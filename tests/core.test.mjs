@@ -471,3 +471,104 @@ test('verification & validation: <testsuites> aggregation, a2a-test-report-v1, a
   assert.throws(()=>validateArgs('a2a_verify',{workspace:'/tmp',operation:'assess',criteria:[{artifact:'a.xml'}]}),/Invalid item/);
   assert.throws(()=>validateArgs('a2a_verify',{workspace:'/tmp',operation:'assess',criteria:[{id:'c1',evil:true}]}),/Invalid item/);
 });
+
+test('side questions: persists, lists by parent/conversation, and integrates with evidence tool',()=>withEngine((e,root)=>{
+  const sq=e.store.recordSideQuestion({
+    workspaceId:e.store.register(root),
+    conversationId:'child-conv-999',
+    parentConversationId:'parent-conv-111',
+    title:'Testing Rate Limits',
+    question:'How do we implement leaky bucket in Go?',
+    summary:'Use token bucket with atomic timestamps.',
+    status:'resolved'
+  });
+  assert.equal(sq.conversation_id,'child-conv-999');
+  assert.equal(sq.parent_conversation_id,'parent-conv-111');
+
+  const listParent=e.store.listSideQuestions({parentConversationId:'parent-conv-111'});
+  assert.equal(listParent.length,1);
+  assert.equal(listParent[0].title,'Testing Rate Limits');
+
+  const queryViaEvidence=e.evidence({workspace:root,operation:'side_questions'});
+  assert.ok(queryViaEvidence.count>=1);
+  assert.equal(queryViaEvidence.items[0].conversation_id,'child-conv-999');
+}));
+
+test('teamwork & subagent verification: verify_handoff enforces machine evidence and timestamp freshness',()=>withEngine((e,root)=>{
+  // Setup source file and fresh test report
+  fs.writeFileSync(path.join(root,'feature.mjs'),'export const add=(a,b)=>a+b;\n');
+  const srcStat=fs.statSync(path.join(root,'feature.mjs'));
+
+  // 1. Missing evidence when no report exists
+  const missingRes=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',changed:['feature.mjs']});
+  assert.equal(missingRes.verified,false);
+  assert.equal(missingRes.status,'missing_evidence');
+
+  // 2. Fresh passing JUnit report
+  const freshXml='<testsuite tests="2" failures="0" errors="0" skipped="0"><testcase name="testAdd"/><testcase name="testAddNegatives"/></testsuite>';
+  fs.writeFileSync(path.join(root,'report.xml'),freshXml);
+  // Ensure artifact timestamp is after source modification
+  const futureTime=(srcStat.mtimeMs+5000)/1000;
+  fs.utimesSync(path.join(root,'report.xml'),futureTime,futureTime);
+
+  const passingRes=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',artifact:'report.xml',changed:['feature.mjs']});
+  assert.equal(passingRes.verified,true);
+  assert.equal(passingRes.status,'passed');
+  assert.equal(passingRes.assertions,2);
+  assert.equal(passingRes.failed,0);
+  assert.equal(passingRes.fresh,true);
+
+  // 3. Stale report: modify source file AFTER artifact timestamp
+  const srcFuture=(futureTime*1000+5000)/1000;
+  fs.utimesSync(path.join(root,'feature.mjs'),srcFuture,srcFuture);
+  const staleRes=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',artifact:'report.xml',changed:['feature.mjs']});
+  assert.equal(staleRes.verified,false);
+  assert.equal(staleRes.status,'stale');
+  assert.equal(staleRes.fresh,false);
+
+  // allow_stale flag bypasses freshness rejection if explicitly requested
+  const allowedStale=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',artifact:'report.xml',changed:['feature.mjs'],allow_stale:true});
+  assert.equal(allowedStale.verified,true);
+
+  // 4. Failing test report
+  const failXml='<testsuite tests="2" failures="1" errors="0" skipped="0"><testcase name="testAdd"/><testcase name="testAddBroken"><failure message="Assertion error"/></testcase></testsuite>';
+  fs.writeFileSync(path.join(root,'report.xml'),failXml);
+  const newerTime=(srcFuture*1000+5000)/1000;
+  fs.utimesSync(path.join(root,'report.xml'),newerTime,newerTime);
+  const failingRes=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-2',artifact:'report.xml',changed:['feature.mjs']});
+  assert.equal(failingRes.verified,false);
+  assert.equal(failingRes.status,'failed');
+  assert.equal(failingRes.failed,1);
+  assert.ok(failingRes.failed_cases.includes('testAddBroken'));
+}));
+
+test('artifact versioning: snapshots versions, computes unified diffs, and integrates with evidence tool',()=>withEngine((e,root)=>{
+  const brainDir=path.join(root,'brain','conv-art-123');
+  fs.mkdirSync(brainDir,{recursive:true});
+  const walkFile=path.join(brainDir,'walkthrough.md');
+
+  fs.writeFileSync(walkFile,'# Walkthrough\nInitial task overview\n- Item 1\n');
+  const snap1=e.store.snapshotArtifact({conversationId:'conv-art-123',artifactPath:walkFile});
+  assert.equal(snap1.version_number,1);
+  assert.equal(snap1.changed,true);
+
+  const snapDup=e.store.snapshotArtifact({conversationId:'conv-art-123',artifactPath:walkFile});
+  assert.equal(snapDup.changed,false);
+  assert.equal(snapDup.version_number,1);
+
+  fs.writeFileSync(walkFile,'# Walkthrough\nInitial task overview\n- Item 1 (verified)\n- Item 2 added\n');
+  const snap2=e.store.snapshotArtifact({conversationId:'conv-art-123',artifactPath:walkFile});
+  assert.equal(snap2.version_number,2);
+  assert.equal(snap2.changed,true);
+  assert.ok(snap2.diff_from_previous.includes('-- Item 1'));
+  assert.ok(snap2.diff_from_previous.includes('+- Item 1 (verified)'));
+  assert.ok(snap2.diff_from_previous.includes('+- Item 2 added'));
+
+  const listRes=e.evidence({workspace:root,operation:'artifact_versions',conversation_id:'conv-art-123',artifact_name:'walkthrough.md'});
+  assert.equal(listRes.count,2);
+
+  const diffRes=e.evidence({workspace:root,operation:'artifact_diff',conversation_id:'conv-art-123',artifact_name:'walkthrough.md'});
+  assert.equal(diffRes.v1,1);
+  assert.equal(diffRes.v2,2);
+  assert.ok(diffRes.diff.includes('+- Item 2 added'));
+}));

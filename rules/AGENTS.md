@@ -23,7 +23,7 @@ When `always-on` is active, adhere to the following senior engineering workflow:
      - Go: `go test -v ./...`
      - Python: `pytest --junitxml=report.xml`
      - PHP: `php artisan test --log-junit=report.xml`
-   - Immediately call `a2a_verify(operation="assess")` on the generated report.
+   - Immediately call `a2a_verify(operation="assess")` or `a2a_verify(operation="verify_handoff")` on the generated report.
    - Never claim completion or report a task as passed without verifiable machine evidence.
 
 4. **Web Frontend & UI Verification**:
@@ -38,6 +38,12 @@ When `always-on` is active, adhere to the following senior engineering workflow:
    - When a user request or `a2a_impact` indicates a large task (e.g. >= 6 affected files, cross-stack refactoring, multi-module architectural changes, or high ripple risk):
    - Proactively suggest running Antigravity's native `/teamwork` command for parallel multi-agent execution (explorers, workers, reviewers, challengers).
    - Supply the Teamwork squad with A2A's pre-computed impact graph and skeleton references so subagents avoid blind token-heavy scans.
+
+7. **Subagent & Teamwork Verification Gate**:
+   - Every subagent, worker, or swarm task MUST produce verifiable machine test evidence (JUnit XML, TAP, or JSON report) before concluding.
+   - The coordinator / parent agent MUST run `a2a_verify(operation="verify_handoff")` before accepting or merging subagent deliverables.
+   - The Freshness Rule: test reports generated before file edits are strictly rejected as `stale`. Subagents must re-run tests on the final code diff.
+   - Zero Unverified Claims: any subagent message claiming "all tests pass" without an artifact is flagged as `unverified` and sent back for test execution.
 
 ## Compact Mode (when enabled)
 - Use terse bullet points; omit pleasantries while keeping 100% of exact code, diffs, commands, paths, and errors.

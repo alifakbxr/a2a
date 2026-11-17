@@ -34,14 +34,14 @@ const BASE_SPECS = [
   },
   {
     name:'evidence',
-    description:'A2A historical evidence, runs, regression hypotheses, incident tracking, and side question persistence.',
+    description:'A2A historical evidence, runs, regression hypotheses, incident tracking, side questions, and artifact versioning.',
     inputSchema:{
       type:'object',
       additionalProperties:false,
       required:['workspace','operation'],
       properties:{
         workspace:ws,
-        operation:{type:'string',enum:['list','runs','incidents','record_incident','add_hypothesis','hypotheses','side_questions','record_side_question']},
+        operation:{type:'string',enum:['list','runs','incidents','record_incident','add_hypothesis','hypotheses','side_questions','record_side_question','artifact_versions','artifact_diff','snapshot_artifact']},
         id:string,
         limit:{type:'integer',minimum:1,maximum:50},
         title:{type:'string',maxLength:240},
@@ -56,7 +56,12 @@ const BASE_SPECS = [
         parent_conversation_id:{type:'string',maxLength:128},
         question:{type:'string',maxLength:4000},
         summary:{type:'string',maxLength:4000},
-        status:{type:'string',maxLength:40}
+        status:{type:'string',maxLength:40},
+        artifact_name:{type:'string',maxLength:240},
+        artifact_path:{type:'string',maxLength:500},
+        version_number:{type:'integer',minimum:1},
+        v1:{type:'integer',minimum:0},
+        v2:{type:'integer',minimum:1}
       }
     }
   }

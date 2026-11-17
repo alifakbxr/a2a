@@ -164,6 +164,167 @@ export class Store {
     if(!row)return null;
     return {...row,metadata:JSON.parse(row.metadata_json||'{}'),metadata_json:undefined};
   }
+  snapshotArtifact({conversationId,artifactPath,content=null}){
+    if(!conversationId)throw new Error('conversationId is required for artifact snapshot');
+    const artifactName=path.basename(artifactPath);
+    let rawContent=content;
+    if(rawContent===null){
+      if(!fs.existsSync(artifactPath))return null;
+      rawContent=fs.readFileSync(artifactPath,'utf8');
+    }
+    const contentSha=sha256(rawContent);
+    const latest=this.get(
+      'SELECT * FROM artifact_versions WHERE conversation_id=? AND artifact_name=? ORDER BY version_number DESC LIMIT 1',
+      conversationId,artifactName
+    );
+    if(latest && latest.content_sha===contentSha){
+      return {...latest,changed:false};
+    }
+    const versionNumber=latest?(latest.version_number+1):1;
+    const diff=latest?computeUnifiedDiff(latest.content,rawContent,`v${latest.version_number}`,`v${versionNumber}`):'';
+    const id=sha256(`${conversationId}:${artifactName}:${versionNumber}:${contentSha}`).slice(0,32);
+    const now=new Date().toISOString();
+    this.run(
+      'INSERT INTO artifact_versions(id,conversation_id,artifact_name,version_number,content_sha,content,diff_from_previous,created_at) VALUES(?,?,?,?,?,?,?,?)',
+      id,conversationId,artifactName,versionNumber,contentSha,rawContent,diff,now
+    );
+    try{
+      const histDir=path.join(this.base,'artifact_history',conversationId);
+      fs.mkdirSync(histDir,{recursive:true,mode:0o700});
+      const shadowPath=path.join(histDir,`${artifactName}.v${versionNumber}.md`);
+      fs.writeFileSync(shadowPath,rawContent,'utf8');
+    }catch{}
+    return {
+      id,
+      conversation_id:conversationId,
+      artifact_name:artifactName,
+      version_number:versionNumber,
+      content_sha:contentSha,
+      diff_from_previous:diff,
+      created_at:now,
+      changed:true,
+      bytes:Buffer.byteLength(rawContent)
+    };
+  }
+  listArtifactVersions({conversationId,artifactName=null,limit=50}={}){
+    let sql="SELECT id,conversation_id,artifact_name,version_number,content_sha,created_at,LENGTH(content) AS bytes,(diff_from_previous IS NOT NULL AND diff_from_previous!='') AS has_diff FROM artifact_versions WHERE 1=1";
+    const params=[];
+    if(conversationId){sql+=' AND conversation_id=?';params.push(conversationId);}
+    if(artifactName){sql+=' AND artifact_name=?';params.push(artifactName);}
+    sql+=' ORDER BY version_number DESC LIMIT ?';
+    params.push(Math.max(1,Math.min(200,Number(limit)||50)));
+    return this.all(sql,...params);
+  }
+  getArtifactVersion({conversationId,artifactName,versionNumber=null}={}){
+    let sql='SELECT * FROM artifact_versions WHERE conversation_id=? AND artifact_name=?';
+    const params=[conversationId,artifactName];
+    if(versionNumber!==null&&versionNumber!==undefined){
+      sql+=' AND version_number=?';
+      params.push(Number(versionNumber));
+    }else{
+      sql+=' ORDER BY version_number DESC LIMIT 1';
+    }
+    return this.get(sql,...params)||null;
+  }
+  getArtifactDiff({conversationId,artifactName,v1=null,v2=null}={}){
+    if(!v1&&!v2){
+      const latest=this.get(
+        'SELECT * FROM artifact_versions WHERE conversation_id=? AND artifact_name=? ORDER BY version_number DESC LIMIT 1',
+        conversationId,artifactName
+      );
+      if(!latest)return null;
+      return {
+        artifact_name:artifactName,
+        v1:latest.version_number>1?latest.version_number-1:0,
+        v2:latest.version_number,
+        diff:latest.diff_from_previous||''
+      };
+    }
+    const row1=v1?this.getArtifactVersion({conversationId,artifactName,versionNumber:v1}):null;
+    const row2=v2?this.getArtifactVersion({conversationId,artifactName,versionNumber:v2}):null;
+    const content1=row1?.content||'';
+    const content2=row2?.content||'';
+    return {
+      artifact_name:artifactName,
+      v1:v1||0,
+      v2:v2||0,
+      diff:computeUnifiedDiff(content1,content2,`v${v1||0}`,`v${v2||0}`)
+    };
+  }
+  scanAndSnapshotBrainArtifacts(conversationId,brainDir=null){
+    if(!conversationId)return [];
+    const bDir=brainDir||path.join(process.env.HOME||'','.gemini/antigravity/brain',conversationId);
+    if(!fs.existsSync(bDir))return [];
+    const results=[];
+    try{
+      const files=fs.readdirSync(bDir,{withFileTypes:true});
+      for(const entry of files){
+        if(entry.isFile()&&entry.name.endsWith('.md')){
+          const filePath=path.join(bDir,entry.name);
+          const snap=this.snapshotArtifact({conversationId,artifactPath:filePath});
+          if(snap&&snap.changed)results.push(snap);
+        }
+      }
+    }catch{}
+    return results;
+  }
+}
+
+export function computeUnifiedDiff(oldStr,newStr,oldLabel='vPrevious',newLabel='vCurrent'){
+  if(oldStr===newStr)return '';
+  const oldLines=oldStr?oldStr.split('\n'):[];
+  const newLines=newStr?newStr.split('\n'):[];
+  const diff=[`--- ${oldLabel}`,`+++ ${newLabel}`];
+  const m=oldLines.length,n=newLines.length;
+  if(m>2500||n>2500){
+    diff.push(`@@ -1,${m} +1,${n} @@`,`- (previous content: ${m} lines)`,`+ (updated content: ${n} lines)`);
+    return diff.join('\n');
+  }
+  const dp=Array.from({length:m+1},()=>new Uint16Array(n+1));
+  for(let i=0;i<m;i++){
+    for(let j=0;j<n;j++){
+      dp[i+1][j+1]=oldLines[i]===newLines[j]?dp[i][j]+1:Math.max(dp[i+1][j],dp[i][j+1]);
+    }
+  }
+  let i=m,j=n;
+  const script=[];
+  while(i>0||j>0){
+    if(i>0&&j>0&&oldLines[i-1]===newLines[j-1]){
+      script.push({type:' ',text:oldLines[i-1]});
+      i--;j--;
+    }else if(j>0&&(i===0||dp[i][j-1]>=dp[i-1][j])){
+      script.push({type:'+',text:newLines[j-1]});
+      j--;
+    }else if(i>0&&(j===0||dp[i][j-1]<dp[i-1][j])){
+      script.push({type:'-',text:oldLines[i-1]});
+      i--;
+    }
+  }
+  script.reverse();
+  let hunk=[],inHunk=false;
+  for(let idx=0;idx<script.length;idx++){
+    const item=script[idx];
+    if(item.type!==' '){
+      if(!inHunk){
+        inHunk=true;
+        const start=Math.max(0,idx-2);
+        for(let k=start;k<idx;k++){
+          if(script[k].type===' ')hunk.push(' '+script[k].text);
+        }
+      }
+      hunk.push(item.type+item.text);
+    }else if(inHunk){
+      hunk.push(' '+item.text);
+      const nextChange=script.slice(idx+1,idx+3).some(x=>x.type!==' ');
+      if(!nextChange){
+        diff.push(...hunk);
+        hunk=[];
+        inHunk=false;
+      }
+    }
+  }
+  if(hunk.length>0)diff.push(...hunk);
+  return diff.join('\n');
 }
 export const uniqueId=(prefix)=>`${prefix}-${cryptoRandom()}`;
 function cryptoRandom(){return globalThis.crypto.randomUUID()}

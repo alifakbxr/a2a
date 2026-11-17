@@ -72,3 +72,12 @@ Assess test evidence (JUnit XML, TAP, `a2a-test-report-v1` JSON) against accepta
 When `a2a_impact` flags `teamwork_advisory.large_scope=true` or when a task touches multiple architectural layers:
 - Advise the user to execute `/teamwork` for parallel multi-agent execution.
 - Pass A2A's pre-computed affected files, dependencies, and test targets into the teamwork prompt so explorers and workers bypass redundant token-heavy file scans.
+
+### 7. Teamwork & Subagent Verification Gate (`a2a_verify operation="verify_handoff"`)
+Ensure all deliverables produced by parallel teamwork workers or subagents are verified with machine evidence before acceptance:
+- Execute `a2a_verify` with `operation="verify_handoff"`, `worker_name="<worker-id>"`, and optional `artifact="report.xml"`:
+  ```bash
+  node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs verify-handoff /absolute/workspace --worker worker-1
+  ```
+- Freshness Rule: test report artifacts generated prior to the subagent's latest file edits are rejected as `stale`.
+- Reject any subagent handoff claiming completion without machine-verifiable test artifacts (0 failures, >0 assertions).

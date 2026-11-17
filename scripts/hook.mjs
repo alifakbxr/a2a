@@ -149,9 +149,40 @@ function recordActiveSession(payload, baseDir) {
   }
 
   writeJsonSecure(sessionFile, { updatedAt: now, latest: entry, byWorkspace });
+
+  if (convId) {
+    try {
+      const store = new Store(baseDir);
+      try {
+        store.scanAndSnapshotBrainArtifacts(convId);
+      } finally {
+        store.close();
+      }
+    } catch {}
+  }
+}
+
+function handleArtifactModification(payload, baseDir) {
+  const toolName = payload?.toolName || payload?.toolCall?.name || '';
+  if (toolName !== 'write_file' && toolName !== 'edit_file') return;
+  const args = payload?.toolArgs || payload?.toolCall?.args || payload?.toolInput || payload?.arguments || {};
+  const filePath = args?.Path || args?.path;
+  if (typeof filePath !== 'string' || !filePath.includes('/brain/')) return;
+  if (!filePath.endsWith('.md')) return;
+  const convId = sanitizeConversationId(payload?.conversationId);
+  if (!convId) return;
+  try {
+    const store = new Store(baseDir);
+    try {
+      store.snapshotArtifact({ conversationId: convId, artifactPath: filePath });
+    } finally {
+      store.close();
+    }
+  } catch {}
 }
 
 function recordCommandRun(payload, baseDir) {
+  handleArtifactModification(payload, baseDir);
   const cmd = payload?.toolCall?.args?.CommandLine;
   if (typeof cmd !== 'string' || !cmd.trim()) return;
   const isTestLike = /\b(?:test|pytest|phpunit|pest|vitest|jest|mocha|cargo\s+test|go\s+test|dotnet\s+test|flutter\s+test|swift\s+test|mvn\s+test|gradlew\s+test)\b/i.test(cmd);

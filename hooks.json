@@ -24,6 +24,26 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "write_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./scripts/hook.mjs",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "edit_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./scripts/hook.mjs",
+            "timeout": 5
+          }
+        ]
       }
     ]
   }

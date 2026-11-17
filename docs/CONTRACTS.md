@@ -6,13 +6,14 @@ All four primary tools are exported in `schemas/mcp-tools.json`. Their definitio
 
 - **`a2a_context`** — `inspect` returns workspace identity, revision, graph coverage, detected ecosystem candidates, and measured token efficiency; `query` performs bounded search; `freshness` checks source and report hashes; `tokens` reports workspace & session token consumption (accepting optional `conversation_id` / `transcript_path`); `skeleton` returns lexer-safe comment-stripped code previews with measured savings.
 - **`a2a_impact`** — consumes explicit changed relative paths or Git working-tree changes. Returns affected nodes, possible tests, risk level, affected tokens, and uncertainty. Depth is bounded (1–4).
-- **`a2a_verify`** — `plan` accepts criterion descriptions and returns test runner candidates; `assess` accepts objects `{id, artifact, test_name}`. `test_name` is an **exact** machine-reported test case name or `*` to bind a whole suite. Never use `*` for a narrow criterion just to make verification pass.
-- **`a2a_evidence`** — `list`, `runs`, `incidents`, `hypotheses` query provenance; `record_incident` and `add_hypothesis` save structured metadata only.
+- **`a2a_verify`** — `plan` accepts criterion descriptions and returns test runner candidates; `assess` accepts objects `{id, artifact, test_name}` (`test_name` is an **exact** machine-reported test case name or `*` to bind a whole suite); `verify_handoff` validates subagent and teamwork deliverables against fresh machine test reports (JUnit XML, TAP, JSON), enforcing timestamp freshness against source file changes and 0 failures.
+- **`a2a_evidence`** — `list`, `runs`, `incidents`, `hypotheses` query provenance; `record_incident` and `add_hypothesis` save structured metadata; `side_questions` and `record_side_question` query and persist Antigravity side questions (`/btw`) and branched exploration notes.
 
 ### MCP Resources
 - `a2a://status` — current mode, compact mode, auto-trust policy, data directory, and authorized workspaces.
 - `a2a://tokens/session` — current Antigravity session token usage and cache hit metrics.
 - `a2a://workspace/summary` — active workspace graph coverage and token summary.
+- `a2a://side-questions` — recorded Antigravity side questions (`/btw`) and exploration notes.
 
 Return statuses include `passed`, `failed`, `blocked`, `inconclusive`, tool-level `error` and read-time `fresh`. Every successful method response includes a source revision where relevant. Commands suggested by `plan` are **not** guaranteed safe: inspect and run them via native permissions.
 

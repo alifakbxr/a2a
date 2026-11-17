@@ -25,8 +25,10 @@ Commands:\n  doctor                     show runtime, workspace permissions, act
   impact <workspace> [paths...] analyze impact & calculate tokens affected
   plan <workspace> [criterion ...] suggest native checks
   assess <workspace> <criterion_id> <relative-report-file> <test-name|*> validate test report
+  verify-handoff <workspace> [--artifact <file>] [--worker <name>] [--allow-stale] verify subagent/teamwork test evidence
   evidence <workspace>       list verified evidence and regression history
   side-questions [workspace] [--conv <id>] [--parent <id>] list recorded Antigravity side questions (/btw)
+  artifacts [list|diff|show|snapshot] [file] [--conv <id>] [--v1 N] [--v2 M] version & diff brain artifacts
   refresh [serverName]       hot-reload A2A MCP server via Antigravity Language Server RPC
   stats                      view install metrics, clone traffic & unique users from GitHub
   mcp                        start A2A stdio server via src/mcp.mjs`);process.exit(0);
@@ -149,6 +151,24 @@ try{
       else if(cmd==='impact')result=engine.impact({workspace:argv[0],changed:argv.slice(1)});
       else if(cmd==='plan')result=engine.verify({workspace:argv[0],operation:'plan',criteria:argv.slice(1)});
       else if(cmd==='assess')result=engine.verify({workspace:argv[0],operation:'assess',criteria:[{id:argv[1],artifact:argv[2],test_name:argv[3]}]});
+      else if(cmd==='verify-handoff'||cmd==='verify_handoff'){
+        let ws=null;let artifact=null;let workerName=null;let allowStale=false;
+        for(let i=0;i<argv.length;i++){
+          if(argv[i]==='--artifact'&&argv[i+1]){artifact=argv[++i];}
+          else if(argv[i].startsWith('--artifact=')){artifact=argv[i].slice(11);}
+          else if(argv[i]==='--worker'&&argv[i+1]){workerName=argv[++i];}
+          else if(argv[i].startsWith('--worker=')){workerName=argv[i].slice(9);}
+          else if(argv[i]==='--allow-stale'){allowStale=true;}
+          else if(!ws&&!argv[i].startsWith('-')){ws=argv[i];}
+        }
+        result=engine.verify({
+          workspace:ws||process.cwd(),
+          operation:'verify_handoff',
+          artifact,
+          worker_name:workerName,
+          allow_stale:allowStale
+        });
+      }
       else if(cmd==='evidence')result=engine.evidence({workspace:argv[0]});
       else if(cmd==='side-questions'||cmd==='side_questions'){
         let ws=null;let convId=null;let parentId=null;
@@ -163,6 +183,52 @@ try{
         if(ws){try{wsId=engine.store.register(normalizeWorkspace(ws));}catch{}}
         const items=engine.store.listSideQuestions({workspaceId:wsId,conversationId:convId,parentConversationId:parentId});
         result={count:items.length,side_questions:items};
+      }
+      else if(cmd==='artifacts'){
+        const sub=argv[0]||'list';
+        let artifactName=null;
+        let convId=null;
+        let v1=null;
+        let v2=null;
+        const subIsCmd=['list','diff','show','snapshot'].includes(sub);
+        const action=subIsCmd?sub:'list';
+        const restArgs=subIsCmd?argv.slice(1):argv;
+        for(let i=0;i<restArgs.length;i++){
+          if(restArgs[i]==='--conv'&&restArgs[i+1]){convId=restArgs[++i];}
+          else if(restArgs[i].startsWith('--conv=')){convId=restArgs[i].slice(7);}
+          else if(restArgs[i]==='--v1'&&restArgs[i+1]){v1=Number(restArgs[++i]);}
+          else if(restArgs[i].startsWith('--v1=')){v1=Number(restArgs[i].slice(5));}
+          else if(restArgs[i]==='--v2'&&restArgs[i+1]){v2=Number(restArgs[++i]);}
+          else if(restArgs[i].startsWith('--v2=')){v2=Number(restArgs[i].slice(5));}
+          else if(!artifactName&&!restArgs[i].startsWith('-')){artifactName=restArgs[i];}
+        }
+        if(!convId){
+          try{
+            const sf=path.join(engine.store.base,'active-session.json');
+            if(fs.existsSync(sf)){
+              const d=JSON.parse(fs.readFileSync(sf,'utf8'));
+              convId=d?.latest?.conversationId||null;
+            }
+          }catch{}
+          if(!convId) convId=process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
+        }
+        if(action==='list'){
+          const items=engine.store.listArtifactVersions({conversationId:convId,artifactName});
+          result={conversation_id:convId,artifact_name:artifactName||null,count:items.length,versions:items};
+        }else if(action==='diff'){
+          if(!artifactName)throw new Error('artifact name required for diff (e.g. a2a artifacts diff walkthrough.md)');
+          const diffRes=engine.store.getArtifactDiff({conversationId:convId,artifactName,v1,v2});
+          result={conversation_id:convId,...(diffRes||{artifact_name:artifactName,v1,v2,diff:''})};
+        }else if(action==='show'){
+          if(!artifactName)throw new Error('artifact name required for show');
+          const row=engine.store.getArtifactVersion({conversationId:convId,artifactName,versionNumber:v1||v2});
+          result=row||{status:'not_found'};
+        }else if(action==='snapshot'){
+          if(!artifactName)throw new Error('artifact name or path required for snapshot');
+          const targetPath=path.isAbsolute(artifactName)?artifactName:path.join(process.env.HOME||'','.gemini/antigravity/brain',convId,artifactName);
+          const snap=engine.store.snapshotArtifact({conversationId:convId,artifactPath:targetPath});
+          result={status:'snapshotted',snapshot:snap};
+        }
       }
       else throw new Error('Unknown command '+cmd);
     }finally{engine.close();}

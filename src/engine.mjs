@@ -5,7 +5,7 @@ import {Store,uniqueId} from './storage.mjs';
 import {requireAuthorizedWorkspace,sha256,cleanError,safeFile,getCompactMode} from './security.mjs';
 import {discover,createGraph,snapshotOf,gitHead,discoverTestCommands} from './scanner.mjs';
 import {contextQuery,analyzeImpact,shortGraphSummary,validateChangedPaths} from './graph.mjs';
-import {planVerification,assessVerification,listEvidence,freshness} from './verification.mjs';
+import {planVerification,assessVerification,listEvidence,freshness,verifyHandoff} from './verification.mjs';
 import {estimateTokens,getSessionTokenUsage,analyzeWorkspaceTokens,skeletonizeCode} from './tokens.mjs';
 
 export class Engine {
@@ -168,7 +168,7 @@ export class Engine {
     this.store.recordTelemetry(s.wsId,{toolName:'a2a_impact',action:'impact',rawScopeTokens:estimateTokens(rawScopeBytes),responseTokens:estimateTokens(JSON.stringify(payload))});
     return payload;
   }
-  verify({workspace,operation='plan',criteria=[],changed=[]}={}){
+  verify({workspace,operation='plan',criteria=[],changed=[],worker_name,artifact,allow_stale}={}){
     const compact=getCompactMode();
     const s=this.sync(workspace);
     if(operation==='plan'){
@@ -188,11 +188,27 @@ export class Engine {
       }
       return res;
     }
+    if(operation==='verify_handoff'||operation==='handoff'){
+      validateChangedPaths(changed);
+      const res=verifyHandoff(this.store,s.wsId,s.root,s.revision,{worker_name,changed,artifact,criteria,allow_stale});
+      if(compact) res.compact=true;
+      return res;
+    }
     throw new Error('Unknown verify operation');
   }
-  evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id,conversation_id,parent_conversation_id,question,summary,status}={}){
+  #resolveActiveConversationId(){
+    try{
+      const sf=path.join(this.store.base,'active-session.json');
+      if(fs.existsSync(sf)){
+        const d=JSON.parse(fs.readFileSync(sf,'utf8'));
+        if(d?.latest?.conversationId)return d.latest.conversationId;
+      }
+    }catch{}
+    return process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
+  }
+  evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id,conversation_id,parent_conversation_id,question,summary,status,artifact_name,artifact_path,v1,v2}={}){
     const compact=getCompactMode();
-    const isReadOnly=operation==='list'||operation==='runs'||operation==='incidents'||operation==='hypotheses'||operation==='side_questions'||operation==='side-questions';
+    const isReadOnly=operation==='list'||operation==='runs'||operation==='incidents'||operation==='hypotheses'||operation==='side_questions'||operation==='side-questions'||operation==='artifact_versions'||operation==='artifact-versions'||operation==='artifact_diff'||operation==='artifact-diff';
     const s=isReadOnly?this.resolveMeta(workspace):this.sync(workspace);
     const wsId=s.wsId;
     if(operation==='list')return {revision:s.revision,...listEvidence(this.store,wsId,s.root,s.revision,{limit,id}),...(compact?{compact:true}:{})};
@@ -232,6 +248,25 @@ export class Engine {
       });
       return {status:'recorded',side_question:record,...(compact?{compact:true}:{})};
     }
+    if(operation==='artifact_versions'||operation==='artifact-versions'){
+      const convId=conversation_id||id||this.#resolveActiveConversationId();
+      const items=this.store.listArtifactVersions({conversationId:convId,artifactName:artifact_name,limit});
+      return {conversation_id:convId,artifact_name:artifact_name||null,count:items.length,versions:items,...(compact?{compact:true}:{})};
+    }
+    if(operation==='artifact_diff'||operation==='artifact-diff'){
+      const convId=conversation_id||id||this.#resolveActiveConversationId();
+      if(!artifact_name)throw new Error('artifact_name is required for artifact_diff');
+      const diffRes=this.store.getArtifactDiff({conversationId:convId,artifactName:artifact_name,v1,v2});
+      return {conversation_id:convId,...(diffRes||{artifact_name,v1,v2,diff:''}),...(compact?{compact:true}:{})};
+    }
+    if(operation==='snapshot_artifact'||operation==='snapshot-artifact'){
+      const convId=conversation_id||id||this.#resolveActiveConversationId();
+      if(!artifact_path&&!artifact_name)throw new Error('artifact_path or artifact_name is required');
+      const targetPath=artifact_path||path.join(process.env.HOME||'','.gemini/antigravity/brain',convId,artifact_name);
+      const snap=this.store.snapshotArtifact({conversationId:convId,artifactPath:targetPath});
+      return {status:'snapshotted',snapshot:snap,...(compact?{compact:true}:{})};
+    }
+    throw new Error('Unknown evidence operation');
     throw new Error('Unknown evidence operation');
   }
 }

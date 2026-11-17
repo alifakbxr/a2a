@@ -231,6 +231,13 @@ node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs compact toggle
 # Inspect token telemetry for any project
 node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs tokens /absolute/path/to/project
 
+# List recorded Antigravity side questions (/btw)
+node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs side-questions
+
+# Version history & unified diff for artifacts (walkthrough.md, plan.md)
+node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs artifacts list walkthrough.md
+node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs artifacts diff walkthrough.md
+
 # Hot-reload the live MCP server in Antigravity
 node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs refresh
 ```
@@ -262,17 +269,22 @@ Provides read-only access to symbols, declarations, and token telemetry.
   - `path` *(string, optional)*: File path for skeleton extraction.
 
 ### 3. `a2a_verify`
-Plans verification requirements or evaluates completed test report artifacts.
+Plans verification requirements, evaluates completed test report artifacts, and strictly validates subagent/teamwork deliverables.
 - **Arguments:**
   - `workspace` *(string, required)*: Absolute path to the workspace.
-  - `operation` *(string)*: `"plan"` | `"assess"`.
-  - `criteria` *(array)*: Acceptance criteria strings or assessment objects binding `artifact` (JUnit XML/TAP/JSON) to `test_name`.
+  - `operation` *(string)*: `"plan"` | `"assess"` | `"verify_handoff"`.
+  - `worker_name` *(string, optional)*: Subagent or teamwork worker ID (e.g. `worker-1`, `reviewer`).
+  - `artifact` *(string, optional)*: Relative path to test report artifact (JUnit XML, TAP, or `a2a-test-report-v1` JSON).
+  - `criteria` *(array, optional)*: Acceptance criteria strings or assessment objects binding `artifact` (JUnit XML/TAP/JSON) to `test_name`.
+  - `allow_stale` *(boolean, optional)*: Whether to allow test artifacts older than recent code modifications (defaults to `false`).
 
 ### 4. `a2a_evidence`
-Manages historical verification runs, regression incidents, and bug hypotheses.
+Manages historical verification runs, regression incidents, bug hypotheses, and Antigravity side questions (`/btw`).
 - **Arguments:**
   - `workspace` *(string, required)*: Absolute path to the workspace.
-  - `operation` *(string)*: `"list"` | `"runs"` | `"incidents"` | `"record_incident"` | `"add_hypothesis"`.
+  - `operation` *(string)*: `"list"` | `"runs"` | `"incidents"` | `"record_incident"` | `"add_hypothesis"` | `"side_questions"` | `"record_side_question"`.
+  - `conversation_id` / `parent_conversation_id` *(string, optional)*: Target conversation UUIDs for side question tracking.
+  - `question` / `summary` *(string, optional)*: Side question details and conclusions.
 
 ---
 

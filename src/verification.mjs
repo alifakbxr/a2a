@@ -1,8 +1,9 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import crypto from 'node:crypto';
 import {safeFile,sha256} from './security.mjs';
 import {uniqueId} from './storage.mjs';
-import {discoverTestCommands} from './scanner.mjs';
+import {discoverTestCommands,gitChanges} from './scanner.mjs';
 
 export function parseArtifact(text, filename){
   const ext=filename.toLowerCase().split('.').at(-1), sample=text.slice(0,1200000);
@@ -111,3 +112,213 @@ export function listEvidence(store,wsId,root,currentRevision,{limit=20,id}={}){
   return {items:store.all('SELECT id,criterion_id,status,artifact_path,artifact_sha,revision_id,created_at FROM evidence WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,n).map(x=>{const state=check(x);return {id:x.id,criterion_id:x.criterion_id,status:x.status,artifact_path:x.artifact_path,revision_id:x.revision_id,created_at:x.created_at,...state}})};
 }
 export function freshness(store,wsId,root,revision){const items=store.all('SELECT id,revision_id,criterion_id,status,artifact_path,artifact_sha FROM evidence WHERE workspace_id=? ORDER BY created_at DESC LIMIT 30',wsId);return items.map(x=>{let artifact_intact=false;try{artifact_intact=sha256(fs.readFileSync(safeFile(root,x.artifact_path)))===x.artifact_sha}catch{};return {id:x.id,revision_id:x.revision_id,criterion_id:x.criterion_id,status:x.status,artifact_intact,fresh:x.revision_id===revision&&artifact_intact}})}
+
+const CANDIDATE_ARTIFACTS = [
+  'report.xml',
+  'junit.xml',
+  'test-results.xml',
+  'test-report.xml',
+  'junit-report.xml',
+  'tests.tap',
+  'test.tap',
+  'report.tap',
+  'test-results.json',
+  'a2a-test-report.json',
+  'test-results/junit.xml',
+  'test-results/test-results.xml',
+  'coverage/junit.xml',
+  'reports/junit.xml',
+  'reports/test-results.xml',
+  'build/test-results/test/TESTS-TestSuites.xml'
+];
+
+export function verifyHandoff(store,wsId,root,rev,{
+  worker_name=null,
+  changed=[],
+  artifact=null,
+  criteria=[],
+  allow_stale=false
+}={}){
+  let detectedChanged=Array.isArray(changed)&&changed.length>0?changed:gitChanges(root);
+  if(!Array.isArray(detectedChanged)) detectedChanged=[];
+  detectedChanged=detectedChanged.map(p=>String(p).replaceAll('\\','/'));
+
+  let maxSourceMtimeMs=0;
+  for(const rel of detectedChanged){
+    try{
+      const full=safeFile(root,rel);
+      const st=fs.statSync(full);
+      if(st.mtimeMs>maxSourceMtimeMs) maxSourceMtimeMs=st.mtimeMs;
+    }catch{}
+  }
+
+  let relArtifact=artifact;
+  if(!relArtifact){
+    let newestTime=0;
+    for(const cand of CANDIDATE_ARTIFACTS){
+      try{
+        const full=safeFile(root,cand);
+        const st=fs.statSync(full);
+        if(st.isFile()&&st.mtimeMs>newestTime){
+          newestTime=st.mtimeMs;
+          relArtifact=cand;
+        }
+      }catch{}
+    }
+  }
+
+  if(!relArtifact){
+    return {
+      operation:'verify_handoff',
+      verified:false,
+      status:'missing_evidence',
+      worker:worker_name||null,
+      revision:rev,
+      changed_files:detectedChanged,
+      reason:'No machine-readable test report artifact found (JUnit XML, TAP, or JSON). Subagents must run tests with a machine reporter before reporting completion.',
+      actionable_fix:'Run native tests with a reporter flag: npm test -- --reporter=tap, pytest --junitxml=report.xml, go test -v ./... > tests.tap, or php artisan test --log-junit=report.xml'
+    };
+  }
+
+  const full=safeFile(root,relArtifact);
+  const stat=fs.statSync(full);
+  if(stat.size>1200000)throw new Error('Evidence report exceeds 1.2 MB');
+
+  const isFresh=allow_stale||maxSourceMtimeMs===0||(stat.mtimeMs>=maxSourceMtimeMs-1500);
+  if(!isFresh){
+    return {
+      operation:'verify_handoff',
+      verified:false,
+      status:'stale',
+      worker:worker_name||null,
+      revision:rev,
+      artifact:relArtifact,
+      fresh:false,
+      changed_files:detectedChanged,
+      reason:'Test evidence artifact is stale: source files were modified after the test report was generated.',
+      actionable_fix:'Re-run native test suite to generate a fresh report matching the latest code changes.'
+    };
+  }
+
+  const bytes=fs.readFileSync(full);
+  const hash=sha256(bytes);
+  const parsed=parseArtifact(bytes.toString('utf8'),path.basename(relArtifact));
+
+  let derivedStatus=parsed.status;
+  let reason=parsed.reason||null;
+  let failedCases=[];
+
+  if(parsed.status==='failed'){
+    derivedStatus='failed';
+    failedCases=parsed.cases.filter(c=>c.state==='failed').slice(0,10).map(c=>c.name);
+    reason=`Test report contains ${parsed.failed} failing test case(s).`;
+  }else if(parsed.status==='inconclusive'){
+    derivedStatus='inconclusive';
+    reason=parsed.reason||'Test report incomplete or contains 0 assertions.';
+  }else if((parsed.assertions||0)===0){
+    derivedStatus='inconclusive';
+    reason='No test assertions found in report.';
+  }
+
+  let criteriaResults=[];
+  if(Array.isArray(criteria)&&criteria.length>0){
+    for(const c of criteria){
+      const cid=typeof c==='string'?c:c.id;
+      const testName=typeof c==='object'&&c.test_name?c.test_name.trim():(typeof c==='string'?c.trim():'*');
+      let cStatus='passed';
+      let cReason=null;
+      if(testName!=='*'){
+        const matching=parsed.cases.filter(tc=>tc.name===testName||tc.name.includes(testName));
+        if(!matching.length){
+          cStatus='inconclusive';
+          cReason=`Test case "${testName}" not found in report`;
+        }else if(matching.some(tc=>tc.state==='failed')){
+          cStatus='failed';
+          cReason=`Test case "${testName}" failed`;
+        }else if(matching.some(tc=>tc.state==='skipped')){
+          cStatus='inconclusive';
+          cReason=`Test case "${testName}" was skipped`;
+        }
+      }else if(parsed.status!=='passed'){
+        cStatus=parsed.status;
+        cReason=reason;
+      }
+      criteriaResults.push({id:cid,status:cStatus,...(cReason?{reason:cReason}:{})});
+    }
+    if(criteriaResults.some(r=>r.status==='failed')){
+      derivedStatus='failed';
+      reason='One or more required criteria failed.';
+    }else if(criteriaResults.some(r=>r.status==='inconclusive')){
+      derivedStatus='inconclusive';
+      reason='One or more required criteria could not be verified.';
+    }
+  }
+
+  const verified=derivedStatus==='passed'&&isFresh&&(parsed.assertions||0)>0;
+
+  const evidenceId=uniqueId('ev');
+  store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',
+    evidenceId,
+    wsId,
+    rev,
+    worker_name?`teamwork:${worker_name}`:'teamwork_handoff',
+    derivedStatus,
+    parsed.format||'unknown',
+    relArtifact,
+    hash,
+    JSON.stringify({
+      worker_name:worker_name||'worker',
+      changed_files:detectedChanged,
+      assertions:parsed.assertions||0,
+      failed:parsed.failed||0,
+      skipped:parsed.skipped||0,
+      fresh:isFresh,
+      verified,
+      trust:'local-machine-report'
+    }),
+    new Date().toISOString()
+  );
+
+  const runId=uniqueId('run');
+  store.run('INSERT INTO runs VALUES(?,?,?,?,?,?)',
+    runId,
+    wsId,
+    rev,
+    derivedStatus,
+    JSON.stringify([{
+      operation:'verify_handoff',
+      worker:worker_name,
+      artifact:relArtifact,
+      assertions:parsed.assertions||0,
+      failed:parsed.failed||0,
+      verified,
+      criteria:criteriaResults
+    }]),
+    new Date().toISOString()
+  );
+
+  return {
+    operation:'verify_handoff',
+    verified,
+    status:derivedStatus,
+    worker:worker_name||null,
+    revision:rev,
+    artifact:relArtifact,
+    artifact_sha:hash,
+    assertions:parsed.assertions||0,
+    failed:parsed.failed||0,
+    skipped:parsed.skipped||0,
+    format:parsed.format,
+    fresh:isFresh,
+    changed_files:detectedChanged,
+    run_id:runId,
+    evidence_id:evidenceId,
+    summary:verified
+      ?`Worker ${worker_name||'task'} handoff verified: ${parsed.assertions} assertions passed (${parsed.skipped||0} skipped) across ${detectedChanged.length} changed files.`
+      :`Worker ${worker_name||'task'} handoff unverified (${derivedStatus}): ${reason||'Test requirements not satisfied.'}`,
+    ...(reason?{reason}:{}),
+    ...(failedCases.length?{failed_cases:failedCases}:{}),
+    ...(criteriaResults.length?{criteria:criteriaResults}:{}),
+    ...(!verified?{actionable_fix:'Ensure all tests pass and re-run with machine reporter (TAP/JUnit/JSON) after final edits.'}:{})
+  };
+}
