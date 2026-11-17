@@ -30,7 +30,7 @@ const BASE_SPECS = [
   {
     name:'verify',
     description:'A2A native test planning and JUnit/TAP/JSON evidence assessment.',
-    inputSchema:{type:'object',additionalProperties:false,required:['workspace','operation'],properties:{workspace:ws,operation:{type:'string',enum:['plan','assess']},changed:paths,criteria:{type:'array',maxItems:40,items:{oneOf:[string,{type:'object',additionalProperties:false,required:['id'],properties:{id:{type:'string',maxLength:160},artifact:{type:'string',maxLength:500},test_name:{type:'string',maxLength:160,description:'Exact testcase name to bind to criterion, or * for entire report.'},blocked:{type:'boolean'},reason:{type:'string',maxLength:240}}}]}}}}
+    inputSchema:{type:'object',additionalProperties:false,required:['workspace','operation'],properties:{workspace:ws,operation:{type:'string',enum:['plan','assess','verify_handoff']},changed:paths,worker_name:{type:'string',maxLength:128,description:'Optional subagent name for verify_handoff.'},artifact:{type:'string',maxLength:500,description:'Relative machine report path for verify_handoff.'},allow_stale:{type:'boolean',description:'Explicitly bypass source freshness (not recommended).'},criteria:{type:'array',maxItems:40,items:{oneOf:[string,{type:'object',additionalProperties:false,required:['id'],properties:{id:{type:'string',maxLength:160},artifact:{type:'string',maxLength:500},test_name:{type:'string',maxLength:160,description:'Exact testcase name to bind to criterion, or * for entire report.'},blocked:{type:'boolean'},reason:{type:'string',maxLength:240}}}]}}}}
   },
   {
     name:'evidence',
