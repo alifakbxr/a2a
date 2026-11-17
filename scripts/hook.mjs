@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { dataDir, getA2AMode, getCompactMode } from '../src/security.mjs';
+import {pathToFileURL} from 'node:url';
+import { dataDir, getA2AMode, getCompactMode, requireAuthorizedWorkspace } from '../src/security.mjs';
 import { sanitizeConversationId } from '../src/tokens.mjs';
 import { Store } from '../src/storage.mjs';
 
@@ -24,7 +25,8 @@ export function detectSideQuestionInfo(payload, transcriptPath) {
   let initialQuestion = null;
   const currentConvId = sanitizeConversationId(payload?.conversationId);
 
-  if (transcriptPath && fs.existsSync(transcriptPath)) {
+  // Internal transcripts are diagnostic only; never read arbitrarily large logs in a hook.
+  if (transcriptPath && fs.existsSync(transcriptPath) && fs.statSync(transcriptPath).size <= 64 * 1024) {
     try {
       const stream = fs.readFileSync(transcriptPath, 'utf8');
       if (stream.includes('<side_question>') || stream.includes('side question (/btw)')) {
@@ -124,8 +126,9 @@ function recordActiveSession(payload, baseDir) {
       try {
         let wsId = null;
         if (workspacePaths.length > 0) {
-          try { wsId = store.register(workspacePaths[0]); } catch {}
+          try { wsId = store.register(requireAuthorizedWorkspace(workspacePaths[0])); } catch {}
         }
+        if(!wsId) return;
         store.recordSideQuestion({
           workspaceId: wsId,
           conversationId: convId,
@@ -150,35 +153,36 @@ function recordActiveSession(payload, baseDir) {
 
   writeJsonSecure(sessionFile, { updatedAt: now, latest: entry, byWorkspace });
 
-  if (convId) {
-    try {
-      const store = new Store(baseDir);
-      try {
-        store.scanAndSnapshotBrainArtifacts(convId);
-      } finally {
-        store.close();
-      }
-    } catch {}
-  }
+  // Do not bulk-copy conversation artifacts when a session starts. Only snapshot
+  // explicit edit events or direct user requests; avoids needless I/O and retention.
 }
 
 function handleArtifactModification(payload, baseDir) {
-  const toolName = payload?.toolName || payload?.toolCall?.name || '';
-  if (toolName !== 'write_file' && toolName !== 'edit_file') return;
-  const args = payload?.toolArgs || payload?.toolCall?.args || payload?.toolInput || payload?.arguments || {};
-  const filePath = args?.Path || args?.path;
-  if (typeof filePath !== 'string' || !filePath.includes('/brain/')) return;
-  if (!filePath.endsWith('.md')) return;
+  if(payload?.error) return;
+  const toolName = payload?.toolCall?.name || payload?.toolName || '';
+  if (!['write_to_file','replace_file_content','multi_replace_file_content','write_file','edit_file'].includes(toolName)) return;
+  const args = payload?.toolCall?.args || payload?.toolArgs || payload?.toolInput || payload?.arguments || {};
+  const filePath = args?.TargetFile || args?.Path || args?.path;
   const convId = sanitizeConversationId(payload?.conversationId);
-  if (!convId) return;
-  try {
-    const store = new Store(baseDir);
-    try {
-      store.snapshotArtifact({ conversationId: convId, artifactPath: filePath });
-    } finally {
-      store.close();
-    }
-  } catch {}
+  if (!convId || typeof filePath !== 'string' || !filePath.endsWith('.md')) return;
+  // Accept Windows separators for matching, but let safeArtifactPath validate the
+  // actual OS path and session-specific boundary (including symlinks).
+  const normalized = filePath.replaceAll('\\\\','/');
+  if (!normalized.includes('/brain/'+convId+'/')) return;
+  const workspaces = Array.isArray(payload?.workspacePaths) ? payload.workspacePaths : [];
+  const candidates = [...workspaces, payload?.cwd].filter(p=>typeof p==='string');
+  let root=null;
+  for(const candidate of candidates){
+    try{root=requireAuthorizedWorkspace(candidate);break}catch{}
+  }
+  if(!root) return;
+  try{
+    const store=new Store(baseDir);
+    try{
+      const wsId=store.register(root);
+      store.snapshotArtifact({workspaceId:wsId,workspaceRoot:root,conversationId:convId,artifactPath:filePath});
+    }finally{store.close()}
+  }catch{}
 }
 
 function recordCommandRun(payload, baseDir) {
@@ -192,7 +196,7 @@ function recordCommandRun(payload, baseDir) {
     updatedAt: new Date().toISOString(),
     conversationId: sanitizeConversationId(payload?.conversationId),
     cwd: typeof payload?.cwd === 'string' ? payload.cwd : null,
-    command: cmd.slice(0, 200),
+    kind: 'test-like-command', // never persist the raw command; it can contain credentials
     errored: Boolean(payload?.error),
   });
 }
@@ -225,7 +229,7 @@ export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   return {};
 }
 
-const isEntry = import.meta.url === new URL(`file://${path.resolve(process.argv[1] || '')}`).href;
+const isEntry = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 if (isEntry) {
   let raw = '';
   try {
