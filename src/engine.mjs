@@ -11,10 +11,10 @@ import {estimateTokens,getSessionTokenUsage,analyzeWorkspaceTokens,skeletonizeCo
 export class Engine {
   constructor({store}={}) {this.store=store||new Store();this.owned=!store;}
   close(){if(this.owned)this.store.close()}
-  sync(workspace){
+  sync(workspace,{verifyIntegrity=false}={}){
     const root=requireAuthorizedWorkspace(workspace),wsId=this.store.register(root);
     const cachedFiles=new Map(this.store.all('SELECT path,content_sha AS hash,language,bytes,mtime_ms FROM files WHERE workspace_id=?',wsId).map(r=>[r.path,r]));
-    const index=discover(root,{cachedFiles}), git=gitHead(root);
+    const index=discover(root,{cachedFiles:verifyIntegrity?null:cachedFiles}), git=gitHead(root);
     const snapshot=sha256((git||'no-git')+'|'+snapshotOf(index));const current=this.store.latest(wsId);
     const revision=this.store.insertRevision(wsId,snapshot,git,{os:os.platform(),arch:os.arch(),node:process.versions.node});
     if(!current||current.id!==revision||cachedFiles.size!==index.files.length){
@@ -92,7 +92,7 @@ export class Engine {
       return payload;
     }
 
-    const s=this.sync(workspace);
+    const s=this.sync(workspace,{verifyIntegrity:action==='freshness'});
     const base={
       workspace_id:s.wsId,
       revision:s.revision,
@@ -210,7 +210,7 @@ export class Engine {
   }
   verify({workspace,operation='plan',criteria=[],changed=[],worker_name,artifact,allow_stale}={}){
     const compact=getCompactMode();
-    const s=this.sync(workspace);
+    const s=this.sync(workspace,{verifyIntegrity:operation!=='plan'});
     if(operation==='plan'){
       validateChangedPaths(changed);
       const plan=planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria});
