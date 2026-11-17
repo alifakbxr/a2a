@@ -43,11 +43,23 @@ export class Engine {
       const uniqueTargets=[...new Set(targets)].slice(0,20);
       if(!uniqueTargets.length) throw new Error('Provide file or files for action="skeleton"');
       let totalRaw=0, totalSkel=0;
+      let remainingOutputChars=32000;
+      let omittedFiles=0;
       const items=[];
       for(const rel of uniqueTargets){
         const full=safeFile(s.root,rel);
+        const stat=fs.statSync(full);
+        if(stat.size>160*1024 || remainingOutputChars<100){
+          omittedFiles++;
+          items.push({file:rel,skipped:true,reason:stat.size>160*1024?'source_too_large':'response_budget_exhausted'});
+          continue;
+        }
         const raw=fs.readFileSync(full,'utf8');
-        const skeleton=skeletonizeCode(raw,path.extname(rel));
+        const wholeSkeleton=skeletonizeCode(raw,path.extname(rel));
+        const cap=Math.min(6000,remainingOutputChars);
+        const skeleton=wholeSkeleton.length>cap?wholeSkeleton.slice(0,cap):wholeSkeleton;
+        const truncated=skeleton.length<wholeSkeleton.length;
+        remainingOutputChars-=skeleton.length;
         const rawTokens=estimateTokens(raw);
         const skelTokens=estimateTokens(skeleton);
         const saved=Math.max(0,rawTokens-skelTokens);
@@ -56,6 +68,8 @@ export class Engine {
           file:rel,
           ...(compact?{}:{raw_tokens:rawTokens,skeleton_tokens:skelTokens,tokens_saved:saved,saved_pct:rawTokens>0?((saved/rawTokens)*100).toFixed(1)+'%':'0%'}),
           skeleton,
+          truncated,
+          ...(truncated?{warning:'Preview truncated. Do not infer complete code behavior from this excerpt.'}:{}),
         });
       }
       const totalSaved=Math.max(0,totalRaw-totalSkel);
@@ -67,6 +81,9 @@ export class Engine {
         summary:{
           raw_tokens:totalRaw,
           skeleton_tokens:totalSkel,
+          estimated_preview_only:true,
+          omitted_files:omittedFiles,
+          truncated_files:items.filter(x=>x.truncated).length,
           ...(compact?{}:{tokens_saved:totalSaved,saved_pct:totalRaw>0?((totalSaved/totalRaw)*100).toFixed(1)+'%':'0%'}),
         },
         ...(compact?{compact:true}:{}),
