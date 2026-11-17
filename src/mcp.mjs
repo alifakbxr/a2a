@@ -4,7 +4,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import {Engine} from './engine.mjs';
 import {getListedTools,validateArgs} from './tools.mjs';
-import {dataDir,getA2AMode,getCompactMode,getAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces} from './security.mjs';
+import {dataDir,getA2AMode,getCompactMode,getAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces,requireAuthorizedWorkspace} from './security.mjs';
 import {getSessionTokenUsage} from './tokens.mjs';
 
 const server={name:'a2a',version:'2.0.0'}, engine=new Engine();
@@ -21,6 +21,15 @@ const RESOURCES = [
   {uri:'a2a://side-questions',name:'A2A Side Questions',description:'Recorded Antigravity side questions (/btw) and exploration notes.',mimeType:'application/json'},
 ];
 
+function getActiveSession(){
+  try{
+    const file=path.join(engine.store.base,'active-session.json');
+    if(!fs.existsSync(file))return null;
+    const active=JSON.parse(fs.readFileSync(file,'utf8'))?.latest;
+    const workspace=active?.workspacePaths?.[0] || active?.cwd;
+    return active?.conversationId && workspace ? {conversationId:active.conversationId,workspace} : null;
+  }catch{return null}
+}
 function readResource(uri){
   if(uri==='a2a://status'){
     return {
@@ -35,27 +44,21 @@ function readResource(uri){
     };
   }
   if(uri==='a2a://tokens/session'){
-    return getSessionTokenUsage(null,{dataDirPath:engine.store.base})||{status:'unavailable',reason:'No active transcript found'};
+    const active=getActiveSession();
+    if(!active)return {status:'unavailable',reason:'No active session found'};
+    requireAuthorizedWorkspace(active.workspace);
+    return getSessionTokenUsage(active.conversationId,{workspace:active.workspace,dataDirPath:engine.store.base})||{status:'unavailable',reason:'No session transcript found'};
   }
   if(uri==='a2a://side-questions'){
-    return {
-      side_questions: engine.store.listSideQuestions({ limit: 50 })
-    };
+    const active=getActiveSession();
+    if(!active?.conversationId || !active?.workspace) return {status:'no_active_session',side_questions:[]};
+    const root=requireAuthorizedWorkspace(active.workspace);
+    const wsId=engine.store.register(root);
+    return {side_questions:engine.store.listSideQuestions({workspaceId:wsId,conversationId:active.conversationId,limit:20})};
   }
   if(uri==='a2a://workspace/summary'){
-    let activeWs=null;
-    try{
-      const sf=path.join(engine.store.base,'active-session.json');
-      if(fs.existsSync(sf)){
-        const sd=JSON.parse(fs.readFileSync(sf,'utf8'));
-        activeWs=sd?.latest?.workspacePaths?.[0]||null;
-      }
-    }catch{}
-    if(!activeWs){
-      const candidates=[...loadAllowlist(),...loadAntigravityWorkspaces()];
-      activeWs=candidates[0]||null;
-    }
-    if(!activeWs)return {status:'no_active_workspace',reason:'Authorize or open a workspace first.'};
+    const activeWs=getActiveSession()?.workspace;
+    if(!activeWs)return {status:'no_active_workspace',reason:'Open an authorized workspace in a session first.'};
     return engine.context({workspace:activeWs,action:'inspect'});
   }
   throw Object.assign(new Error('Resource not found: '+String(uri||'')),{code:-32002});
