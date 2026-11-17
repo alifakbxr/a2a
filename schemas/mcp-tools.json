@@ -1,0 +1,222 @@
+{
+  "schema_version": "1.0.0",
+  "tools": [
+    {
+      "name": "verifykit_context",
+      "description": "Read-only source-backed project index, symbol relationships, capabilities and freshness. No source text or secrets are returned; does not replace native Antigravity file search.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workspace"
+        ],
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Absolute path of a locally authorized workspace. Authorize with verifykit CLI first."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "inspect",
+              "query",
+              "freshness",
+              "tokens"
+            ],
+            "default": "inspect"
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 40
+          }
+        }
+      }
+    },
+    {
+      "name": "verifykit_impact",
+      "description": "Analyze changes and possible impacted features/tests using a bounded, provenance-aware static graph. Derived relationships are labeled; never claims full coverage.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workspace"
+        ],
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Absolute path of a locally authorized workspace. Authorize with verifykit CLI first."
+          },
+          "changed": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "maxItems": 200
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          }
+        }
+      }
+    },
+    {
+      "name": "verifykit_verify",
+      "description": "Plan risk-aware checks for native Antigravity tools or assess existing JUnit/TAP test artifacts. Never executes commands and never labels unrun tests as passed.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workspace",
+          "operation"
+        ],
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Absolute path of a locally authorized workspace. Authorize with verifykit CLI first."
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "assess"
+            ]
+          },
+          "changed": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "maxItems": 200
+          },
+          "criteria": {
+            "type": "array",
+            "maxItems": 40,
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "maxLength": 160
+                    },
+                    "artifact": {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    "test_name": {
+                      "type": "string",
+                      "maxLength": 160,
+                      "description": "Exact testcase name to bind to criterion, or * for entire report."
+                    },
+                    "blocked": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "maxLength": 240
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "verifykit_evidence",
+      "description": "Inspect evidence/runs/incidents, or record hypotheses and incident metadata. Evidence is revision-bound and cannot attest origin cryptographically.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workspace",
+          "operation"
+        ],
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Absolute path of a locally authorized workspace. Authorize with verifykit CLI first."
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "list",
+              "runs",
+              "incidents",
+              "record_incident",
+              "add_hypothesis",
+              "hypotheses"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "root_cause": {
+            "type": "string",
+            "maxLength": 1400
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "maxItems": 200
+          },
+          "criteria": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 40
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20
+          },
+          "hypothesis": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "experiment": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "incident_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

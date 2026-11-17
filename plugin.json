@@ -1,0 +1,17 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "a2a",
+  "displayName": "A2A (Agent to Alif)",
+  "version": "2.0.0",
+  "description": "A2A (Agent to Alif): Smart local-first engineering intelligence, impact analysis, token telemetry & verification for Antigravity.",
+  "logo": "assets/logo.svg",
+  "author": { "name": "Alif Akbar" },
+  "license": "MIT",
+  "repository": "https://github.com/alifakbxr/a2a",
+  "keywords": ["a2a", "agent-to-alif", "engineering", "verification", "code-intelligence", "regression", "local-first", "tokens"],
+  "suggestedPrompts": [
+    "Use A2A to analyze the impact of my code changes",
+    "Check token telemetry and context savings with A2A",
+    "Toggle A2A between Always-On and On-Demand modes"
+  ]
+}
