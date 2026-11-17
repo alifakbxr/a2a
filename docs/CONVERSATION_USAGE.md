@@ -2,7 +2,7 @@
 
 ## What the numbers mean
 
-A2A reports in Indonesian by default so the figures can be understood without reading JSON. **No A2A install date is required.** The report reads existing Antigravity transcript files locally; conversations created long before the plugin was installed can appear.
+A2A reports in clear, accessible **English by default** so people around the world can read the figures without understanding JSON. **No A2A install date is required.** The report reads existing Antigravity transcript files locally; conversations created long before the plugin was installed can appear.
 
 Three types of values are deliberately separated:
 
