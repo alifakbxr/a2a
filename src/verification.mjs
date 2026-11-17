@@ -116,6 +116,7 @@ export function freshness(store,wsId,root,revision){const items=store.all('SELEC
 export const CANDIDATE_ARTIFACTS = [
   'report.xml',
   'junit.xml',
+  'report.xml',
   'test-results.xml',
   'test-report.xml',
   'junit-report.xml',
