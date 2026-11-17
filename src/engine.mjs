@@ -139,11 +139,22 @@ export class Engine {
       base.coverage.estimated_source_tokens=wsTokens.total_estimated_tokens;
       base.coverage.tokens_saved_ratio=wsTokens.efficiency.savings_ratio;
       const trimmedWsTokens=compact?{...wsTokens,top_consumers:wsTokens.top_consumers.slice(0,5)}:wsTokens;
+      let sessionTokens=null;
+      try {
+        const active=JSON.parse(fs.readFileSync(path.join(this.store.base,'active-session.json'),'utf8'))?.latest;
+        const activeId=active?.conversationId;
+        const activeWs=active?.workspacePaths||[];
+        const callerMatches=!conversation_id || conversation_id===activeId;
+        const pathMatches=!transcript_path || fs.realpathSync(transcript_path)===fs.realpathSync(active?.transcriptPath||'');
+        if(activeId && callerMatches && pathMatches && activeWs.some(w=>{try{return requireAuthorizedWorkspace(w)===s.root}catch{return false}})){
+          sessionTokens=getSessionTokenUsage(activeId,{workspace:s.root,dataDirPath:this.store.base});
+        }
+      }catch{}
       return {
         ...base,
         workspace_tokens:trimmedWsTokens,
-        session_tokens:getSessionTokenUsage(conversation_id,{transcriptPath:transcript_path,workspace:s.root,dataDirPath:this.store.base}),
-        ...(compact?{compact:true}:{}),
+        session_tokens:sessionTokens,
+        ...(compact?{compact:true}:{session_note:'Session usage is only available for the active authorized conversation.'}),
       };
     }
     throw new Error('Unknown context action');
