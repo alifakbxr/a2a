@@ -149,6 +149,7 @@ export function nativeRunProvenance(store,root,changedFiles,relReport,reportHash
   // This is a local hook-derived record, not a cryptographic attestation.
   if(!changedFiles.length || !store?.base)return {matched:false,reason:'No changed source files were bound to the native run'};
   try{
+    const sameWorkspace=(a,b)=>a&&b&&fs.realpathSync(a)===fs.realpathSync(b);
     const file=path.join(store.base,'last-test-run.json');
     const st=fs.statSync(file);
     if(!st.isFile() || st.size>128*1024)return {matched:false,reason:'Native run metadata is unavailable'};
@@ -156,10 +157,10 @@ export function nativeRunProvenance(store,root,changedFiles,relReport,reportHash
     const active=JSON.parse(fs.readFileSync(path.join(store.base,'active-session.json'),'utf8'))?.latest;
     if(!active?.conversationId || active.conversationId!==record.conversationId
        || !Array.isArray(active.workspacePaths)
-       || !active.workspacePaths.some(w=>path.resolve(w)===path.resolve(root))){
+       || !active.workspacePaths.some(w=>{try{return sameWorkspace(w,root)}catch{return false}})){
       return {matched:false,reason:'Native-run record is not bound to the active workspace session'};
     }
-    if(record.kind!=='native-test-tool-completed'||record.succeeded!==true||path.resolve(record.workspace||'')!==path.resolve(root)){
+    if(record.kind!=='native-test-tool-completed'||record.succeeded!==true||!sameWorkspace(record.workspace,root)){
       return {matched:false,reason:'No successful native test run recorded for this workspace'};
     }
     const age=Date.now()-Date.parse(record.updatedAt||'');
