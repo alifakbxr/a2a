@@ -402,7 +402,8 @@ test('engine: skeleton action, measured telemetry, and compact mode output strip
   assert.equal(skel.files.length,1);
   assert.ok(!skel.files[0].skeleton.includes('comment to strip'));
   assert.ok(skel.files[0].skeleton.includes('https://example.com//keep'));
-  assert.ok(skel.summary.raw_tokens>=skel.summary.skeleton_tokens);
+  assert.ok(skel.summary.estimated_source_tokens>=skel.summary.estimated_preview_tokens);
+  assert.equal(skel.summary.tokens_saved,undefined);
 
   const tok=e.context({workspace:root,action:'tokens'});
   assert.ok(tok.workspace_tokens.compact_index_tokens>0);
