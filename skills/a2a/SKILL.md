@@ -1,83 +1,26 @@
 ---
 name: a2a
-description: A2A - Intelligent impact analysis, code skeletonizer, token usage telemetry, regression memory & test verification. Trigger with /a2a or when the user mentions A2A.
+description: A2A plugin management, scoped code intelligence, verification, and token diagnostics; use for explicit /a2a requests.
 ---
 
-# A2A Skill
+# A2A · Native-first
 
-Use this skill when the user asks to manage A2A, toggle between Always-On and On-Demand modes, enable/disable Compact mode, run impact analysis, skeletonize files, detect token usage/savings, refresh the MCP server, or verify tests on a project.
+A2A is optional intelligence for Antigravity, not a replacement for its native editor, test runner, browser or agents.
 
-## Chat Commands & Fast Actions
+## Modes
+- `/a2a on-demand` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs mode on-demand` (default)
+- `/a2a always-on` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs mode always-on` (adaptive, opt-in)
+- `/a2a toggle` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs toggle`
+- `/a2a compact [on|off|toggle|status]` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs compact <value>`
+- `/a2a status` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs doctor`
+- `/a2a tokens` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs tokens /absolute/workspace`
 
-You can control A2A directly through chat commands:
+## Always-On decision policy
+1. **Skip** A2A for trivial, docs, styles, isolated edits, analysis-only or when native tools already answer the question.
+2. For cross-module or high-risk changes, call `a2a_impact` **once** with `summary=true`. If its output is sufficient, do not call extra A2A context tools. Request full detail only when necessary; uncertainty remains mandatory.
+3. For unfamiliar symbols, use `a2a_context(action="query", query="...")`. Use `action="skeleton"` only for preliminary navigation; never repeat the same content with a native full-file read unless implementations are needed.
+4. For testable behavior changes, run relevant native tests then assess the existing machine report **once** via `a2a_verify(operation="assess", criteria=[...])`. Skip forced machine reports for research/documentation-only tasks.
+5. For worker code handoffs, use `a2a_verify(operation="verify_handoff", criteria=[...])` on relevant evidence. Native Teamwork orchestration remains responsible for choosing workers.
+6. Do not invoke token telemetry, repeat output summaries, or append an A2A footer unless explicitly requested. Preserve errors, uncertainty, freshness and unresolved checks.
 
-- `/a2a toggle` or `/a2a-toggle`: Toggle between `always-on` and `on-demand`.
-- `/a2a always-on` or `/a2a-always-on`: Set operating mode to `always-on`.
-- `/a2a on-demand` or `/a2a-on-demand`: Set operating mode to `on-demand`.
-- `/a2a compact [on|off|toggle|status]` or `/a2a-compact`: Control A2A Compact token compression.
-- `/a2a status` or `/a2a-status`: View active mode, compact mode, auto-trust policy, health, and trusted workspaces.
-- `/a2a tokens`: Inspect workspace token footprint and Antigravity session consumption.
-- `/a2a skeleton <file...>`: Produce comment-stripped code skeletons with measured token savings.
-- `/a2a refresh`: Hot-reload the `a2a_a2a` MCP server via the Antigravity Language Server RPC.
-
-### Handling Chat Mode & CLI Commands
-
-When the user gives any of the commands above:
-1. Execute the corresponding valid CLI command:
-   - Mode: `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs mode <always-on|on-demand>` or `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs toggle`
-   - Compact: `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs compact <on|off|toggle|status>`
-   - Status / Doctor: `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs doctor`
-   - Tokens: `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs tokens /absolute/path [--conv <id>]`
-   - Skeleton: `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs skeleton /absolute/path <relative-file...>`
-   - Refresh MCP: `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs refresh`
-2. Confirm the active state or measured result clearly without displaying personal user names.
-
-## Mode Control
-
-A2A operates in two modes:
-- **`always-on`**: The agent automatically checks `a2a_impact` before editing code, uses `a2a_context`, evaluates `a2a_verify` after tests, and reports verifiable mode/measured telemetry.
-- **`on-demand`**: A2A tools are only invoked when explicitly requested by the user.
-
-### IDE UI Toggle Button
-Enable or disable A2A completely via Antigravity IDE Customizations:
-- **[A2A](customization://a2a)**
-
-## Common Operations
-
-### 1. Token Telemetry & Context Savings (`a2a_context action="tokens"`)
-Detect source tokens in project, active Antigravity session consumption, and measured context savings:
-```bash
-node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs tokens /absolute/path
-```
-
-### 2. Code Skeletonizer (`a2a_context action="skeleton"`)
-Strip comments cleanly using A2A's lexer-safe skeletonizer while preserving strings, templates, and regexes:
-- MCP Tool: `a2a_context` with `action="skeleton"`, `workspace`, and `file` or `files`.
-
-### 3. Pre-Edit Impact Analysis (`a2a_impact`)
-Analyze affected files, features, and test candidates before changing code:
-- MCP Tool: `a2a_impact` with `workspace` and `changed: ["path/to/file"]`.
-- When `risk="high"` or edits touch auth, DB, file uploads, payments, or APIs: audit OWASP Top 10 (input validation, ownership/IDOR, authz, SQLi/XSS, secret hygiene) and run the project's dependency vulnerability scan (`npm audit`, `composer audit`, `govulncheck ./...`, `pip-audit`, `cargo audit`).
-
-### 4. Code Relationships & Symbols (`a2a_context`)
-Query symbol declarations and call relations:
-- MCP Tool: `a2a_context` with `action="query"`, `query="functionName"`.
-
-### 5. Verification Assessment & DevTools (`a2a_verify`)
-Assess test evidence (JUnit XML, TAP, `a2a-test-report-v1` JSON) against acceptance criteria:
-- MCP Tool: `a2a_verify` with `operation="assess"`, `criteria=[{"id": "c1", "artifact": "report.xml", "test_name": "*"}]`.
-- For web/HTTP applications, use Chrome DevTools MCP (`list_console_messages`, `list_network_requests`, `evaluate_script`, `take_snapshot`) to verify zero uncaught console errors and expected HTTP responses.
-
-### 6. Large Scope & Antigravity /teamwork Handoff
-When `a2a_impact` flags `teamwork_advisory.large_scope=true` or when a task touches multiple architectural layers:
-- Advise the user to execute `/teamwork` for parallel multi-agent execution.
-- Pass A2A's pre-computed affected files, dependencies, and test targets into the teamwork prompt so explorers and workers bypass redundant token-heavy file scans.
-
-### 7. Teamwork & Subagent Verification Gate (`a2a_verify operation="verify_handoff"`)
-Ensure all deliverables produced by parallel teamwork workers or subagents are verified with machine evidence before acceptance:
-- Execute `a2a_verify` with `operation="verify_handoff"`, `worker_name="<worker-id>"`, and optional `artifact="report.xml"`:
-  ```bash
-  node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs verify-handoff /absolute/workspace --worker worker-1
-  ```
-- Freshness Rule: test report artifacts generated prior to the subagent's latest file edits are rejected as `stale`.
-- Reject any subagent handoff claiming completion without machine-verifiable test artifacts (0 failures, >0 assertions).
+Use `a2a_evidence` only when incident history or artifact history materially helps. Token savings in A2A are *source/output size estimates*, not measured task-level reductions. See [evaluation protocol](../../docs/TOKEN_EFFICIENCY.md).
