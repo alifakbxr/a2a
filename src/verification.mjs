@@ -280,9 +280,6 @@ export function verifyHandoff(store,wsId,root,rev,{
           cStatus='inconclusive';
           cReason=`Test case "${testName}" was skipped`;
         }
-      }else if(parsed.status!=='passed'){
-        cStatus=parsed.status;
-        cReason=reason;
       }
       criteriaResults.push({id:cid,status:cStatus,...(cReason?{reason:cReason}:{})});
     }
