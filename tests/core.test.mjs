@@ -176,7 +176,8 @@ test('token diagnostics do not invent net savings in workspace',()=>withEngine((
   assert.equal(r.session_usage.status,'not_available');
   assert.equal(r.coverage.estimated_workspace_source_tokens,r.workspace_tokens.total_estimated_tokens);
   const impact=e.impact({workspace:root,changed:['src/auth.js']});
-  assert.ok(impact.tokens_affected>0);
+  assert.ok(impact.estimated_source_tokens_affected>0);
+  assert.equal(impact.source_token_estimate_only,true);
 }));
 
 test('security: upward authorization bypass is blocked and protected roots are denied',()=>{
