@@ -395,8 +395,13 @@ function resolveTranscriptTarget({ conversationId = null, transcriptPath = null,
 
   if (transcriptPath && typeof transcriptPath === 'string') {
     try {
-      const resolved = path.resolve(transcriptPath);
-      if (resolved.endsWith('transcript.jsonl') && fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+      const resolved = fs.realpathSync(path.resolve(transcriptPath));
+      const inBrain = getBrainRoots().some(brain=>{
+        const canonical=fs.existsSync(brain)?fs.realpathSync(brain):path.resolve(brain);
+        const rel=path.relative(canonical,resolved);
+        return rel && rel!=='.' && rel!=='..' && !rel.startsWith('..'+path.sep) && !path.isAbsolute(rel);
+      });
+      if (inBrain && path.basename(resolved)==='transcript.jsonl' && fs.statSync(resolved).isFile()) {
         const inferredId = cleanId || sanitizeConversationId(path.basename(path.dirname(path.dirname(path.dirname(resolved))))) || 'explicit';
         return { convId: inferredId, logFile: resolved, source: 'explicit-transcript-path' };
       }
@@ -446,26 +451,7 @@ function resolveTranscriptTarget({ conversationId = null, transcriptPath = null,
     }
   } catch {}
 
-  // Fallback: scan brain directories by mtimeMs, skipping subagent transcripts first
-  const candidates = [];
-  for (const brainDir of getBrainRoots()) {
-    try {
-      if (!fs.existsSync(brainDir)) continue;
-      for (const d of fs.readdirSync(brainDir)) {
-        const sid = sanitizeConversationId(d);
-        if (!sid) continue;
-        const logFile = path.join(brainDir, sid, '.system_generated', 'logs', 'transcript.jsonl');
-        try {
-          const st = fs.statSync(logFile);
-          if (st.isFile()) candidates.push({ convId: sid, logFile, mtimeMs: st.mtimeMs });
-        } catch {}
-      }
-    } catch {}
-  }
-  candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
-  const nonSubagent = candidates.find(c => !isSubagentTranscript(c.logFile));
-  if (nonSubagent) return { convId: nonSubagent.convId, logFile: nonSubagent.logFile, source: 'latest-primary-transcript' };
-  if (candidates.length > 0) return { convId: candidates[0].convId, logFile: candidates[0].logFile, source: 'latest-transcript-fallback' };
+  // Never guess the most recent transcript: it may belong to another session.
   return null;
 }
 
@@ -474,6 +460,9 @@ export function getSessionTokenUsage(conversationId = null, opts = {}) {
   if (!target || !fs.existsSync(target.logFile)) return null;
 
   try {
+    if(fs.statSync(target.logFile).size > 8*1024*1024){
+      return {status:'unavailable',reason:'Transcript is too large for safe synchronous parsing',source:target.source};
+    }
     const content = fs.readFileSync(target.logFile, 'utf8');
     const lines = content.split('\n').filter(Boolean);
 
@@ -518,8 +507,13 @@ export function getSessionTokenUsage(conversationId = null, opts = {}) {
       } catch {}
     }
 
-    const totalInput = uncachedInputTokens + cacheReadTokens;
-    const cacheHitRatio = totalInput > 0 ? ((cacheReadTokens / totalInput) * 100).toFixed(1) + '%' : '0%';
+    // Antigravity CLI's documented usage counts cache_read_tokens inside input_tokens.
+    // Internal PLANNER_RESPONSE fields are undocumented; report an estimate and warn on
+    // inconsistent examples instead of silently double-counting cached reads.
+    const cacheFieldsConsistent = cacheReadTokens <= uncachedInputTokens;
+    const totalInput = uncachedInputTokens;
+    const estimatedUncachedInput = cacheFieldsConsistent ? Math.max(0,totalInput-cacheReadTokens) : null;
+    const cacheHitRatio = totalInput > 0 && cacheFieldsConsistent ? ((cacheReadTokens / totalInput) * 100).toFixed(1) + '%' : null;
 
     return {
       conversation_id: target.convId,
@@ -529,18 +523,22 @@ export function getSessionTokenUsage(conversationId = null, opts = {}) {
       user_turns: userTurns,
       latest_model: lastModel,
       current_context_tokens: currentContextTokens,
-      input_tokens: uncachedInputTokens,
-      uncached_input_tokens: uncachedInputTokens,
+      input_tokens: totalInput,
+      uncached_input_tokens: estimatedUncachedInput,
       cache_read_tokens: cacheReadTokens,
       output_tokens: outputTokens,
       cache_hit_ratio: cacheHitRatio,
-      total_tokens_consumed: uncachedInputTokens + outputTokens + cacheReadTokens,
+      total_tokens_consumed: cacheFieldsConsistent ? totalInput + outputTokens : null,
+      total_tokens_estimated: true,
+      warning: cacheFieldsConsistent
+        ? 'Internal transcript usage is an estimate; native CLI usage.total_tokens is authoritative.'
+        : 'cache_read_tokens exceeds input_tokens in internal transcript; no reliable session total available.',
       tool_calls: {
         total: totalToolCalls,
         a2a_calls: a2aToolCalls,
         read_file_calls: readFileCalls,
       },
-      cost_estimate: estimateSessionCost({ uncachedInputTokens, cacheReadTokens, outputTokens }),
+      cost_estimate: cacheFieldsConsistent ? estimateSessionCost({ uncachedInputTokens:estimatedUncachedInput, cacheReadTokens, outputTokens }) : null,
     };
   } catch {
     return null;
