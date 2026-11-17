@@ -76,8 +76,7 @@ export function analyzeImpact(store,wsId,workspace,{changed=[],depth=3}={}){
   const nodes=rows.map(n=>({id:n.id,kind:n.kind,label:n.label,path:n.file_path,basis:n.basis}));
   const relatedTests=nodes.filter(n=>n.kind==='test').map(n=>n.path);
   const allTests=store.all("SELECT file_path FROM nodes WHERE workspace_id=? AND kind='test' LIMIT 150",wsId).map(x=>x.file_path);
-  const indexedPaths=new Set(store.all('SELECT path FROM files WHERE workspace_id=?',wsId).map(row=>row.path));
-  const missingChanged=uniquePaths.filter(p=>!indexedPaths.has(p));
+  const missingChanged=uniquePaths.filter(p=>!store.get('SELECT 1 AS present FROM files WHERE workspace_id=? AND path=?',wsId,p));
   const fallback=rankFallbackTests(uniquePaths,allTests);
   const risks=[];
   if(uniquePaths.some(p=>isSensitiveFeature(p))||nodes.some(n=>isSensitiveFeature(n.label)))risks.push('security-or-state-sensitive');
