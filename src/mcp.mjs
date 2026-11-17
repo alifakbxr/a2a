@@ -86,6 +86,7 @@ function route(req){
       }
       const text=JSON.stringify(result);
       if(!text)throw new Error('Empty tool response');
+      if(Buffer.byteLength(text,'utf8')>64*1024)throw new Error('MCP response exceeds 64 KiB. Narrow the file list, query, or diff range.');
       return {content:[{type:'text',text}],isError:false};
     }
     case 'resources/list':return {resources:RESOURCES};
@@ -93,7 +94,9 @@ function route(req){
       const uri=req.params?.uri;
       if(typeof uri!=='string'||!uri)throw Object.assign(new Error('Missing resource uri'),{code:-32602});
       const payload=readResource(uri);
-      return {contents:[{uri,mimeType:'application/json',text:JSON.stringify(payload,null,2)}]};
+      const content=JSON.stringify(payload);
+      if(Buffer.byteLength(content,'utf8')>64*1024)throw new Error('MCP resource response exceeds 64 KiB');
+      return {contents:[{uri,mimeType:'application/json',text:content}]};
     }
     case 'prompts/list':return {prompts:[]};
     default:throw Object.assign(new Error('Method not found'),{code:-32601});
