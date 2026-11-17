@@ -20,16 +20,19 @@ export class Store {
     }
     this.file=a2aFile;
     this.db=new DatabaseSync(this.file);
-    this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=4000;'+DDL);
-    try{fs.chmodSync(this.file,0o600)}catch{}
+    this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=4000;');
     this.#ensureColumn('workspaces','current_revision_id','TEXT');
     this.#ensureColumn('files','mtime_ms','REAL');
     this.#ensureColumn('artifact_versions','workspace_id','TEXT');
+    this.db.exec(DDL);
+    try{fs.chmodSync(this.file,0o600)}catch{}
     this.db.prepare("INSERT OR IGNORE INTO meta(key,value) VALUES('schema_version','1')").run();
     const actual=this.db.prepare("SELECT value FROM meta WHERE key='schema_version'").get()?.value;
     if(actual!=='1') throw new Error('Incompatible A2A database schema '+actual);
   }
   #ensureColumn(table,col,type){
+    const tableExists=this.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table);
+    if(!tableExists) return;
     const cols=this.db.prepare(`PRAGMA table_info(${table})`).all();
     if(!cols.some(c=>c.name===col)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
   }
