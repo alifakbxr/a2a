@@ -87,6 +87,7 @@ test('hook.mjs fails open on malformed stdin and handles PostToolUse',()=>{
     });
     assert.equal(resPost.status,0);
     assert.equal(resPost.stdout.trim(),'{}');
-    assert.ok(fs.existsSync(path.join(temp,'pdata','last-test-run.json')));
+    // No trusted workspace -> never create a global native-run record.
+    assert.equal(fs.existsSync(path.join(temp,'pdata','last-test-run.json')),false);
   }finally{fs.rmSync(temp,{recursive:true,force:true})}
 });
