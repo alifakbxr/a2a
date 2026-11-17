@@ -5,7 +5,7 @@ import {
   getAutoTrustMode,setAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces,
   authorizeWorkspace,revokeWorkspace,dataDir,requireAuthorizedWorkspace
 } from '../src/security.mjs';
-import {getSessionTokenUsage} from '../src/tokens.mjs';
+import {readOfficialAgyUsageFile} from '../src/tokens.mjs';
 
 const [cmd,...argv]=process.argv.slice(2);
 function print(obj){process.stdout.write(JSON.stringify(obj,null,2)+'\n')}
@@ -19,7 +19,7 @@ Commands:\n  doctor                     show runtime, workspace permissions, act
   allow <absolute-workspace> authorize one project manually
   revoke <absolute-workspace> revoke one project
   inspect <workspace>        index project & show code graph coverage
-  tokens [workspace] [--conv <id>] inspect source estimates and session token diagnostics
+  tokens [workspace] [--usage-file output.json] inspect source sizes and optional real agy CLI usage
   skeleton <workspace> <file...>   strip comments via lexer and estimate preview size reduction
   context <workspace> <query> query symbols and feature relations
   impact <workspace> [paths...] analyze impact & calculate tokens affected
@@ -50,7 +50,7 @@ try{
       allowlist:allowlistPath(),
       allowed_workspaces:loadAllowlist(),
       antigravity_workspaces:loadAntigravityWorkspaces(),
-      session_tokens:getSessionTokenUsage(null,{dataDirPath:dataDir()}),
+      session_usage:{status:'not_collected',reason:'Doctor does not read internal conversation transcripts.'},
       network:'no outbound requests',
       shell_execution:'disabled',
     });
@@ -134,13 +134,18 @@ try{
     try{
       if(cmd==='inspect'){result=engine.context({workspace:argv[0]});}
       else if(cmd==='tokens'){
-        let ws=null, convId=null;
+        let ws=null,usageFile=null;
         for(let i=0;i<argv.length;i++){
-          if(argv[i]==='--conv'&&argv[i+1]){convId=argv[++i];}
-          else if(argv[i].startsWith('--conv=')){convId=argv[i].slice(7);}
+          if(argv[i]==='--usage-file'&&argv[i+1]){usageFile=argv[++i];}
+          else if(argv[i].startsWith('--usage-file=')){usageFile=argv[i].slice(13);}
+          else if(argv[i].startsWith('--'))throw new Error('Unknown tokens option: '+argv[i]);
           else if(!ws){ws=argv[i];}
+          else throw new Error('Unexpected tokens argument: '+argv[i]);
         }
-        result=engine.context({workspace:ws||process.cwd(),action:'tokens',conversation_id:convId});
+        result=engine.context({workspace:ws||process.cwd(),action:'tokens'});
+        if(usageFile){
+          result.session_usage=readOfficialAgyUsageFile(usageFile);
+        }
       }
       else if(cmd==='skeleton'){
         const workspace=argv[0];
