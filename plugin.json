@@ -10,8 +10,8 @@
   "repository": "https://github.com/alifakbxr/a2a",
   "keywords": ["a2a", "agent-to-alif", "engineering", "verification", "code-intelligence", "regression", "local-first", "tokens"],
   "suggestedPrompts": [
-    "Use A2A to analyze the impact of my code changes",
-    "Check token telemetry and context savings with A2A",
-    "Toggle A2A between Always-On and On-Demand modes"
+    "/a2a-toggle - Toggle A2A between Always-On and On-Demand modes",
+    "/a2a-status - Check A2A health, active mode & trusted workspaces",
+    "Check token telemetry and context savings with A2A"
   ]
 }

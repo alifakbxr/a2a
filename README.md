@@ -38,6 +38,20 @@ Antigravity automatically discovers and activates the plugin instantly.
 
 ## Setup & Configuration
 
+### Direct Chat Commands (Fastest)
+
+You can manage and toggle A2A directly in your Antigravity chat:
+
+| Command | Action |
+|---|---|
+| `/a2a-toggle` *(or `/a2a toggle`)* | Quickly switch between **Always-On** and **On-Demand** |
+| `/a2a-always-on` *(or `/a2a always-on`)* | Enable **Always-On** (proactive impact check & verification) |
+| `/a2a-on-demand` *(or `/a2a on-demand`)* | Switch to **On-Demand** (tools run only when requested) |
+| `/a2a-status` *(or `/a2a status`)* | Show current mode, health diagnostics & trusted workspaces |
+| `/a2a tokens` | Show token consumption and context savings |
+
+### CLI Commands (Terminal)
+
 1. Check runtime and permissions:
    ```bash
    node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs doctor

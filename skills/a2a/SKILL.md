@@ -9,6 +9,22 @@ Use this skill when the user asks to manage A2A, toggle between Always-On and On
 
 > **A2A** stands for **Agent to Alif**.
 
+## Chat Commands & Fast Actions
+
+You can control A2A directly through chat commands:
+
+- `/a2a toggle` or `/a2a-toggle`: Toggle between `always-on` and `on-demand`.
+- `/a2a always-on` or `/a2a-always-on`: Set operating mode to `always-on`.
+- `/a2a on-demand` or `/a2a-on-demand`: Set operating mode to `on-demand`.
+- `/a2a status` or `/a2a-status`: View active mode, health, and trusted workspaces.
+- `/a2a tokens`: Inspect workspace token footprint and Antigravity session consumption.
+
+### Handling Chat Mode Changes
+
+When the user gives any of the mode commands above:
+1. Immediately execute the corresponding action via `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs mode <always-on|on-demand|toggle>` or status check.
+2. Confirm the active mode clearly to the user.
+
 ## Mode Control
 
 A2A operates in two modes:
