@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import {safeFile,sha256} from './security.mjs';
 import {uniqueId} from './storage.mjs';
 import {discoverTestCommands,gitChanges} from './scanner.mjs';
+import {proposeRiskTests} from './risk-guidance.mjs';
 
 export function parseArtifact(text, filename){
   const ext=filename.toLowerCase().split('.').at(-1), sample=text.slice(0,1200000);
@@ -73,7 +74,7 @@ export function planVerification({index,impact,criteria=[]}){
     return {id,description:c,status:'not_run',evidence_required:true};
   });
   const checks=discoverTestCommands(index);
-  return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,checks,execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
+  return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,risk_guidance:proposeRiskTests({paths:impact?.changed??[],criteria}),checks,execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
 }
 function aggregate(results){if(results.some(r=>r.status==='failed'))return 'failed';if(results.some(r=>r.status==='blocked'))return 'blocked';if(results.length&&results.every(r=>r.status==='passed'))return 'passed';return 'inconclusive'}
 export function assessVerification(store,wsId,root,rev,criteria){
