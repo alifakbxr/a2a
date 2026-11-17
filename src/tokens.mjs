@@ -332,27 +332,16 @@ export function minifyContext(text) {
 }
 
 /**
- * Approximate USD savings estimate from saved tokens based on configurable rate.
+ * A2A cannot infer billable savings from tool/source-size estimates. Retained
+ * as a compatibility helper but deliberately does not fabricate a USD amount.
  */
-export function estimateCostSavings(tokensSaved, ratePerMillion = 3.50) {
-  if (!tokensSaved || tokensSaved <= 0) return '$0.00';
-  const val = (tokensSaved / 1_000_000) * ratePerMillion;
-  return `$${val.toFixed(4)}`;
-}
+export function estimateCostSavings() { return null; }
 
-export function estimateSessionCost({ uncachedInputTokens = 0, cacheReadTokens = 0, outputTokens = 0 } = {}) {
-  const inputRate = 2.50;
-  const cacheRate = 0.25;
-  const outputRate = 10.00;
-  const usd =
-    (uncachedInputTokens / 1_000_000) * inputRate +
-    (cacheReadTokens / 1_000_000) * cacheRate +
-    (outputTokens / 1_000_000) * outputRate;
+export function estimateSessionCost() {
   return {
-    approximate: true,
-    estimated_usd: `$${usd.toFixed(4)}`,
-    rates_per_million_usd: { uncached_input: inputRate, cache_read: cacheRate, output: outputRate },
-    note: 'Approximate estimate using configurable blended rates; actual billing varies by model and tier.',
+    approximate:false,
+    estimated_usd:null,
+    reason:'Model-specific price, billing plan, and verified token accounting were not provided.',
   };
 }
 
