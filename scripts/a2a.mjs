@@ -3,7 +3,7 @@ import {Engine} from '../src/engine.mjs';
 import {
   allowlistPath,settingsPath,getA2AMode,setA2AMode,getCompactMode,setCompactMode,
   getAutoTrustMode,setAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces,
-  authorizeWorkspace,revokeWorkspace,dataDir
+  authorizeWorkspace,revokeWorkspace,dataDir,requireAuthorizedWorkspace
 } from '../src/security.mjs';
 import {getSessionTokenUsage} from '../src/tokens.mjs';
 
@@ -179,8 +179,8 @@ try{
           else if(argv[i].startsWith('--parent=')){parentId=argv[i].slice(9);}
           else if(!ws&&!argv[i].startsWith('-')){ws=argv[i];}
         }
-        let wsId=null;
-        if(ws){try{wsId=engine.store.register(normalizeWorkspace(ws));}catch{}}
+        const root=requireAuthorizedWorkspace(ws||process.cwd());
+        const wsId=engine.store.register(root);
         const items=engine.store.listSideQuestions({workspaceId:wsId,conversationId:convId,parentConversationId:parentId});
         result={count:items.length,side_questions:items};
       }
@@ -188,13 +188,16 @@ try{
         const sub=argv[0]||'list';
         let artifactName=null;
         let convId=null;
+        let workspaceArg=null;
         let v1=null;
         let v2=null;
         const subIsCmd=['list','diff','show','snapshot'].includes(sub);
         const action=subIsCmd?sub:'list';
         const restArgs=subIsCmd?argv.slice(1):argv;
         for(let i=0;i<restArgs.length;i++){
-          if(restArgs[i]==='--conv'&&restArgs[i+1]){convId=restArgs[++i];}
+          if(restArgs[i]==='--workspace'&&restArgs[i+1]){workspaceArg=restArgs[++i];}
+          else if(restArgs[i].startsWith('--workspace=')){workspaceArg=restArgs[i].slice(12);}
+          else if(restArgs[i]==='--conv'&&restArgs[i+1]){convId=restArgs[++i];}
           else if(restArgs[i].startsWith('--conv=')){convId=restArgs[i].slice(7);}
           else if(restArgs[i]==='--v1'&&restArgs[i+1]){v1=Number(restArgs[++i]);}
           else if(restArgs[i].startsWith('--v1=')){v1=Number(restArgs[i].slice(5));}
@@ -212,21 +215,29 @@ try{
           }catch{}
           if(!convId) convId=process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
         }
+        let activeWorkspace=null;
+        try {
+          const sf=path.join(engine.store.base,'active-session.json');
+          const sess=JSON.parse(fs.readFileSync(sf,'utf8'));
+          activeWorkspace=sess?.latest?.workspacePaths?.[0]||null;
+        }catch{}
+        const root=requireAuthorizedWorkspace(workspaceArg||activeWorkspace||process.cwd());
+        const wsId=engine.store.register(root);
         if(action==='list'){
-          const items=engine.store.listArtifactVersions({conversationId:convId,artifactName});
+          const items=engine.store.listArtifactVersions({workspaceId:wsId,conversationId:convId,artifactName});
           result={conversation_id:convId,artifact_name:artifactName||null,count:items.length,versions:items};
         }else if(action==='diff'){
           if(!artifactName)throw new Error('artifact name required for diff (e.g. a2a artifacts diff walkthrough.md)');
-          const diffRes=engine.store.getArtifactDiff({conversationId:convId,artifactName,v1,v2});
+          const diffRes=engine.store.getArtifactDiff({workspaceId:wsId,conversationId:convId,artifactName,v1,v2});
           result={conversation_id:convId,...(diffRes||{artifact_name:artifactName,v1,v2,diff:''})};
         }else if(action==='show'){
           if(!artifactName)throw new Error('artifact name required for show');
-          const row=engine.store.getArtifactVersion({conversationId:convId,artifactName,versionNumber:v1||v2});
+          const row=engine.store.getArtifactVersion({workspaceId:wsId,conversationId:convId,artifactName,versionNumber:v1||v2});
           result=row||{status:'not_found'};
         }else if(action==='snapshot'){
           if(!artifactName)throw new Error('artifact name or path required for snapshot');
           const targetPath=path.isAbsolute(artifactName)?artifactName:path.join(process.env.HOME||'','.gemini/antigravity/brain',convId,artifactName);
-          const snap=engine.store.snapshotArtifact({conversationId:convId,artifactPath:targetPath});
+          const snap=engine.store.snapshotArtifact({workspaceId:wsId,workspaceRoot:root,conversationId:convId,artifactPath:targetPath});
           result={status:'snapshotted',snapshot:snap};
         }
       }
