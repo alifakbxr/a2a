@@ -25,7 +25,7 @@ const BASE_SPECS = [
   {
     name:'impact',
     description:'A2A static impact analysis, reverse dependencies, and affected token metrics.',
-    inputSchema:{type:'object',additionalProperties:false,required:['workspace'],properties:{workspace:ws,changed:paths,depth:{type:'integer',minimum:1,maximum:4}}}
+    inputSchema:{type:'object',additionalProperties:false,required:['workspace'],properties:{workspace:ws,changed:paths,depth:{type:'integer',minimum:1,maximum:4},summary:{type:'boolean',description:'Return a bounded risk/test triage summary while retaining uncertainty and full affected counts.'}}}
   },
   {
     name:'verify',
