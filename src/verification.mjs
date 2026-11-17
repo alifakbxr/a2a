@@ -113,7 +113,7 @@ export function listEvidence(store,wsId,root,currentRevision,{limit=20,id}={}){
 }
 export function freshness(store,wsId,root,revision){const items=store.all('SELECT id,revision_id,criterion_id,status,artifact_path,artifact_sha FROM evidence WHERE workspace_id=? ORDER BY created_at DESC LIMIT 30',wsId);return items.map(x=>{let artifact_intact=false;try{artifact_intact=sha256(fs.readFileSync(safeFile(root,x.artifact_path)))===x.artifact_sha}catch{};return {id:x.id,revision_id:x.revision_id,criterion_id:x.criterion_id,status:x.status,artifact_intact,fresh:x.revision_id===revision&&artifact_intact}})}
 
-const CANDIDATE_ARTIFACTS = [
+export const CANDIDATE_ARTIFACTS = [
   'report.xml',
   'junit.xml',
   'test-results.xml',
