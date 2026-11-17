@@ -2,12 +2,17 @@
 
 ## Public MCP interface
 
-All four tools are exported in `schemas/mcp-tools.json`. Their definitions are generated from `src/tools.mjs`; changes require regenerating the file and rerunning tests. All tools require an explicitly authorized absolute `workspace` path.
+All four primary tools are exported in `schemas/mcp-tools.json`. Their definitions are generated from `src/tools.mjs`; changes require regenerating the file and rerunning tests. All tools require an authorized absolute `workspace` path. Legacy `verifykit_*` aliases remain invokable for backward compatibility and can be listed via `A2A_LEGACY_TOOL_ALIASES=1`.
 
-- **`verifykit_context`** — `inspect` returns workspace identity, revision, graph coverage, detected ecosystem candidates; `query` performs bounded search; `freshness` checks source and report hashes.
-- **`verifykit_impact`** — consumes explicit changed relative paths or Git working-tree changes. Returns affected nodes, possible tests, risk level and uncertainty. Depth is bounded (1–4).
-- **`verifykit_verify`** — `plan` accepts criterion descriptions and returns test runner candidates; `assess` accepts objects `{id, artifact, test_name}`. `test_name` is an **exact** machine-reported test case name or `*` to bind a whole suite. Never use `*` for a narrow criterion just to make verification pass.
-- **`verifykit_evidence`** — `list`, `runs`, `incidents`, `hypotheses` query provenance; `record_incident` and `add_hypothesis` save structured metadata only.
+- **`a2a_context`** — `inspect` returns workspace identity, revision, graph coverage, detected ecosystem candidates, and measured token efficiency; `query` performs bounded search; `freshness` checks source and report hashes; `tokens` reports workspace & session token consumption (accepting optional `conversation_id` / `transcript_path`); `skeleton` returns lexer-safe comment-stripped code previews with measured savings.
+- **`a2a_impact`** — consumes explicit changed relative paths or Git working-tree changes. Returns affected nodes, possible tests, risk level, affected tokens, and uncertainty. Depth is bounded (1–4).
+- **`a2a_verify`** — `plan` accepts criterion descriptions and returns test runner candidates; `assess` accepts objects `{id, artifact, test_name}`. `test_name` is an **exact** machine-reported test case name or `*` to bind a whole suite. Never use `*` for a narrow criterion just to make verification pass.
+- **`a2a_evidence`** — `list`, `runs`, `incidents`, `hypotheses` query provenance; `record_incident` and `add_hypothesis` save structured metadata only.
+
+### MCP Resources
+- `a2a://status` — current mode, compact mode, auto-trust policy, data directory, and authorized workspaces.
+- `a2a://tokens/session` — current Antigravity session token usage and cache hit metrics.
+- `a2a://workspace/summary` — active workspace graph coverage and token summary.
 
 Return statuses include `passed`, `failed`, `blocked`, `inconclusive`, tool-level `error` and read-time `fresh`. Every successful method response includes a source revision where relevant. Commands suggested by `plan` are **not** guaranteed safe: inspect and run them via native permissions.
 
@@ -16,17 +21,18 @@ Return statuses include `passed`, `failed`, `blocked`, `inconclusive`, tool-leve
 | Table | Responsibility | Lifecycle |
 | --- | --- | --- |
 | `meta` | schema version (initially 1) | updated only by explicit migration |
-| `workspaces` | canonical root and isolated workspace ID | user-managed |
-| `revisions` | immutable source snapshots and environment label | append-only |
-| `files` | current paths, hashes, language, size | rebuild on indexing |
-| `nodes` | source symbols/files + derived features | rebuild on indexing |
-| `edges` | typed relations, basis, state, source | rebuild on indexing |
+| `workspaces` | canonical root, isolated workspace ID, `current_revision_id` | user-managed |
+| `revisions` | source snapshots and environment label | upserted on active snapshot |
+| `files` | current paths, hashes, language, size, `mtime_ms` | incrementally synced |
+| `nodes` | source symbols/files + derived features | incrementally synced |
+| `edges` | typed relations, basis, state, source | incrementally synced |
 | `evidence` | immutable report hashes and mapped outcomes | append-only |
 | `runs` | aggregate verdict and criterion results | append-only |
 | `incidents` | root-cause claims and evidence links | append-only |
 | `hypotheses` | alternative explanations and proposed experiments | append-only |
+| `telemetry` | measured `raw_scope_tokens`, `response_tokens`, `tokens_saved` | append-only |
 
-The executable DDL is `schemas/database.sql`. All database writes happen inside a local plugin-owned directory. No schema migration to an unknown future version is performed automatically.
+The executable DDL is `schemas/database.sql` (stored in `a2a.sqlite`, migrating `verifykit.sqlite` if present). All database writes happen inside a local plugin-owned directory.
 
 ## State constraints
 
@@ -38,8 +44,8 @@ The executable DDL is `schemas/database.sql`. All database writes happen inside 
 
 ## Supported report formats
 
-- JUnit XML with `<testsuite>` and one or more explicit `<testcase>` records. Aggregate metadata must match actual testcase counts and failures; incomplete reports are inconclusive.
+- JUnit XML with `<testsuite>` (single or wrapped in `<testsuites>`) and one or more explicit `<testcase>` records. Aggregate metadata must match actual testcase counts and failures; incomplete reports are inconclusive.
 - TAP with `ok N - name` and `not ok N - name`, optional `1..N` plan. A present plan must match assertion count. Test names are matched exactly.
-- `verifykit-test-report-v1` JSON with `completed: true` and one or more cases `{name,state}`. Valid case states are `passed`, `failed`, `skipped`. This format is for instrumentation from a trusted test harness, never for self-reported AI claims.
+- `a2a-test-report-v1` (or legacy `verifykit-test-report-v1`) JSON with `completed: true` and one or more cases `{name,state}`. Valid case states are `passed`, `failed`, `skipped`. This format is for instrumentation from a trusted test harness, never for self-reported AI claims.
 
-No arbitrary free-form terminal transcript can produce a passing verdict. Screenshots, videos and browser walkthroughs can be referenced as external evidence by the native agent, but VerifyKit does **not** turn image appearance into a verified assertion.
+No arbitrary free-form terminal transcript can produce a passing verdict. Screenshots, videos and browser walkthroughs can be referenced as external evidence by the native agent, but A2A does **not** turn image appearance into a verified assertion.

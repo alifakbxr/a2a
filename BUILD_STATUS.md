@@ -1,19 +1,14 @@
-# A2A (Agent to Alif) Build Status — v2.0.0
+# A2A Build Status — v2.0.0
 
 ## Implemented and Verified
 
-- Native Antigravity plugin manifest (`plugin.json`) and zero-dependency stdio MCP configuration (`mcp_config.json`).
-- Core MCP operations: `a2a_context`, `a2a_impact`, `a2a_verify`, `a2a_evidence` (with backward-compatible `verifykit_*` aliases).
-- Zero-friction workspace integration: automatically recognizes Antigravity IDE workspaces without redundant approval prompts.
-- Always-on and on-demand mode toggles via CLI, skill, and IDE customization page.
-- Token telemetry: live source tokens calculation, session consumption tracking, and context savings measurement.
-- SQLite schema with typed graph nodes/edges, indexed revisions, run history, evidence and incidents.
-- Multi-stack manifest discovery, static symbols/imports, heuristic feature/test relationships.
-- Bounded reverse/forward impact traversal with risk flags and unknown-coverage reporting.
-- Native-execution-only verification plans; JUnit/TAP/JSON testcase-parsed report assessments.
-- Named testcase mapping, no false pass for missing/empty/skipped/mismatched reports.
-- Source/revision fingerprinting and evidence SHA-256 freshness checks.
-- Explicit incident and competing-hypothesis recording, never auto-confirmed.
-- Local CLI (`scripts/a2a.mjs`) for authorization, inspection, impact, test evidence, token tracking, and doctor.
-- Automated tests: **30 passed, 0 failed** on Linux / Node.
-- Official `agy plugin validate . --strict` passed.
+- Native Antigravity plugin manifest (`plugin.json`), stdio MCP (`mcp_config.json`), concise `rules/AGENTS.md`, `hooks.json` (`SessionStart`, `PreInvocation`, `PostToolUse`), and 6 slash-command skills.
+- Core MCP operations: `a2a_context` (`inspect`, `query`, `freshness`, `tokens`, `skeleton`), `a2a_impact`, `a2a_verify`, `a2a_evidence` (with backward-compatible `verifykit_*` routing and `A2A_LEGACY_TOOL_ALIASES=1` listing flag) plus MCP resources (`a2a://status`, `a2a://tokens/session`, `a2a://workspace/summary`).
+- Hardened workspace trust: protected-roots denylist, no upward ancestor authorization, project-marker gated historical auto-trust, `antigravity-cli/settings.json` support, `autoTrust` modes, and TTL caching.
+- Always-on, on-demand, and compact mode toggles via CLI, skills, and IDE customization page.
+- Measured token telemetry: `telemetry` SQLite counters, cache-aware `transcript.jsonl` parsing (`PLANNER_RESPONSE`/`USER_INPUT`, skipping subagent transcripts on fallback), and lexer-safe code skeletonizer.
+- Incremental SQLite schema (`a2a.sqlite`) with `(mtimeMs, size)` fast-path sync, revert-safe revision tracking, typed graph nodes/edges, run history, evidence, and incidents.
+- Multi-stack manifest discovery, comment-aware symbol/import extraction (including Go/Swift/Kotlin and TS `.js`->`.ts`), and batched impact traversal.
+- Native-execution-only verification plans; JUnit XML (`<testsuites>`/`<testsuite>` aggregation), TAP, and `a2a-test-report-v1` JSON assessments.
+- Local CLI (`scripts/a2a.mjs`) for `doctor`, `mode`, `toggle`, `compact`, `autotrust`, `allow`, `revoke`, `inspect`, `tokens`, `skeleton`, `context`, `impact`, `plan`, `assess`, `evidence`, and `refresh`.
+- Official `agy plugin validate . --strict` and `node scripts/check-release.mjs` passed.

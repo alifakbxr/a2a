@@ -1,24 +1,25 @@
-# VerifyKit Technical Architecture
+# A2A Technical Architecture
 
 ## Mission and invariants
 
 1. **Native ownership:** all planning, reasoning, coding, browser, terminal, permissions, and orchestration remain Antigravity's responsibility.
 2. **No claim without evidence:** compilation is not functional verification; evidence is bound to a source snapshot and a machine-readable completed test report with a named case.
 3. **No knowledge without provenance:** extracted relationships distinguish observed source facts from filename or test-name heuristics.
-4. **No mandatory intervention:** VerifyKit's four MCP tools are invoked on demand. No hooks, always-on rules, or background agents.
+4. **Configurable operating modes:** `always-on` (default) engages A2A proactively via `rules/AGENTS.md` and `hooks.json`; `on-demand` restricts A2A to explicit invocation.
 5. **Local safety:** no external network access, arbitrary shell tool, or automatic dependency installer.
 
 ## Module boundaries
 
 | Module | Inputs | Outputs | Must not do |
 | --- | --- | --- | --- |
-| `security` | canonical path, relative path, allowlist | authorization and path safety | auto-authorize, follow symlinks |
-| `scanner` | authorized workspace files | file hashes, language, symbols/imports | run project scripts, send source contents to remote API |
-| `storage` | validated structured records | transactional SQLite state | store raw source code, execute repo commands |
-| `graph` | revision-specific nodes and edges | scoped queries and bounded impact | promote derived edges to verified facts |
+| `security` | canonical path, relative path, allowlist, settings | authorization, protected-root filtering, path safety | upward-authorize ancestors, follow symlinks |
+| `scanner` | authorized workspace files, cached `(mtime, size)` | file hashes, language, symbols/imports | run project scripts, send source contents to remote API |
+| `storage` | validated structured records | incremental SQLite state (`a2a.sqlite`) & telemetry | store raw source code, execute repo commands |
+| `graph` | revision-specific nodes and edges | batched scoped queries and bounded impact | promote derived edges to verified facts |
+| `tokens` | source text/bytes, `transcript.jsonl`, telemetry | lexer-safe skeletons, measured savings, session metrics | fabricate efficiency percentages |
 | `verification` | named criteria and test report | status, evidence hash, revision-bound result | claim an untested behavior passed |
-| `engine` | authorized MCP request | aggregated structured outputs | override Antigravity policy |
-| `mcp` | JSON-RPC 2.0 stdio messages | four tools | expose generic shell or credentials |
+| `engine` | authorized MCP/CLI request | aggregated structured outputs | override Antigravity policy |
+| `mcp` | JSON-RPC 2.0 stdio messages | 4 `a2a_*` tools (+ opt-in legacy aliases) & 3 resources | expose generic shell or credentials |
 
 ## Sequence diagrams
 
@@ -26,40 +27,36 @@
 sequenceDiagram
   actor User
   participant AG as Antigravity Agent
-  participant VK as VerifyKit MCP
+  participant A2A as A2A MCP
   participant FS as Workspace
   participant DB as Local SQLite
   User->>AG: Fix bug and verify it
   opt When source relationships are needed
-    AG->>VK: verifykit_context / impact
-    VK->>FS: Read authorized source metadata
-    VK->>DB: Store revision-scoped relationships
-    VK-->>AG: Related files, tests, risks and uncertainty
+    AG->>A2A: a2a_context / a2a_impact
+    A2A->>FS: Read authorized source metadata
+    A2A->>DB: Store incremental revision-scoped relationships & telemetry
+    A2A-->>AG: Related files, tests, risks and measured tokens
   end
   AG->>AG: Edit with native tools
-  AG->>VK: verifykit_verify plan
-  VK-->>AG: Existing candidate checks + acceptance criteria
+  AG->>A2A: a2a_verify plan
+  A2A-->>AG: Existing candidate checks + acceptance criteria
   AG->>AG: Run existing tests with native permissions
-  AG->>VK: verifykit_verify assess (report path and test_name)
-  VK->>FS: Validate report, testcase and source snapshot
-  VK->>DB: Save evidence hash and verdict
-  VK-->>AG: Pass / fail / blocked / inconclusive
+  AG->>A2A: a2a_verify assess (report path and test_name)
+  A2A->>FS: Validate report, testcase and source snapshot
+  A2A->>DB: Save evidence hash and verdict
+  A2A-->>AG: Pass / fail / blocked / inconclusive
   AG-->>User: Verified scope and remaining gaps
 ```
 
 ## Graph construction
 
-The index is created by walking readable source/configuration files (non-recursive symlinks are skipped). Binary, generated, sensitive and very large files are excluded. Each indexed file receives a `file:<relative-path>` node and SHA-256. Simple deterministic syntax patterns add symbol definitions and local imports; feature relationships derived from filenames are marked `derived`. A filename-matched test edge is a **candidate**, not guaranteed coverage.
+The index is created by walking readable source/configuration files (non-recursive symlinks are skipped), using `(mtimeMs, size)` fast-path caching with a racy-stat guard to avoid re-reading unchanged files. Binary, generated, lockfile, sensitive, and oversized files are excluded. Each indexed file receives a `file:<relative-path>` node and SHA-256. Comment-aware syntax patterns add symbol definitions and local imports; feature relationships derived from filenames are marked `derived`. A filename-matched test edge is a **candidate**, not guaranteed coverage.
 
-Queries search node labels or paths, then retrieve limited adjacent edges. Impact analysis performs bounded breadth-first traversal in both directions for explicitly supplied files or Git working tree changes. Runtime bindings, event buses, reflection and dynamic imports may be invisible to static analysis. Missing tests and heuristic edges affect the risk signals.
-
-Graph complexity: `O(F+B+E)` to index `F` source files with `B` bytes of source and `E` extracted relationships. Impact queries are bounded by depth <= 4 and 350 visited nodes. Each query synchronizes source hashes to prevent stale graph reuse; this deliberate correctness choice can be expensive on large repositories and must be profiled before optimizing with mtime caches.
+Queries search node labels or paths, then retrieve batched adjacent edges. Impact analysis performs bounded breadth-first traversal prioritizing `IMPORTS` and `MAY_TEST` edges without expanding across unrelated `CONTRIBUTES_TO` feature siblings.
 
 ## Revision & evidence design
 
-`revision_id = SHA256(workspace_id + SHA256(GitHEAD + sorted(path:fileHash)))` truncated. Unlike a Git commit alone, this includes uncommitted modifications. When report files or source change, freshness checks compare current revision plus the original report SHA-256. Historical runs are preserved, with `fresh=false` when evidence is no longer applicable.
-
-A test report has a trust level of `local-report-not-cryptographically-attested`. A malicious repository could fabricate its own reports; native build/test review remains essential. Named testcase binding prevents unrelated passing suites from automatically satisfying arbitrary criteria.
+`revision_id = SHA256(workspace_id + SHA256(GitHEAD + sorted(path:fileHash)))` truncated. Unlike a Git commit alone, this includes uncommitted modifications. `workspaces.current_revision_id` tracks the active snapshot so reverting via `git checkout` or undo immediately restores cache hits. Historical runs are preserved, with `fresh=false` when evidence is no longer applicable.
 
 ## Verdict rules
 
@@ -71,7 +68,7 @@ A test report has a trust level of `local-report-not-cryptographically-attested`
 
 ## Operational model
 
-A `node` subprocess handles one JSON-RPC request per stdin line, responds on stdout, and stores the graph in `PLUGIN_DATA`. Antigravity's MCP lazy schema loading is retained. Node warnings and crash errors go to stderr. No HTTP listener is started. The local allowlist exists under the user's configuration directory and can only be changed using the explicit CLI. All workspace paths are canonicalized, bounded, and checked for symlinks.
+A `node` subprocess handles one JSON-RPC request per stdin line, responds on stdout, and stores the graph in `a2a.sqlite` inside `PLUGIN_DATA`. A lightweight `hooks.json` (`SessionStart`, `PreInvocation`, `PostToolUse`) records `active-session.json` so `a2a_context(action="tokens")` resolves the active conversation transcript accurately. No HTTP listener is started.
 
 ## Deliberate exclusions
 

@@ -18,9 +18,24 @@ export function parseArtifact(text, filename){
       const state=/<(?:failure|error)\b/.test(body)?'failed':/<skipped\b/.test(body)?'skipped':'passed';
       return {name:v.a.name||'',state};
     });
-    const rootMatch=sample.match(/<testsuites\b([^>]*)>/), suiteMatch=sample.match(/<testsuite\b([^>]*)>/);
-    const totals=attrs((rootMatch||suiteMatch)?.[1]||'');
-    const expected=Number(totals.tests), declaredFailed=Number(totals.failures||0)+Number(totals.errors||0), declaredSkipped=Number(totals.skipped||0);
+    const rootMatch=sample.match(/<testsuites\b([^>]*)>/);
+    const rootAttrs=rootMatch?attrs(rootMatch[1]):{};
+    const suiteMatches=[...sample.matchAll(/<testsuite\b([^>]*)>/g)];
+    let expected=NaN, declaredFailed=0, declaredSkipped=0;
+    if(rootAttrs.tests!==undefined){
+      expected=Number(rootAttrs.tests);
+      declaredFailed=Number(rootAttrs.failures||0)+Number(rootAttrs.errors||0);
+      declaredSkipped=Number(rootAttrs.skipped||0);
+    }else if(suiteMatches.length>0){
+      let sumTests=0, hasTestsAttr=false;
+      for(const sm of suiteMatches){
+        const a=attrs(sm[1]);
+        if(a.tests!==undefined){hasTestsAttr=true;sumTests+=Number(a.tests)}
+        declaredFailed+=Number(a.failures||0)+Number(a.errors||0);
+        declaredSkipped+=Number(a.skipped||0);
+      }
+      expected=hasTestsAttr?sumTests:NaN;
+    }
     const actualFailed=cases.filter(c=>c.state==='failed').length,actualSkipped=cases.filter(c=>c.state==='skipped').length;
     if(!cases.length || !Number.isFinite(expected)||expected!==cases.length)return {status:'inconclusive',reason:'JUnit test count missing or does not match testcase elements',assertions:cases.length,cases};
     if(declaredFailed!==actualFailed||declaredSkipped!==actualSkipped)return {status:'inconclusive',reason:'JUnit suite totals disagree with testcase outcomes',assertions:cases.length,cases};
@@ -38,14 +53,15 @@ export function parseArtifact(text, filename){
   if(ext==='json'){
     try {
       const obj=JSON.parse(sample);
-      if(obj?.format!=='verifykit-test-report-v1'||!Array.isArray(obj.cases)||obj.cases.length<1||obj.cases.length>10000||obj.completed!==true)return {status:'inconclusive',assertions:0,reason:'Unsupported or incomplete report schema',cases:[]};
+      const validFormats=new Set(['a2a-test-report-v1','verifykit-test-report-v1']);
+      if(!validFormats.has(obj?.format)||!Array.isArray(obj.cases)||obj.cases.length<1||obj.cases.length>10000||obj.completed!==true)return {status:'inconclusive',assertions:0,reason:'Unsupported or incomplete report schema',cases:[]};
       const cases=obj.cases.map(c=>({name:String(c.name||'').slice(0,160),state:['passed','failed','skipped'].includes(c.state)?c.state:'unknown'}));
       if(cases.some(c=>!c.name||c.state==='unknown'))return {status:'inconclusive',assertions:cases.length,reason:'Invalid test cases',cases};
       const failed=cases.filter(c=>c.state==='failed').length,skipped=cases.filter(c=>c.state==='skipped').length;
-      return {status:failed?'failed':skipped===cases.length?'inconclusive':'passed',assertions:cases.length,failed,skipped,format:'verifykit-test-report-v1',cases};
+      return {status:failed?'failed':skipped===cases.length?'inconclusive':'passed',assertions:cases.length,failed,skipped,format:obj.format,cases};
     }catch{}
   }
-  return {status:'inconclusive',assertions:0,reason:'Unsupported artifact type; require JUnit, TAP, or verifykit-test-report-v1',cases:[]};
+  return {status:'inconclusive',assertions:0,reason:'Unsupported artifact type; require JUnit, TAP, or a2a-test-report-v1',cases:[]};
 }
 
 export function planVerification({index,impact,criteria=[]}){
@@ -56,7 +72,7 @@ export function planVerification({index,impact,criteria=[]}){
     return {id,description:c,status:'not_run',evidence_required:true};
   });
   const checks=discoverTestCommands(index);
-  return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,checks,execution:'Use existing Antigravity native terminal/browser with its permissions. VerifyKit does not execute commands.',state:'not_run'};
+  return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,checks,execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
 }
 function aggregate(results){if(results.some(r=>r.status==='failed'))return 'failed';if(results.some(r=>r.status==='blocked'))return 'blocked';if(results.length&&results.every(r=>r.status==='passed'))return 'passed';return 'inconclusive'}
 export function assessVerification(store,wsId,root,rev,criteria){

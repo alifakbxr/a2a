@@ -2,21 +2,32 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
 
 export const sha256 = (v) => crypto.createHash('sha256').update(v).digest('hex');
 export const MAX_INDEX_FILES = 9000;
 export const MAX_SOURCE_BYTES = 160 * 1024;
-const BLOCKED_PARTS = new Set(['.git','node_modules','vendor','.next','.nuxt','.dart_tool','.gradle','target','dist','build','coverage','.venv','venv','__pycache__','.idea','.vscode','.verifykit','.cache','.terraform','.pnpm-store','.gitlab','.ssh','.aws','.kube','.gnupg','.config','.gemini','.claude','.cursor']);
-const SENSITIVE = /(^|\/)(\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|id_rsa|id_ed25519|.*\.pem|.*\.key|.*\.p12|.*\.pfx|secrets?(?:\..*)?|credentials?(?:\..*)?|.*\.sqlite(?:-wal|-shm)?|.*\.db)$/i;
+const BLOCKED_PARTS = new Set(['.git','node_modules','vendor','.next','.nuxt','.svelte-kit','.turbo','.parcel-cache','.dart_tool','.gradle','target','dist','build','coverage','.venv','venv','__pycache__','.pytest_cache','.mypy_cache','.ruff_cache','.idea','.vscode','.verifykit','.a2a','.cache','.terraform','.pnpm-store','.gitlab','.ssh','.aws','.kube','.gnupg','.config','.gemini','.claude','.cursor']);
+const SENSITIVE = /(^|\/)(\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|id_rsa|id_ed25519|.*\.pem|.*\.key|.*\.p12|.*\.pfx|secrets?(?:\..*)?|credentials?(?:\..*)?|.*\.sqlite(?:-wal|-shm)?|.*\.db|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|composer\.lock|Cargo\.lock|poetry\.lock|Gemfile\.lock|npm-shrinkwrap\.json)$/i;
+const IGNORED_SUBPATHS = /(^|\/)storage\/logs(\/|$)/i;
 export const isSafeRelative = (rel) => typeof rel === 'string' && rel.length > 0 && rel.length <= 500 && !rel.includes('\0') && !path.isAbsolute(rel) && !rel.split(/[\\/]/).some(p=>p==='..') && !rel.startsWith('~');
-export const shouldIgnore = rel => rel.split(/[\\/]/).some(p=>BLOCKED_PARTS.has(p)) || SENSITIVE.test(rel) || /\.(?:min\.(?:js|css)|map|lock|png|jpe?g|gif|webp|pdf|zip|tar|gz|mp4|mp3|woff2?|ttf|exe|dll|so|dylib)$/i.test(rel);
+export const shouldIgnore = (rel) => {
+  const norm = String(rel || '').replaceAll('\\', '/');
+  return norm.split('/').some(p => BLOCKED_PARTS.has(p))
+    || SENSITIVE.test(norm)
+    || IGNORED_SUBPATHS.test(norm)
+    || /\.(?:min\.(?:js|css)|map|lock|tsbuildinfo|png|jpe?g|gif|webp|pdf|zip|tar|gz|mp4|mp3|woff2?|ttf|exe|dll|so|dylib)$/i.test(norm);
+};
 export const dataDir = () => {
   if (process.env.A2A_DATA_DIR || process.env.VERIFYKIT_DATA_DIR || process.env.PLUGIN_DATA) {
     return path.resolve(process.env.A2A_DATA_DIR || process.env.VERIFYKIT_DATA_DIR || process.env.PLUGIN_DATA);
   }
+  const pluginData = path.join(os.homedir(), '.gemini', 'antigravity', 'plugin_data', 'a2a');
+  if (fs.existsSync(pluginData)) return pluginData;
   const a2aDir = path.join(os.homedir(), '.config', 'a2a', 'data');
+  if (fs.existsSync(a2aDir)) return a2aDir;
   const legacyDir = path.join(os.homedir(), '.config', 'verifykit', 'data');
-  if (fs.existsSync(legacyDir) && !fs.existsSync(a2aDir)) return legacyDir;
+  if (fs.existsSync(legacyDir)) return legacyDir;
   return a2aDir;
 };
 export const allowlistPath = () => {
@@ -28,31 +39,48 @@ export const allowlistPath = () => {
 export const settingsPath = () => {
   const p = path.join(os.homedir(), '.config', 'a2a', 'settings.json');
   const legacy = path.join(os.homedir(), '.config', 'verifykit', 'settings.json');
-  if (fs.existsSync(legacy) && !fs.existsSync(p)) return legacy;
+  if (fs.existsSync(p)) return p;
+  if (fs.existsSync(legacy)) return legacy;
   return p;
 };
 
-export function getVerifyKitMode() {
+function readSettings() {
   try {
     const file = settingsPath();
     if (fs.existsSync(file)) {
-      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (data.mode === 'always-on' || data.mode === 'on-demand') return data.mode;
+      return JSON.parse(fs.readFileSync(file, 'utf8')) || {};
     }
   } catch {}
+  return {};
+}
+
+function writeSettings(patch) {
+  const target = path.join(os.homedir(), '.config', 'a2a', 'settings.json');
+  const parent = path.dirname(target);
+  fs.mkdirSync(parent, { recursive: true, mode: 0o700 });
+  const data = { ...readSettings(), ...patch, updatedAt: new Date().toISOString() };
+  const flags = fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC | (fs.constants.O_NOFOLLOW || 0);
+  const fd = fs.openSync(target, flags, 0o600);
+  try {
+    fs.fchmodSync(fd, 0o600);
+    fs.writeFileSync(fd, JSON.stringify(data, null, 2) + '\n');
+  } finally {
+    fs.closeSync(fd);
+  }
+  return data;
+}
+
+export function getVerifyKitMode() {
+  const data = readSettings();
+  if (data.mode === 'always-on' || data.mode === 'on-demand') return data.mode;
   return 'always-on';
 }
 export const getA2AMode = getVerifyKitMode;
 
 export function getCompactMode() {
-  try {
-    const file = settingsPath();
-    if (fs.existsSync(file)) {
-      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (typeof data.compact === 'boolean') return data.compact;
-      if (data.compact === 'on' || data.compact === 'enabled' || data.compact === 'true') return true;
-    }
-  } catch {}
+  const data = readSettings();
+  if (typeof data.compact === 'boolean') return data.compact;
+  if (data.compact === 'on' || data.compact === 'enabled' || data.compact === 'true') return true;
   return false;
 }
 
@@ -60,28 +88,14 @@ export function setCompactMode(val) {
   let boolVal;
   if (val === 'toggle') {
     boolVal = !getCompactMode();
+  } else if (val === true || val === 'on' || val === 'enable' || val === 'enabled' || val === 'true') {
+    boolVal = true;
+  } else if (val === false || val === 'off' || val === 'disable' || val === 'disabled' || val === 'false') {
+    boolVal = false;
   } else {
-    boolVal = (val === true || val === 'on' || val === 'enable' || val === 'enabled' || val === 'true');
+    throw new Error('Invalid compact setting. Expected "on", "off", or "toggle"');
   }
-  const file = settingsPath();
-  const parent = path.dirname(file);
-  fs.mkdirSync(parent, { recursive: true, mode: 0o700 });
-  let data = {};
-  try {
-    if (fs.existsSync(file)) {
-      data = JSON.parse(fs.readFileSync(file, 'utf8')) || {};
-    }
-  } catch {}
-  data.compact = boolVal;
-  data.updatedAt = new Date().toISOString();
-  const flags = fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC | (fs.constants.O_NOFOLLOW || 0);
-  const fd = fs.openSync(file, flags, 0o600);
-  try {
-    fs.fchmodSync(fd, 0o600);
-    fs.writeFileSync(fd, JSON.stringify(data, null, 2) + '\n');
-  } finally {
-    fs.closeSync(fd);
-  }
+  writeSettings({ compact: boolVal });
   return boolVal;
 }
 
@@ -89,28 +103,26 @@ export function setVerifyKitMode(mode) {
   if (mode !== 'always-on' && mode !== 'on-demand') {
     throw new Error('Invalid mode. Expected "always-on" or "on-demand"');
   }
-  const file = settingsPath();
-  const parent = path.dirname(file);
-  fs.mkdirSync(parent, { recursive: true, mode: 0o700 });
-  let data = {};
-  try {
-    if (fs.existsSync(file)) {
-      data = JSON.parse(fs.readFileSync(file, 'utf8')) || {};
-    }
-  } catch {}
-  data.mode = mode;
-  data.updatedAt = new Date().toISOString();
-  const flags = fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC | (fs.constants.O_NOFOLLOW || 0);
-  const fd = fs.openSync(file, flags, 0o600);
-  try {
-    fs.fchmodSync(fd, 0o600);
-    fs.writeFileSync(fd, JSON.stringify(data, null, 2) + '\n');
-  } finally {
-    fs.closeSync(fd);
-  }
+  writeSettings({ mode });
   return mode;
 }
 export const setA2AMode = setVerifyKitMode;
+
+const VALID_AUTO_TRUST = new Set(['antigravity-trust', 'active-only', 'project-markers', 'off']);
+export function getAutoTrustMode() {
+  const data = readSettings();
+  if (VALID_AUTO_TRUST.has(data.autoTrust)) return data.autoTrust;
+  return 'antigravity-trust';
+}
+export function setAutoTrustMode(mode) {
+  if (!VALID_AUTO_TRUST.has(mode)) {
+    throw new Error('Invalid autoTrust mode. Expected "antigravity-trust", "active-only", "project-markers", or "off"');
+  }
+  writeSettings({ autoTrust: mode });
+  invalidateWorkspaceCache();
+  return mode;
+}
+
 export const normalizeWorkspace = input => {
   if (!input || typeof input !== 'string') throw new Error('workspace must be an absolute directory path');
   const full = path.resolve(input);
@@ -118,92 +130,291 @@ export const normalizeWorkspace = input => {
   if (!fs.existsSync(full) || !fs.statSync(full).isDirectory()) throw new Error('workspace does not exist');
   return fs.realpathSync(full);
 };
-export function loadAntigravityWorkspaces() {
-  const dirs = new Set();
-  const home = os.homedir();
 
-  // 1. ~/.gemini/config/projects/*.json
+function realpathIfExists(p) {
   try {
-    const projDir = path.join(home, '.gemini', 'config', 'projects');
-    if (fs.existsSync(projDir)) {
-      for (const f of fs.readdirSync(projDir)) {
-        if (!f.endsWith('.json')) continue;
-        try {
-          const content = JSON.parse(fs.readFileSync(path.join(projDir, f), 'utf8'));
-          const resources = content?.projectResources?.resources || [];
-          for (const res of resources) {
-            if (res.folderUri && typeof res.folderUri === 'string' && res.folderUri.startsWith('file://')) {
-              try {
-                const p = decodeURIComponent(new URL(res.folderUri).pathname);
-                if (p && fs.existsSync(p)) dirs.add(fs.realpathSync(p));
-              } catch {}
-            }
-          }
-        } catch {}
+    if (fs.existsSync(p)) return fs.realpathSync(p);
+  } catch {}
+  return path.resolve(p);
+}
+
+export function getProtectedRoots() {
+  const homeRaw = os.homedir();
+  const home = realpathIfExists(homeRaw);
+  const tmpRaw = os.tmpdir();
+  const tmp = realpathIfExists(tmpRaw);
+  const candidates = [
+    path.parse(home).root,
+    home,
+    path.join(home, 'Documents'),
+    path.join(home, 'Downloads'),
+    path.join(home, 'Desktop'),
+    path.join(home, 'Music'),
+    path.join(home, 'Pictures'),
+    path.join(home, 'Videos'),
+    path.join(home, '.config'),
+    path.join(home, '.gemini'),
+    path.join(home, '.gemini', 'config'),
+    path.join(home, '.gemini', 'antigravity'),
+    path.join(home, '.ssh'),
+    path.join(home, '.aws'),
+    path.join(home, '.gnupg'),
+    path.resolve(tmpRaw),
+    tmp,
+  ];
+  const roots = new Set();
+  for (const c of candidates) {
+    roots.add(path.resolve(c));
+    roots.add(realpathIfExists(c));
+  }
+  return roots;
+}
+
+export function isProtectedRoot(ws) {
+  if (!ws || typeof ws !== 'string') return true;
+  const canonical = realpathIfExists(ws);
+  const home = realpathIfExists(os.homedir());
+  if (canonical === path.parse(canonical).root) return true;
+  if (canonical === home || home.startsWith(canonical + path.sep)) return true;
+  return getProtectedRoots().has(canonical);
+}
+
+const PROJECT_MARKERS = [
+  '.git', 'package.json', 'composer.json', 'pyproject.toml', 'go.mod', 'Cargo.toml',
+  'pubspec.yaml', 'pom.xml', 'build.gradle', 'build.gradle.kts', 'Package.swift',
+  'project.godot', 'CMakeLists.txt', 'Makefile'
+];
+
+function hasProjectMarker(dir) {
+  try {
+    for (const m of PROJECT_MARKERS) {
+      if (fs.existsSync(path.join(dir, m))) return true;
+    }
+    const entries = fs.readdirSync(dir);
+    return entries.some(e => /\.(?:sln|csproj)$/i.test(e));
+  } catch {
+    return false;
+  }
+}
+
+function parseJsonc(raw) {
+  try { return JSON.parse(raw); } catch {}
+  let out = '', i = 0, inStr = false, esc = false;
+  while (i < raw.length) {
+    const ch = raw[i];
+    if (inStr) {
+      out += ch;
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      i++;
+      continue;
+    }
+    if (ch === '"') { inStr = true; out += ch; i++; continue; }
+    if (ch === '/' && raw[i + 1] === '/') {
+      while (i < raw.length && raw[i] !== '\n') i++;
+      continue;
+    }
+    if (ch === '/' && raw[i + 1] === '*') {
+      i += 2;
+      while (i < raw.length && !(raw[i] === '*' && raw[i + 1] === '/')) i++;
+      i += 2;
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  out = out.replace(/,\s*([}\]])/g, '$1');
+  return JSON.parse(out);
+}
+
+function extractWorkspaceFolderPaths(wsFilePath) {
+  const results = [];
+  try {
+    if (!fs.existsSync(wsFilePath) || !fs.statSync(wsFilePath).isFile()) return results;
+    const data = parseJsonc(fs.readFileSync(wsFilePath, 'utf8'));
+    const folders = Array.isArray(data?.folders) ? data.folders : [];
+    const baseDir = path.dirname(wsFilePath);
+    for (const f of folders) {
+      if (!f || typeof f !== 'object') continue;
+      if (typeof f.uri === 'string' && f.uri.startsWith('file://')) {
+        try { results.push(decodeURIComponent(new URL(f.uri).pathname)); } catch {}
+      } else if (typeof f.path === 'string' && f.path.trim()) {
+        results.push(path.resolve(baseDir, f.path));
       }
     }
   } catch {}
+  return results;
+}
 
-  // 2. ~/.gemini/projects.json
+const WORKSPACE_CACHE_TTL_MS = 10_000;
+let workspaceCache = null;
+
+export function invalidateWorkspaceCache() {
+  workspaceCache = null;
+}
+
+export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
+  const autoTrust = getAutoTrustMode();
+  if (autoTrust === 'off') return [];
+
+  const home = os.homedir();
+  const cacheKey = `${home}|${autoTrust}|${settingsPath()}`;
+  const now = Date.now();
+  if (!bypassCache && workspaceCache && workspaceCache.key === cacheKey && (now - workspaceCache.ts) < WORKSPACE_CACHE_TTL_MS) {
+    return workspaceCache.dirs;
+  }
+
+  const dirs = new Set();
+  const addPath = (rawPath, { requireMarker = true } = {}) => {
+    if (!rawPath || typeof rawPath !== 'string') return;
+    if (rawPath.endsWith('.code-workspace')) {
+      for (const folder of extractWorkspaceFolderPaths(rawPath)) {
+        addPath(folder, { requireMarker });
+      }
+      return;
+    }
+    if (path.basename(rawPath) === 'workspace.json') {
+      for (const folder of extractWorkspaceFolderPaths(rawPath)) {
+        addPath(folder, { requireMarker });
+      }
+      return;
+    }
+    try {
+      if (!fs.existsSync(rawPath) || !fs.statSync(rawPath).isDirectory()) return;
+      const real = fs.realpathSync(rawPath);
+      if (isProtectedRoot(real)) return;
+      if (requireMarker && !hasProjectMarker(real)) return;
+      dirs.add(real);
+    } catch {}
+  };
+
+  // 1. Antigravity IDE built-in Workspace Trust (globalStorage/state.vscdb -> content.trust.model.key)
   try {
-    const pJson = path.join(home, '.gemini', 'projects.json');
-    if (fs.existsSync(pJson)) {
-      const content = JSON.parse(fs.readFileSync(pJson, 'utf8'));
-      if (content?.projects && typeof content.projects === 'object') {
-        for (const p of Object.keys(content.projects)) {
-          if (p && fs.existsSync(p)) {
-            try { dirs.add(fs.realpathSync(p)); } catch {}
+    const stateCandidates = [
+      path.join(home, '.config', 'Antigravity IDE', 'User', 'globalStorage', 'state.vscdb'),
+      path.join(home, 'Library', 'Application Support', 'Antigravity IDE', 'User', 'globalStorage', 'state.vscdb'),
+      ...(process.env.APPDATA ? [path.join(process.env.APPDATA, 'Antigravity IDE', 'User', 'globalStorage', 'state.vscdb')] : []),
+    ];
+    for (const dbFile of stateCandidates) {
+      if (!fs.existsSync(dbFile)) continue;
+      let db;
+      try {
+        db = new DatabaseSync(dbFile, { readOnly: true });
+        const row = db.prepare("SELECT value FROM ItemTable WHERE key='content.trust.model.key'").get();
+        if (row?.value) {
+          const parsed = JSON.parse(row.value);
+          const entries = Array.isArray(parsed?.uriTrustInfo) ? parsed.uriTrustInfo : [];
+          for (const entry of entries) {
+            if (!entry || entry.trusted !== true || !entry.uri) continue;
+            let raw = entry.uri.fsPath || entry.uri.path || null;
+            if (!raw && typeof entry.uri.external === 'string' && entry.uri.external.startsWith('file://')) {
+              try { raw = decodeURIComponent(new URL(entry.uri.external).pathname); } catch {}
+            }
+            if (raw) addPath(raw, { requireMarker: false });
           }
         }
+      } catch {} finally {
+        try { db?.close(); } catch {}
       }
     }
   } catch {}
 
-  // 3. ~/.config/Antigravity IDE/User/workspaceStorage/*/workspace.json
+  // 2. Antigravity CLI & App settings.json (explicit trustedWorkspaces)
   try {
-    const wsStorage = path.join(home, '.config', 'Antigravity IDE', 'User', 'workspaceStorage');
-    if (fs.existsSync(wsStorage)) {
-      for (const d of fs.readdirSync(wsStorage)) {
-        const wsFile = path.join(wsStorage, d, 'workspace.json');
-        if (fs.existsSync(wsFile)) {
+    for (const appDir of ['antigravity-cli', 'antigravity', 'antigravity-ide']) {
+      const cliSettings = path.join(home, '.gemini', appDir, 'settings.json');
+      if (!fs.existsSync(cliSettings)) continue;
+      try {
+        const content = JSON.parse(fs.readFileSync(cliSettings, 'utf8'));
+        const trusted = Array.isArray(content?.trustedWorkspaces) ? content.trustedWorkspaces : [];
+        for (const p of trusted) {
+          addPath(p, { requireMarker: false });
+        }
+      } catch {}
+    }
+  } catch {}
+
+  if (autoTrust === 'active-only' || autoTrust === 'project-markers') {
+    // 3. Running Antigravity processes with --add-dir=... (active sessions)
+    try {
+      if (process.platform === 'linux') {
+        const pids = fs.readdirSync('/proc').filter(p => /^\d+$/.test(p));
+        for (const pid of pids) {
           try {
-            const data = JSON.parse(fs.readFileSync(wsFile, 'utf8'));
-            const uri = data.folder || data.workspace;
-            if (uri && typeof uri === 'string' && uri.startsWith('file://')) {
-              try {
-                let p = decodeURIComponent(new URL(uri).pathname);
-                if (p.endsWith('.code-workspace')) p = path.dirname(p);
-                if (p && fs.existsSync(p)) dirs.add(fs.realpathSync(p));
-              } catch {}
+            const cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
+            if (cmdline.includes('agy') || cmdline.includes('antigravity')) {
+              const matches = cmdline.matchAll(/--add-dir=([^\0]+)/g);
+              for (const match of matches) {
+                addPath(match[1], { requireMarker: false });
+              }
             }
           } catch {}
         }
       }
-    }
-  } catch {}
+    } catch {}
+  }
 
-  // 4. Running processes with --add-dir=...
-  try {
-    if (process.platform === 'linux') {
-      const pids = fs.readdirSync('/proc').filter(p => /^\d+$/.test(p));
-      for (const pid of pids) {
-        try {
-          const cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
-          if (cmdline.includes('agy') || cmdline.includes('antigravity')) {
-            const matches = cmdline.matchAll(/--add-dir=([^\0]+)/g);
-            for (const match of matches) {
-              const dir = match[1];
-              if (dir && fs.existsSync(dir)) {
-                try { dirs.add(fs.realpathSync(dir)); } catch {}
+  if (autoTrust === 'project-markers') {
+    // 4. ~/.gemini/config/projects/*.json (historical projects — require project marker)
+    try {
+      const projDir = path.join(home, '.gemini', 'config', 'projects');
+      if (fs.existsSync(projDir)) {
+        for (const f of fs.readdirSync(projDir)) {
+          if (!f.endsWith('.json')) continue;
+          try {
+            const content = JSON.parse(fs.readFileSync(path.join(projDir, f), 'utf8'));
+            const resources = content?.projectResources?.resources || [];
+            for (const res of resources) {
+              if (res.folderUri && typeof res.folderUri === 'string' && res.folderUri.startsWith('file://')) {
+                try {
+                  addPath(decodeURIComponent(new URL(res.folderUri).pathname), { requireMarker: true });
+                } catch {}
               }
             }
-          }
-        } catch {}
+          } catch {}
+        }
       }
-    }
-  } catch {}
+    } catch {}
 
-  return [...dirs].sort();
+    // 4. ~/.gemini/projects.json (historical projects — require project marker)
+    try {
+      const pJson = path.join(home, '.gemini', 'projects.json');
+      if (fs.existsSync(pJson)) {
+        const content = JSON.parse(fs.readFileSync(pJson, 'utf8'));
+        if (content?.projects && typeof content.projects === 'object') {
+          for (const p of Object.keys(content.projects)) {
+            addPath(p, { requireMarker: true });
+          }
+        }
+      }
+    } catch {}
+
+    // 5. ~/.config/Antigravity IDE/User/workspaceStorage/*/workspace.json (historical IDE storage — require project marker)
+    try {
+      const wsStorage = path.join(home, '.config', 'Antigravity IDE', 'User', 'workspaceStorage');
+      if (fs.existsSync(wsStorage)) {
+        for (const d of fs.readdirSync(wsStorage)) {
+          const wsFile = path.join(wsStorage, d, 'workspace.json');
+          if (fs.existsSync(wsFile)) {
+            try {
+              const data = JSON.parse(fs.readFileSync(wsFile, 'utf8'));
+              const uri = data.folder || data.workspace;
+              if (uri && typeof uri === 'string' && uri.startsWith('file://')) {
+                try {
+                  addPath(decodeURIComponent(new URL(uri).pathname), { requireMarker: true });
+                } catch {}
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const sorted = [...dirs].sort();
+  workspaceCache = { key: cacheKey, ts: now, dirs: sorted };
+  return sorted;
 }
 
 export function loadAllowlist(){
@@ -216,19 +427,19 @@ export function loadAllowlist(){
 }
 
 export function isWorkspaceAuthorized(ws){
-  const home = fs.realpathSync(os.homedir());
-  if (ws === path.parse(ws).root || ws === home) return false;
+  if (isProtectedRoot(ws)) return false;
+  const canonical = realpathIfExists(ws);
   const allowed = loadAllowlist();
-  if (allowed.includes(ws)) return true;
   for (const a of allowed) {
-    if (ws.startsWith(a + path.sep) || a.startsWith(ws + path.sep)) {
+    if (isProtectedRoot(a)) continue;
+    if (canonical === a || canonical.startsWith(a + path.sep)) {
       return true;
     }
   }
   const agWorkspaces = loadAntigravityWorkspaces();
-  if (agWorkspaces.includes(ws)) return true;
   for (const a of agWorkspaces) {
-    if (ws.startsWith(a + path.sep) || a.startsWith(ws + path.sep)) {
+    if (isProtectedRoot(a)) continue;
+    if (canonical === a || canonical.startsWith(a + path.sep)) {
       return true;
     }
   }
@@ -237,19 +448,19 @@ export function isWorkspaceAuthorized(ws){
 
 export function requireAuthorizedWorkspace(input){
   const ws=normalizeWorkspace(input);
-  if (!isWorkspaceAuthorized(ws)) throw new Error('Workspace is not authorized. Run: node scripts/verifykit.mjs allow "'+ws+'" (local user approval).');
+  if (!isWorkspaceAuthorized(ws)) throw new Error('Workspace is not authorized. Run: node scripts/a2a.mjs allow "'+ws+'" (local user approval).');
   return ws;
 }
 function writeAllowlist(allowed){
-  const target=allowlistPath(),parent=path.dirname(target);fs.mkdirSync(parent,{recursive:true,mode:0o700});
+  const target=path.join(os.homedir(), '.config', 'a2a', 'allowed-workspaces.json');
+  const parent=path.dirname(target);fs.mkdirSync(parent,{recursive:true,mode:0o700});
   const flags=fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_TRUNC|(fs.constants.O_NOFOLLOW||0);
   const fd=fs.openSync(target,flags,0o600);
   try{fs.fchmodSync(fd,0o600);fs.writeFileSync(fd,JSON.stringify({version:1,allowed},null,2)+'\n')}finally{fs.closeSync(fd)}
 }
 export function authorizeWorkspace(input) {
   const ws=normalizeWorkspace(input);
-  const home=fs.realpathSync(os.homedir());
-  if(ws === path.parse(ws).root || ws === home) throw new Error('Refusing to authorize a filesystem root or entire home directory');
+  if(isProtectedRoot(ws)) throw new Error('Refusing to authorize a protected root or system directory');
   const allowed=[...new Set([...loadAllowlist(),ws])].sort();
   writeAllowlist(allowed);
   return ws;

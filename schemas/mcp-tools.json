@@ -2,8 +2,8 @@
   "schema_version": "1.0.0",
   "tools": [
     {
-      "name": "verifykit_context",
-      "description": "Read-only source-backed project index, symbol relationships, capabilities and freshness. No source text or secrets are returned; does not replace native Antigravity file search.",
+      "name": "a2a_context",
+      "description": "A2A read-only project index, symbol relationships, code skeletonizer, freshness & measured token telemetry.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -13,7 +13,7 @@
         "properties": {
           "workspace": {
             "type": "string",
-            "description": "Absolute path of a locally authorized workspace. Authorize with verifykit CLI first."
+            "description": "Absolute path of an authorized workspace (Antigravity IDE workspaces authorized automatically)."
           },
           "action": {
             "type": "string",
@@ -21,7 +21,8 @@
               "inspect",
               "query",
               "freshness",
-              "tokens"
+              "tokens",
+              "skeleton"
             ],
             "default": "inspect"
           },
@@ -33,13 +34,37 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 40
+          },
+          "conversation_id": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Optional Antigravity conversation ID for exact session token lookup."
+          },
+          "transcript_path": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Optional path to transcript.jsonl for exact session token lookup."
+          },
+          "file": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Relative file path for action=\"skeleton\"."
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "maxItems": 20,
+            "description": "Relative file paths for action=\"skeleton\"."
           }
         }
       }
     },
     {
-      "name": "verifykit_impact",
-      "description": "Analyze changes and possible impacted features/tests using a bounded, provenance-aware static graph. Derived relationships are labeled; never claims full coverage.",
+      "name": "a2a_impact",
+      "description": "A2A static impact analysis, reverse dependencies, and affected token metrics.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -49,7 +74,7 @@
         "properties": {
           "workspace": {
             "type": "string",
-            "description": "Absolute path of a locally authorized workspace. Authorize with verifykit CLI first."
+            "description": "Absolute path of an authorized workspace (Antigravity IDE workspaces authorized automatically)."
           },
           "changed": {
             "type": "array",
@@ -68,8 +93,8 @@
       }
     },
     {
-      "name": "verifykit_verify",
-      "description": "Plan risk-aware checks for native Antigravity tools or assess existing JUnit/TAP test artifacts. Never executes commands and never labels unrun tests as passed.",
+      "name": "a2a_verify",
+      "description": "A2A native test planning and JUnit/TAP/JSON evidence assessment.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -80,7 +105,7 @@
         "properties": {
           "workspace": {
             "type": "string",
-            "description": "Absolute path of a locally authorized workspace. Authorize with verifykit CLI first."
+            "description": "Absolute path of an authorized workspace (Antigravity IDE workspaces authorized automatically)."
           },
           "operation": {
             "type": "string",
@@ -141,8 +166,8 @@
       }
     },
     {
-      "name": "verifykit_evidence",
-      "description": "Inspect evidence/runs/incidents, or record hypotheses and incident metadata. Evidence is revision-bound and cannot attest origin cryptographically.",
+      "name": "a2a_evidence",
+      "description": "A2A historical evidence, runs, regression hypotheses, and incident tracking.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -153,7 +178,7 @@
         "properties": {
           "workspace": {
             "type": "string",
-            "description": "Absolute path of a locally authorized workspace. Authorize with verifykit CLI first."
+            "description": "Absolute path of an authorized workspace (Antigravity IDE workspaces authorized automatically)."
           },
           "operation": {
             "type": "string",

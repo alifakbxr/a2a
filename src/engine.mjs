@@ -1,43 +1,194 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import os from 'node:os';
 import {Store,uniqueId} from './storage.mjs';
-import {requireAuthorizedWorkspace,sha256,cleanError} from './security.mjs';
+import {requireAuthorizedWorkspace,sha256,cleanError,safeFile,getCompactMode} from './security.mjs';
 import {discover,createGraph,snapshotOf,gitHead,discoverTestCommands} from './scanner.mjs';
 import {contextQuery,analyzeImpact,shortGraphSummary,validateChangedPaths} from './graph.mjs';
 import {planVerification,assessVerification,listEvidence,freshness} from './verification.mjs';
-import {estimateTokens,getSessionTokenUsage,analyzeWorkspaceTokens} from './tokens.mjs';
+import {estimateTokens,getSessionTokenUsage,analyzeWorkspaceTokens,skeletonizeCode} from './tokens.mjs';
 
 export class Engine {
   constructor({store}={}) {this.store=store||new Store();this.owned=!store;}
   close(){if(this.owned)this.store.close()}
   sync(workspace){
-    const root=requireAuthorizedWorkspace(workspace),wsId=this.store.register(root), index=discover(root), git=gitHead(root);
+    const root=requireAuthorizedWorkspace(workspace),wsId=this.store.register(root);
+    const cachedFiles=new Map(this.store.all('SELECT path,content_sha AS hash,language,bytes,mtime_ms FROM files WHERE workspace_id=?',wsId).map(r=>[r.path,r]));
+    const index=discover(root,{cachedFiles}), git=gitHead(root);
     const snapshot=sha256((git||'no-git')+'|'+snapshotOf(index));const current=this.store.latest(wsId);
     const revision=this.store.insertRevision(wsId,snapshot,git,{os:os.platform(),arch:os.arch(),node:process.versions.node});
-    if(!current||current.id!==revision||this.store.get('SELECT count(*) AS n FROM files WHERE workspace_id=?',wsId).n!==index.files.length){const graph=createGraph(index);this.store.persistIndex(wsId,revision,index.files.map(({text,...rest})=>rest),graph.nodes,graph.edges)}
+    if(!current||current.id!==revision||cachedFiles.size!==index.files.length){
+      for(const f of index.files){
+        if(f.text===null){
+          try{f.text=fs.readFileSync(safeFile(root,f.path),'utf8')}catch{f.text=''}
+        }
+      }
+      const graph=createGraph(index);
+      this.store.persistIndex(wsId,revision,index.files.map(({text,...rest})=>rest),graph.nodes,graph.edges);
+    }
     return {root,wsId,revision,index,git,snapshot,skipped:index.skipped};
   }
-  context({workspace,action='inspect',query='',limit=12}={}){
-    const s=this.sync(workspace),wsTokens=analyzeWorkspaceTokens(s.index);
-    const base={workspace_id:s.wsId,revision:s.revision,git_head:s.git,coverage:{...shortGraphSummary(this.store,s.wsId),skipped_files:s.skipped.length,incomplete:s.skipped.some(x=>x==='index_limit_exceeded'||x==='index_byte_budget_exceeded'),estimated_source_tokens:wsTokens.total_estimated_tokens,tokens_saved_ratio:wsTokens.efficiency.savings_ratio},read_only:true};
-    if(action==='inspect')return {...base,ecosystems:discoverTestCommands(s.index).suggestions.map(x=>x.ecosystem),test_candidates:discoverTestCommands(s.index).testFiles.slice(0,25),tokens:{estimated_source_tokens:wsTokens.total_estimated_tokens,efficiency:wsTokens.efficiency},limitations:['Language analysis is heuristic and static; relationships may be incomplete.']};
-    if(action==='query')return {...base,...contextQuery(this.store,s.wsId,{query,limit})};
-    if(action==='freshness')return {...base,evidence:freshness(this.store,s.wsId,s.root,s.revision)};
-    if(action==='tokens')return {...base,workspace_tokens:wsTokens,session_tokens:getSessionTokenUsage()};
+  resolveMeta(workspace){
+    const root=requireAuthorizedWorkspace(workspace),wsId=this.store.register(root);
+    const current=this.store.latest(wsId);
+    if(!current) return this.sync(workspace);
+    return {root,wsId,revision:current.id,git:current.git_head};
+  }
+  context({workspace,action='inspect',query='',limit=12,conversation_id=null,transcript_path=null,file=null,files=[]}={}){
+    const compact=getCompactMode();
+    if(action==='skeleton'){
+      const s=this.resolveMeta(workspace);
+      const targets=[...(typeof file==='string'&&file.trim()?[file.trim()]:[]),...(Array.isArray(files)?files:[])].filter(Boolean);
+      const uniqueTargets=[...new Set(targets)].slice(0,20);
+      if(!uniqueTargets.length) throw new Error('Provide file or files for action="skeleton"');
+      let totalRaw=0, totalSkel=0;
+      const items=[];
+      for(const rel of uniqueTargets){
+        const full=safeFile(s.root,rel);
+        const raw=fs.readFileSync(full,'utf8');
+        const skeleton=skeletonizeCode(raw,path.extname(rel));
+        const rawTokens=estimateTokens(raw);
+        const skelTokens=estimateTokens(skeleton);
+        const saved=Math.max(0,rawTokens-skelTokens);
+        totalRaw+=rawTokens;totalSkel+=skelTokens;
+        items.push({
+          file:rel,
+          raw_tokens:rawTokens,
+          skeleton_tokens:skelTokens,
+          tokens_saved:saved,
+          saved_pct:rawTokens>0?((saved/rawTokens)*100).toFixed(1)+'%':'0%',
+          skeleton,
+        });
+      }
+      const totalSaved=Math.max(0,totalRaw-totalSkel);
+      const payload={
+        workspace_id:s.wsId,
+        revision:s.revision,
+        action:'skeleton',
+        files:items,
+        summary:{
+          raw_tokens:totalRaw,
+          skeleton_tokens:totalSkel,
+          tokens_saved:totalSaved,
+          saved_pct:totalRaw>0?((totalSaved/totalRaw)*100).toFixed(1)+'%':'0%',
+        },
+        ...(compact?{compact:true}:{}),
+      };
+      this.store.recordTelemetry(s.wsId,{toolName:'a2a_context',action:'skeleton',rawScopeTokens:totalRaw,responseTokens:estimateTokens(JSON.stringify(payload))});
+      return payload;
+    }
+
+    const s=this.sync(workspace);
+    const base={
+      workspace_id:s.wsId,
+      revision:s.revision,
+      git_head:s.git,
+      coverage:{
+        ...shortGraphSummary(this.store,s.wsId),
+        skipped_files:s.skipped.length,
+        incomplete:s.skipped.some(x=>x==='index_limit_exceeded'||x==='index_byte_budget_exceeded'),
+      },
+      read_only:true,
+    };
+
+    if(action==='query'){
+      const qRes=contextQuery(this.store,s.wsId,{query,limit});
+      if(compact) delete qRes.uncertainty;
+      const payload={...base,...qRes,...(compact?{compact:true}:{})};
+      const fileBytes=new Map(s.index.files.map(f=>[f.path,f.bytes]));
+      const matchedFiles=new Set(qRes.nodes.map(n=>n.file).filter(Boolean));
+      let rawBytes=0;
+      for(const fp of matchedFiles) rawBytes+=fileBytes.get(fp)||0;
+      this.store.recordTelemetry(s.wsId,{toolName:'a2a_context',action:'query',rawScopeTokens:estimateTokens(rawBytes),responseTokens:estimateTokens(JSON.stringify(payload))});
+      return payload;
+    }
+    if(action==='freshness'){
+      return {...base,evidence:freshness(this.store,s.wsId,s.root,s.revision),...(compact?{compact:true}:{})};
+    }
+
+    const telemetrySummary=this.store.getTelemetrySummary(s.wsId);
+    const wsTokens=analyzeWorkspaceTokens(s.index,[],telemetrySummary);
+    base.coverage.estimated_source_tokens=wsTokens.total_estimated_tokens;
+    base.coverage.tokens_saved_ratio=wsTokens.efficiency.savings_ratio;
+
+    if(action==='inspect'){
+      const cmdInfo=discoverTestCommands(s.index,s.root);
+      const payload={
+        ...base,
+        ecosystems:cmdInfo.suggestions.map(x=>x.ecosystem),
+        test_candidates:cmdInfo.testFiles.slice(0,25),
+        tokens:{
+          estimated_source_tokens:wsTokens.total_estimated_tokens,
+          compact_index_tokens:wsTokens.compact_index_tokens,
+          efficiency:wsTokens.efficiency,
+        },
+        ...(compact?{compact:true}:{limitations:['Language analysis is heuristic and static; relationships may be incomplete.']}),
+      };
+      this.store.recordTelemetry(s.wsId,{toolName:'a2a_context',action:'inspect',rawScopeTokens:wsTokens.total_estimated_tokens,responseTokens:estimateTokens(JSON.stringify(payload))});
+      return payload;
+    }
+    if(action==='tokens'){
+      const trimmedWsTokens=compact?{...wsTokens,top_consumers:wsTokens.top_consumers.slice(0,5)}:wsTokens;
+      return {
+        ...base,
+        workspace_tokens:trimmedWsTokens,
+        session_tokens:getSessionTokenUsage(conversation_id,{transcriptPath:transcript_path,workspace:s.root,dataDirPath:this.store.base}),
+        ...(compact?{compact:true}:{}),
+      };
+    }
     throw new Error('Unknown context action');
   }
-  impact({workspace,changed=[],depth=3}={}){validateChangedPaths(changed);const s=this.sync(workspace);const impactTokens=analyzeWorkspaceTokens(s.index,changed);return {revision:s.revision,...analyzeImpact(this.store,s.wsId,s.root,{changed,depth}),tokens_affected:impactTokens.changed_files_tokens,incomplete_index:s.skipped.some(x=>x==='index_limit_exceeded'||x==='index_byte_budget_exceeded')}}
-  verify({workspace,operation='plan',criteria=[],changed=[]}={}){
+  impact({workspace,changed=[],depth=3}={}){
+    validateChangedPaths(changed);
+    const compact=getCompactMode();
     const s=this.sync(workspace);
-    if(operation==='plan'){validateChangedPaths(changed);return {revision:s.revision,...planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria})}}
-    if(operation==='assess')return assessVerification(this.store,s.wsId,s.root,s.revision,criteria);
+    const res=analyzeImpact(this.store,s.wsId,s.root,{changed,depth});
+    const impactTokens=analyzeWorkspaceTokens(s.index,res.changed);
+    const affectedPaths=new Set([...res.changed,...res.affected.map(a=>a.path).filter(Boolean)]);
+    const fileBytes=new Map(s.index.files.map(f=>[f.path,f.bytes]));
+    let rawScopeBytes=0;
+    for(const p of affectedPaths) rawScopeBytes+=fileBytes.get(p)||0;
+    if(compact) delete res.uncertainty;
+    const payload={
+      revision:s.revision,
+      ...res,
+      tokens_affected:impactTokens.changed_files_tokens,
+      incomplete_index:s.skipped.some(x=>x==='index_limit_exceeded'||x==='index_byte_budget_exceeded'),
+      ...(compact?{compact:true}:{}),
+    };
+    this.store.recordTelemetry(s.wsId,{toolName:'a2a_impact',action:'impact',rawScopeTokens:estimateTokens(rawScopeBytes),responseTokens:estimateTokens(JSON.stringify(payload))});
+    return payload;
+  }
+  verify({workspace,operation='plan',criteria=[],changed=[]}={}){
+    const compact=getCompactMode();
+    const s=this.sync(workspace);
+    if(operation==='plan'){
+      validateChangedPaths(changed);
+      const plan=planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria});
+      if(compact){
+        if(plan.impact) delete plan.impact.unknowns;
+        if(plan.checks) delete plan.checks.note;
+      }
+      return {revision:s.revision,...plan,...(compact?{compact:true}:{})};
+    }
+    if(operation==='assess'){
+      const res=assessVerification(this.store,s.wsId,s.root,s.revision,criteria);
+      if(compact){
+        delete res.limits;
+        res.compact=true;
+      }
+      return res;
+    }
     throw new Error('Unknown verify operation');
   }
   evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id}={}){
-    const s=this.sync(workspace),wsId=s.wsId;
-    if(operation==='list')return {revision:s.revision,...listEvidence(this.store,wsId,s.root,s.revision,{limit,id})};
-    if(operation==='runs')return {revision:s.revision,runs:this.store.all('SELECT id,revision_id,verdict,criteria_json,created_at FROM runs WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20))).map(x=>({...x,fresh:x.revision_id===s.revision,criteria:JSON.parse(x.criteria_json),criteria_json:undefined}))};
-    if(operation==='incidents')return {items:this.store.all('SELECT * FROM incidents WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20))).map(x=>({...x,paths:JSON.parse(x.related_paths_json),criteria:JSON.parse(x.criteria_json),evidence_ids:JSON.parse(x.evidence_ids_json),related_paths_json:undefined,criteria_json:undefined,evidence_ids_json:undefined}))};
+    const compact=getCompactMode();
+    const isReadOnly=operation==='list'||operation==='runs'||operation==='incidents'||operation==='hypotheses';
+    const s=isReadOnly?this.resolveMeta(workspace):this.sync(workspace);
+    const wsId=s.wsId;
+    if(operation==='list')return {revision:s.revision,...listEvidence(this.store,wsId,s.root,s.revision,{limit,id}),...(compact?{compact:true}:{})};
+    if(operation==='runs')return {revision:s.revision,runs:this.store.all('SELECT id,revision_id,verdict,criteria_json,created_at FROM runs WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20))).map(x=>({...x,fresh:x.revision_id===s.revision,criteria:JSON.parse(x.criteria_json),criteria_json:undefined})),...(compact?{compact:true}:{})};
+    if(operation==='incidents')return {items:this.store.all('SELECT * FROM incidents WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20))).map(x=>({...x,paths:JSON.parse(x.related_paths_json),criteria:JSON.parse(x.criteria_json),evidence_ids:JSON.parse(x.evidence_ids_json),related_paths_json:undefined,criteria_json:undefined,evidence_ids_json:undefined})),...(compact?{compact:true}:{})};
     if(operation==='record_incident'){
       if(typeof title!=='string'||title.trim().length<5||title.length>240||typeof root_cause!=='string'||root_cause.length>1400)throw new Error('Invalid incident title/root cause');
       validateChangedPaths(paths);if(!Array.isArray(criteria)||criteria.length>40||criteria.some(v=>typeof v!=='string'||v.length>160))throw new Error('Invalid criteria');
@@ -45,14 +196,14 @@ export class Engine {
       for(const eid of evidence_ids)if(!this.store.get('SELECT id FROM evidence WHERE id=? AND workspace_id=?',eid,wsId))throw new Error('Evidence ID outside workspace or unknown');
       const state=evidence_ids.length?'evidence-linked':'hypothesized',inc=uniqueId('inc');
       this.store.run('INSERT INTO incidents VALUES(?,?,?,?,?,?,?,?,?,?)',inc,wsId,title,root_cause,state,s.revision,JSON.stringify(paths),JSON.stringify(criteria),JSON.stringify(evidence_ids),new Date().toISOString());
-      return {id:inc,state,revision:s.revision,warning:'Evidence-linked is not synonymous with proven root cause.'};
+      return {id:inc,state,revision:s.revision,...(compact?{compact:true}:{warning:'Evidence-linked is not synonymous with proven root cause.'})};
     }
     if(operation==='add_hypothesis'){
       if(typeof hypothesis!=='string'||hypothesis.length<8||hypothesis.length>1000||typeof experiment!=='string'||experiment.length>1000)throw new Error('Invalid hypothesis/experiment');
       if(incident_id && !this.store.get('SELECT id FROM incidents WHERE id=? AND workspace_id=?',incident_id,wsId))throw new Error('Invalid incident');
       const hid=uniqueId('hyp');this.store.run('INSERT INTO hypotheses VALUES(?,?,?,?,?,?,?,?)',hid,wsId,incident_id||null,hypothesis,'untested',experiment,JSON.stringify([]),new Date().toISOString());return {id:hid,status:'untested'};
     }
-    if(operation==='hypotheses')return {items:this.store.all('SELECT id,incident_id,description,status,experiment,created_at FROM hypotheses WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20)))};
+    if(operation==='hypotheses')return {items:this.store.all('SELECT id,incident_id,description,status,experiment,created_at FROM hypotheses WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20))),...(compact?{compact:true}:{})};
     throw new Error('Unknown evidence operation');
   }
 }
