@@ -128,8 +128,7 @@ function recordActiveSession(payload, baseDir) {
         if (workspacePaths.length > 0) {
           try { wsId = store.register(requireAuthorizedWorkspace(workspacePaths[0])); } catch {}
         }
-        if(!wsId) return;
-        store.recordSideQuestion({
+        if(wsId) store.recordSideQuestion({
           workspaceId: wsId,
           conversationId: convId,
           parentConversationId: sideQ.parentConversationId,
