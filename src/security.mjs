@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
+import {fileURLToPath} from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 export const sha256 = (v) => crypto.createHash('sha256').update(v).digest('hex');
@@ -261,7 +262,7 @@ function extractWorkspaceFolderPaths(wsFilePath) {
     for (const f of folders) {
       if (!f || typeof f !== 'object') continue;
       if (typeof f.uri === 'string' && f.uri.startsWith('file://')) {
-        try { results.push(decodeURIComponent(new URL(f.uri).pathname)); } catch {}
+        try { results.push(fileURLToPath(f.uri)); } catch {}
       } else if (typeof f.path === 'string' && f.path.trim()) {
         results.push(path.resolve(baseDir, f.path));
       }
@@ -332,7 +333,7 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
             if (!entry || entry.trusted !== true || !entry.uri) continue;
             let raw = entry.uri.fsPath || entry.uri.path || null;
             if (!raw && typeof entry.uri.external === 'string' && entry.uri.external.startsWith('file://')) {
-              try { raw = decodeURIComponent(new URL(entry.uri.external).pathname); } catch {}
+              try { raw = fileURLToPath(entry.uri.external); } catch {}
             }
             if (raw) addPath(raw, { requireMarker: false });
           }
@@ -391,7 +392,7 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
             for (const res of resources) {
               if (res.folderUri && typeof res.folderUri === 'string' && res.folderUri.startsWith('file://')) {
                 try {
-                  addPath(decodeURIComponent(new URL(res.folderUri).pathname), { requireMarker: true });
+                  addPath(fileURLToPath(res.folderUri), { requireMarker: true });
                 } catch {}
               }
             }
@@ -425,7 +426,7 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
               const uri = data.folder || data.workspace;
               if (uri && typeof uri === 'string' && uri.startsWith('file://')) {
                 try {
-                  addPath(decodeURIComponent(new URL(uri).pathname), { requireMarker: true });
+                  addPath(fileURLToPath(uri), { requireMarker: true });
                 } catch {}
               }
             } catch {}
