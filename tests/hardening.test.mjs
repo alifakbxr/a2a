@@ -88,6 +88,7 @@ test('verification: native-run report + source hashes permit local PASS; changed
   fs.writeFileSync(path.join(ws1,'src','math.js'),'export const add=(a,b)=>a+b+0;\n');
   const xml='<testsuite tests="1" failures="0" errors="0" skipped="0"><testcase name="addition works"/></testsuite>';
   fs.writeFileSync(path.join(ws1,'report.xml'),xml);
+  handleHookEvent({hookEventName:'SessionStart',conversationId:'conv-native-test-11',workspacePaths:[ws1],cwd:ws1},{baseDir:process.env.A2A_DATA_DIR});
   const hook=handleHookEvent({hookEventName:'PostToolUse',conversationId:'conv-native-test-11',workspacePaths:[ws1],
     toolCall:{name:'run_command',args:{Cwd:ws1,CommandLine:'npm test'}},error:''},{baseDir:process.env.A2A_DATA_DIR});
   assert.deepEqual(hook,{});
