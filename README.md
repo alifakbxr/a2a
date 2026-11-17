@@ -48,6 +48,7 @@ You can manage and toggle A2A directly in your Antigravity chat:
 | `/a2a-always-on` *(or `/a2a always-on`)* | Enable **Always-On** (proactive impact check & verification) |
 | `/a2a-on-demand` *(or `/a2a on-demand`)* | Switch to **On-Demand** (tools run only when requested) |
 | `/a2a-compact` *(or `/a2a compact`)* | Toggle **Compact Mode** (65-80% output token reduction, zero fluff) |
+| `/a2a-compact` *(or `/a2a compact`)* | Toggle **Compact Mode** (65-80% output token reduction, zero fluff) |
 | `/a2a-status` *(or `/a2a status`)* | Show current mode, health diagnostics & trusted workspaces |
 | `/a2a tokens` | Show token consumption and context savings |
 
@@ -84,6 +85,7 @@ You can manage and toggle A2A directly in your Antigravity chat:
 | `/a2a-toggle` *(or `/a2a toggle`)* | Quickly switch between **Always-On** and **On-Demand** |
 | `/a2a-always-on` *(or `/a2a always-on`)* | Enable **Always-On** (proactive impact check & verification) |
 | `/a2a-on-demand` *(or `/a2a on-demand`)* | Switch to **On-Demand** (tools run only when requested) |
+| `/a2a-compact` *(or `/a2a compact`)* | Toggle **Compact Mode** (65-80% output token reduction, zero fluff) |
 | `/a2a-compact` *(or `/a2a compact`)* | Toggle **Compact Mode** (65-80% output token reduction, zero fluff) |
 | `/a2a-status` *(or `/a2a status`)* | Show current mode, health diagnostics & trusted workspaces |
 | `/a2a tokens` | Show token consumption and context savings |
