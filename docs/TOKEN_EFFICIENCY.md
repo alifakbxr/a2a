@@ -1,24 +1,36 @@
-# Token efficiency evaluation
+# Token measurement and A/B protocol
 
-A2A exposes *estimated* source and response token footprints. It does **not** know the true tokens a model would have used without the plugin. `raw_scope_tokens - response_tokens` is a counterfactual estimate, **not net session savings**. Model-provided cache counters, if available, must be considered separately.
+## What A2A can and cannot measure
 
-## Controlled A/B protocol (manual Antigravity)
+**Without a provider usage record:** `a2a tokens` reports only an **estimated workspace source inventory** and **estimated tool payload sizes**. These numbers are **not** consumed context, billable tokens, savings, or the Gemini context window. Net savings, percentages, and USD estimates are intentionally `null`. Existing legacy telemetry rows cannot retroactively prove savings.
 
-1. Choose at least five representative tasks with independently testable acceptance criteria (simple edit, bug fix, multi-module change, test repair, security-sensitive edit).
-2. Record model, reasoning configuration, Antigravity version, repository revision, test fixtures, permissions and task prompt; use a fresh conversation per attempt.
-3. Run each task from the **same repository snapshot** under:
-   - **A: Native** — A2A disabled.
-   - **B: On-demand** — A2A enabled with no automatic tools (manually invoke only when needed).
-   - **C: Always-on** — explicit opt-in to adaptive A2A instructions.
-4. Use comparable cold/warm cache conditions, randomize variant order, and repeat runs. Record token counts from the *same authoritative model/session provider* where available.
-5. Count all input, output, cache-read, tool-result and retry tokens consistently; also track tool-call count, latency, automated test outcomes and correctness. Do not compare A2A's source-size heuristic against native billed usage.
-6. Report median and spread per task type. Compare both **net tokens** and **task quality**. Include failures and sessions needing additional iterations.
-7. Do not publish a specific percent savings or "zero false completion" claim without reproducible logs and methodology.
+**With official Antigravity CLI usage:** `agy --output-format json` provides a run-level `usage` object; `stream-json` provides it in the final `event: result`. A2A validates and displays the official `total_tokens` without summing cache-read or thinking tokens a second time.
 
-## Interpretation
+```bash
+# Only runs a new headless Antigravity task; it does NOT measure an existing IDE conversation.
+agy -p "Explain this module without changing files" --output-format json > agy-result.json
 
-- A2A may help on complex dependency changes, while increasing token cost for simple edits.
-- The code skeletonizer removes comments and blank lines but **does not remove function bodies**; callers may still require full source.
-- Prefer a short context query before reading full files; avoid duplicate skeleton + full file reads.
-- For existing installs with persisted `always-on` settings, switch to on-demand explicitly: `a2a mode on-demand` or `node scripts/a2a.mjs mode on-demand`.
-- Session transcript metrics depend on undocumented Antigravity event shapes; treat them as diagnostic, not billing-grade.
+# Show the official usage for that completed run plus the separate workspace inventory.
+node scripts/a2a.mjs tokens . --usage-file agy-result.json
+```
+
+The imported file may contain conversation content. Keep it local and private; do not commit it. Files over 4 MiB and inconsistent usage totals are rejected. A2A does not automatically read arbitrary other conversations.
+
+## Source of truth
+
+Google's [official CLI headless documentation](https://antigravity.google/docs/cli/headless/) defines the `usage` object. For its example, `input_tokens=10,418`, `output_tokens=589`, and `total_tokens=11,007`. `thinking_tokens=551` and `cache_read_tokens=8,113` are reported fields; neither is separately added to `total_tokens`.
+
+Source inventory is estimated from UTF-8 file sizes, not from the live Gemini tokenizer. A2A cannot directly inspect a model's private context or billing records.
+
+## Controlled A/B procedure
+
+1. Choose at least five tasks with measurable acceptance criteria: trivial edit, regression fix, multi-module change, security fix, and verification/report task.
+2. Pin repository snapshot, model, Antigravity version, instruction effort, permissions, OS and prompt. Use fresh sessions to prevent prior turns from leaking into the comparison.
+3. Run from equivalent snapshots in each mode: **Native** (plugin disabled), **On-Demand**, and **Always-On**. Randomize order and repeat each variant multiple times.
+4. Capture the official CLI JSON result for every run. Use `usage.total_tokens` consistently as the per-run reported metric; separately report `cache_read_tokens`, `thinking_tokens`, `duration_seconds`, number of turns, tool calls and retries.
+5. Record acceptance-test outcome, regression count and human-review errors. A lower token total with broken behavior is not an improvement.
+6. Report median and spread by task type. Keep sources/configuration reproducible, and never confuse tool payload counters with provider usage.
+
+For matched runs, define `net_difference_pct = 100 * (total_tokens_A2A - total_tokens_native)/total_tokens_native`. Positive values mean more reported tokens; negative values mean fewer. A2A cannot calculate this without **both** runs.
+
+Do not publish token-savings percentages, cache savings, or 0% false-positive completion until independently verified end-to-end.
