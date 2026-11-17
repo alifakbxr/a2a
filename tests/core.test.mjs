@@ -24,6 +24,8 @@ function fixture(){
   const base=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-test-'));const home=path.join(base,'home'),root=path.join(base,'work');fs.mkdirSync(home);fs.mkdirSync(root);
   envBackup={
     HOME:process.env.HOME,
+    USERPROFILE:process.env.USERPROFILE,
+    APPDATA:process.env.APPDATA,
     A2A_DATA_DIR:process.env.A2A_DATA_DIR,
     VERIFYKIT_DATA_DIR:process.env.VERIFYKIT_DATA_DIR,
     PLUGIN_DATA:process.env.PLUGIN_DATA,
@@ -32,6 +34,8 @@ function fixture(){
     A2A_LEGACY_TOOL_ALIASES:process.env.A2A_LEGACY_TOOL_ALIASES,
   };
   process.env.HOME=home;
+  process.env.USERPROFILE=home;
+  process.env.APPDATA=path.join(home,'AppData','Roaming');
   delete process.env.A2A_DATA_DIR;
   delete process.env.PLUGIN_DATA;
   delete process.env.ANTIGRAVITY_APP_DATA_DIR;

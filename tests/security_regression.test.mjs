@@ -28,12 +28,16 @@ function createSecurityFixture() {
 
   const envBackup = {
     HOME: process.env.HOME,
+    USERPROFILE: process.env.USERPROFILE,
+    APPDATA: process.env.APPDATA,
     VERIFYKIT_DATA_DIR: process.env.VERIFYKIT_DATA_DIR,
     A2A_DATA_DIR: process.env.A2A_DATA_DIR,
     ANTIGRAVITY_CONVERSATION_ID: process.env.ANTIGRAVITY_CONVERSATION_ID,
   };
 
   process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  process.env.APPDATA = path.join(home, 'AppData', 'Roaming');
   process.env.VERIFYKIT_DATA_DIR = path.join(base, 'data');
   delete process.env.A2A_DATA_DIR;
   delete process.env.ANTIGRAVITY_CONVERSATION_ID;
@@ -52,6 +56,8 @@ function createSecurityFixture() {
     if (!envBackup.A2A_DATA_DIR) delete process.env.A2A_DATA_DIR;
     if (!envBackup.VERIFYKIT_DATA_DIR) delete process.env.VERIFYKIT_DATA_DIR;
     if (!envBackup.ANTIGRAVITY_CONVERSATION_ID) delete process.env.ANTIGRAVITY_CONVERSATION_ID;
+    if (!envBackup.USERPROFILE) delete process.env.USERPROFILE;
+    if (!envBackup.APPDATA) delete process.env.APPDATA;
     try {
       fs.rmSync(base, { recursive: true, force: true });
     } catch {}

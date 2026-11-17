@@ -7,10 +7,20 @@ import os from 'node:os';
 import path from 'node:path';
 
 function spawnServer(extraEnv={}){const temp=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-mcp-'));
-  const p=spawn(process.execPath,['src/mcp.mjs'],{cwd:path.resolve('.'),env:{...process.env,HOME:temp,A2A_DATA_DIR:path.join(temp,'db'),...extraEnv},stdio:['pipe','pipe','pipe']});
+  const p=spawn(process.execPath,['src/mcp.mjs'],{cwd:path.resolve('.'),env:{...process.env,HOME:temp,USERPROFILE:temp,A2A_DATA_DIR:path.join(temp,'db'),...extraEnv},stdio:['pipe','pipe','pipe']});
   const lines=createInterface({input:p.stdout});const pending=[];lines.on('line',line=>{const fn=pending.shift();if(fn)fn(JSON.parse(line))});
   const ask=(req)=>new Promise((resolve,reject)=>{pending.push(resolve);p.stdin.write(JSON.stringify(req)+'\n',err=>{if(err)reject(err)})});
-  return {p,temp,ask,close:()=>{p.stdin.end();p.kill();fs.rmSync(temp,{recursive:true,force:true})}};
+  const close=async ()=>{
+    try{p.stdin.end()}catch{}
+    try{p.kill()}catch{}
+    await new Promise(resolve=>{
+      if(p.exitCode!==null) return resolve();
+      p.on('close',resolve);
+      setTimeout(resolve,500);
+    });
+    try{fs.rmSync(temp,{recursive:true,force:true})}catch{}
+  };
+  return {p,temp,ask,close};
 }
 test('MCP handshake, default 4-tool listing, legacy alias routing, resources, and safe permission rejection',async()=>{
   const {temp,ask,close}=spawnServer();try{
@@ -53,14 +63,14 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
 
     const unknown=await ask({jsonrpc:'2.0',id:8,method:'method/unknown',params:{}});
     assert.equal(unknown.error.code,-32601);
-  }finally{close()}
+  }finally{await close()}
 });
 
 test('MCP legacy alias env flag exposes 8 tools when enabled',async()=>{
   const {ask,close}=spawnServer({A2A_LEGACY_TOOL_ALIASES:'1'});try{
     const tools=await ask({jsonrpc:'2.0',id:1,method:'tools/list',params:{}});
     assert.equal(tools.result.tools.length,8);
-  }finally{close()}
+  }finally{await close()}
 });
 
 test('hook.mjs fails open on malformed stdin and handles PostToolUse',()=>{

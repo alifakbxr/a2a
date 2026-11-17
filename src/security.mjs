@@ -18,27 +18,35 @@ export const shouldIgnore = (rel) => {
     || IGNORED_SUBPATHS.test(norm)
     || /\.(?:min\.(?:js|css)|map|lock|tsbuildinfo|png|jpe?g|gif|webp|pdf|zip|tar|gz|mp4|mp3|woff2?|ttf|exe|dll|so|dylib)$/i.test(norm);
 };
+export function getHomeDir() {
+  if (process.env.HOME && process.env.HOME.trim()) return process.env.HOME;
+  if (process.env.USERPROFILE && process.env.USERPROFILE.trim()) return process.env.USERPROFILE;
+  return os.homedir();
+}
 export const dataDir = () => {
   if (process.env.A2A_DATA_DIR || process.env.VERIFYKIT_DATA_DIR || process.env.PLUGIN_DATA) {
     return path.resolve(process.env.A2A_DATA_DIR || process.env.VERIFYKIT_DATA_DIR || process.env.PLUGIN_DATA);
   }
-  const pluginData = path.join(os.homedir(), '.gemini', 'antigravity', 'plugin_data', 'a2a');
+  const home = getHomeDir();
+  const pluginData = path.join(home, '.gemini', 'antigravity', 'plugin_data', 'a2a');
   if (fs.existsSync(pluginData)) return pluginData;
-  const a2aDir = path.join(os.homedir(), '.config', 'a2a', 'data');
+  const a2aDir = path.join(home, '.config', 'a2a', 'data');
   if (fs.existsSync(a2aDir)) return a2aDir;
-  const legacyDir = path.join(os.homedir(), '.config', 'verifykit', 'data');
+  const legacyDir = path.join(home, '.config', 'verifykit', 'data');
   if (fs.existsSync(legacyDir)) return legacyDir;
   return a2aDir;
 };
 export const allowlistPath = () => {
-  const p = path.join(os.homedir(), '.config', 'a2a', 'allowed-workspaces.json');
-  const legacy = path.join(os.homedir(), '.config', 'verifykit', 'allowed-workspaces.json');
+  const home = getHomeDir();
+  const p = path.join(home, '.config', 'a2a', 'allowed-workspaces.json');
+  const legacy = path.join(home, '.config', 'verifykit', 'allowed-workspaces.json');
   if (fs.existsSync(legacy) && !fs.existsSync(p)) return legacy;
   return p;
 };
 export const settingsPath = () => {
-  const p = path.join(os.homedir(), '.config', 'a2a', 'settings.json');
-  const legacy = path.join(os.homedir(), '.config', 'verifykit', 'settings.json');
+  const home = getHomeDir();
+  const p = path.join(home, '.config', 'a2a', 'settings.json');
+  const legacy = path.join(home, '.config', 'verifykit', 'settings.json');
   if (fs.existsSync(p)) return p;
   if (fs.existsSync(legacy)) return legacy;
   return p;
@@ -55,7 +63,7 @@ function readSettings() {
 }
 
 function writeSettings(patch) {
-  const target = path.join(os.homedir(), '.config', 'a2a', 'settings.json');
+  const target = path.join(getHomeDir(), '.config', 'a2a', 'settings.json');
   const parent = path.dirname(target);
   fs.mkdirSync(parent, { recursive: true, mode: 0o700 });
   const data = { ...readSettings(), ...patch, updatedAt: new Date().toISOString() };
@@ -139,7 +147,7 @@ export function realpathIfExists(p) {
 }
 
 export function getProtectedRoots() {
-  const homeRaw = os.homedir();
+  const homeRaw = getHomeDir();
   const home = realpathIfExists(homeRaw);
   const tmpRaw = os.tmpdir();
   const tmp = realpathIfExists(tmpRaw);
@@ -173,7 +181,7 @@ export function getProtectedRoots() {
 export function isProtectedRoot(ws) {
   if (!ws || typeof ws !== 'string') return true;
   const canonical = realpathIfExists(ws);
-  const home = realpathIfExists(os.homedir());
+  const home = realpathIfExists(getHomeDir());
   if (canonical === path.parse(canonical).root) return true;
   if (process.platform === 'win32') {
     const cLower = canonical.toLowerCase();
@@ -273,7 +281,7 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
   const autoTrust = getAutoTrustMode();
   if (autoTrust === 'off') return [];
 
-  const home = os.homedir();
+  const home = getHomeDir();
   const cacheKey = `${home}|${autoTrust}|${settingsPath()}`;
   const now = Date.now();
   if (!bypassCache && workspaceCache && workspaceCache.key === cacheKey && (now - workspaceCache.ts) < WORKSPACE_CACHE_TTL_MS) {
@@ -500,7 +508,7 @@ export function requireAuthorizedWorkspace(input){
   return ws;
 }
 function writeAllowlist(allowed){
-  const target=path.join(os.homedir(), '.config', 'a2a', 'allowed-workspaces.json');
+  const target=path.join(getHomeDir(), '.config', 'a2a', 'allowed-workspaces.json');
   const parent=path.dirname(target);fs.mkdirSync(parent,{recursive:true,mode:0o700});
   const flags=fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_TRUNC|(fs.constants.O_NOFOLLOW||0);
   const fd=fs.openSync(target,flags,0o600);
@@ -548,7 +556,7 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
     } catch {}
   }
   if (!authorizedBoundary && conversationId && /^[a-zA-Z0-9_\-.]{4,64}$/.test(conversationId)) {
-    const brainDir = path.resolve(os.homedir(), '.gemini', 'antigravity', 'brain', conversationId);
+    const brainDir = path.resolve(getHomeDir(), '.gemini', 'antigravity', 'brain', conversationId);
     if (isSameOrDescendantPath(brainDir, resolved)) {
       authorizedBoundary = brainDir;
     }
