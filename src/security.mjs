@@ -563,29 +563,8 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
       authorizedBoundary = brainDir;
     }
   }
-  if (!authorizedBoundary) {
-    const allowed = loadAllowlist();
-    for (const a of allowed) {
-      if (isProtectedRoot(a)) continue;
-      const canonical = realpathIfExists(a);
-      if (isSameOrDescendantPath(canonical, resolved) || isSameOrDescendantPath(a, resolved)) {
-        authorizedBoundary = canonical;
-        break;
-      }
-    }
-  }
-  if (!authorizedBoundary) {
-    const agWorkspaces = loadAntigravityWorkspaces();
-    for (const a of agWorkspaces) {
-      if (isProtectedRoot(a)) continue;
-      const canonical = realpathIfExists(a);
-      if (isSameOrDescendantPath(canonical, resolved) || isSameOrDescendantPath(a, resolved)) {
-        authorizedBoundary = canonical;
-        break;
-      }
-    }
-  }
-
+  // No global allowlist fallback: authorization is bound to the *requested* workspace.
+  // For hook-driven snapshots (no workspaceRoot), only the session's brain directory is valid.
   if (!authorizedBoundary) {
     throw new Error('Path escapes authorized workspace or brain boundary');
   }
