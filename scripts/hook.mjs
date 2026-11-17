@@ -169,7 +169,7 @@ function handleArtifactModification(payload, baseDir) {
   if (!convId || typeof filePath !== 'string' || !filePath.endsWith('.md')) return;
   // Accept Windows separators for matching, but let safeArtifactPath validate the
   // actual OS path and session-specific boundary (including symlinks).
-  const normalized = filePath.replaceAll('\\\\','/');
+  const normalized = filePath.replaceAll('\\','/');
   if (!normalized.includes('/brain/'+convId+'/')) return;
   const workspaces = Array.isArray(payload?.workspacePaths) ? payload.workspacePaths : [];
   const candidates = [...workspaces, payload?.cwd].filter(p=>typeof p==='string');
