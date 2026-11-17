@@ -213,8 +213,9 @@ export class Store {
     try{
       const histDir=path.join(this.base,'artifact_history',workspaceId||'unassigned',conversationId);
       fs.mkdirSync(histDir,{recursive:true,mode:0o700});
+      try{fs.chmodSync(histDir,0o700)}catch{}
       const shadowPath=path.join(histDir,`${artifactName}.v${versionNumber}.md`);
-      fs.writeFileSync(shadowPath,rawContent,'utf8');
+      fs.writeFileSync(shadowPath,rawContent,{encoding:'utf8',mode:0o600,flag:'wx'});
 
       // Retention policy: Keep at most 10 versions per artifact
       const excess=this.all(
