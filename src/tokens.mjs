@@ -490,7 +490,7 @@ export function getSessionTokenUsage(conversationId = null, opts = {}) {
           uncachedInputTokens += inp;
           cacheReadTokens += cr;
           outputTokens += out;
-          if (inp > 0 || cr > 0) currentContextTokens = inp + cr;
+          if (inp > 0 || cr > 0) currentContextTokens = inp;
         }
         if (obj.model) lastModel = obj.model;
         if (Array.isArray(obj.tool_calls)) {
