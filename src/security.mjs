@@ -131,7 +131,7 @@ export const normalizeWorkspace = input => {
   return fs.realpathSync(full);
 };
 
-function realpathIfExists(p) {
+export function realpathIfExists(p) {
   try {
     if (fs.existsSync(p)) return fs.realpathSync(p);
   } catch {}
@@ -175,8 +175,23 @@ export function isProtectedRoot(ws) {
   const canonical = realpathIfExists(ws);
   const home = realpathIfExists(os.homedir());
   if (canonical === path.parse(canonical).root) return true;
-  if (canonical === home || home.startsWith(canonical + path.sep)) return true;
-  return getProtectedRoots().has(canonical);
+  if (process.platform === 'win32') {
+    const cLower = canonical.toLowerCase();
+    const hLower = home.toLowerCase();
+    if (cLower === path.parse(cLower).root.toLowerCase()) return true;
+    if (cLower === hLower || hLower.startsWith(cLower.endsWith(path.sep) ? cLower : cLower + path.sep)) return true;
+  } else {
+    if (canonical === home || home.startsWith(canonical.endsWith(path.sep) ? canonical : canonical + path.sep)) return true;
+  }
+  const protRoots = getProtectedRoots();
+  if (protRoots.has(canonical)) return true;
+  if (process.platform === 'win32' || process.platform === 'darwin') {
+    const cLower = canonical.toLowerCase();
+    for (const pr of protRoots) {
+      if (pr.toLowerCase() === cLower) return true;
+    }
+  }
+  return false;
 }
 
 const PROJECT_MARKERS = [
@@ -426,20 +441,53 @@ export function loadAllowlist(){
   } catch {return []}
 }
 
+export function isSameOrDescendantPath(parent, child) {
+  if (!parent || !child) return false;
+  const p = path.resolve(parent);
+  const c = path.resolve(child);
+  if (p === c) return true;
+
+  const pWithSep = p.endsWith(path.sep) ? p : p + path.sep;
+  if (c.startsWith(pWithSep)) return true;
+
+  // Case-insensitive check (Windows and macOS default filesystems)
+  if (process.platform === 'win32' || process.platform === 'darwin') {
+    const pLower = p.toLowerCase();
+    const cLower = c.toLowerCase();
+    const pLowerWithSep = pLower.endsWith(path.sep) ? pLower : pLower + path.sep;
+    if (cLower === pLower || cLower.startsWith(pLowerWithSep)) return true;
+  }
+
+  // macOS /private symlink alias check (/var -> /private/var, /tmp -> /private/tmp)
+  if (process.platform === 'darwin') {
+    const pPriv = p.startsWith('/private/') ? p : '/private' + p;
+    const cPriv = c.startsWith('/private/') ? c : '/private' + c;
+    const pPrivWithSep = pPriv.endsWith('/') ? pPriv : pPriv + '/';
+    if (cPriv === pPriv || cPriv.startsWith(pPrivWithSep)) return true;
+
+    const pNoPriv = p.startsWith('/private/') ? p.slice('/private'.length) : p;
+    const cNoPriv = c.startsWith('/private/') ? c.slice('/private'.length) : c;
+    const pNoPrivWithSep = pNoPriv.endsWith('/') ? pNoPriv : pNoPriv + '/';
+    if (cNoPriv === pNoPriv || cNoPriv.startsWith(pNoPrivWithSep)) return true;
+  }
+
+  return false;
+}
+
 export function isWorkspaceAuthorized(ws){
   if (isProtectedRoot(ws)) return false;
   const canonical = realpathIfExists(ws);
   const allowed = loadAllowlist();
   for (const a of allowed) {
     if (isProtectedRoot(a)) continue;
-    if (canonical === a || canonical.startsWith(a + path.sep)) {
+    if (isSameOrDescendantPath(a, canonical) || isSameOrDescendantPath(a, ws)) {
       return true;
     }
   }
   const agWorkspaces = loadAntigravityWorkspaces();
   for (const a of agWorkspaces) {
     if (isProtectedRoot(a)) continue;
-    if (canonical === a || canonical.startsWith(a + path.sep)) {
+    if (isSameOrDescendantPath(a, canonical) || isSameOrDescendantPath(a, ws)) {
       return true;
     }
   }
@@ -494,14 +542,14 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
   if (workspaceRoot) {
     try {
       const authWs = requireAuthorizedWorkspace(workspaceRoot);
-      if (resolved === authWs || resolved.startsWith(authWs + path.sep)) {
+      if (isSameOrDescendantPath(authWs, resolved) || isSameOrDescendantPath(workspaceRoot, resolved)) {
         authorizedBoundary = authWs;
       }
     } catch {}
   }
   if (!authorizedBoundary && conversationId && /^[a-zA-Z0-9_\-.]{4,64}$/.test(conversationId)) {
     const brainDir = path.resolve(os.homedir(), '.gemini', 'antigravity', 'brain', conversationId);
-    if (resolved === brainDir || resolved.startsWith(brainDir + path.sep)) {
+    if (isSameOrDescendantPath(brainDir, resolved)) {
       authorizedBoundary = brainDir;
     }
   }
@@ -510,7 +558,7 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
     for (const a of allowed) {
       if (isProtectedRoot(a)) continue;
       const canonical = realpathIfExists(a);
-      if (resolved === canonical || resolved.startsWith(canonical + path.sep)) {
+      if (isSameOrDescendantPath(canonical, resolved) || isSameOrDescendantPath(a, resolved)) {
         authorizedBoundary = canonical;
         break;
       }
@@ -521,7 +569,7 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
     for (const a of agWorkspaces) {
       if (isProtectedRoot(a)) continue;
       const canonical = realpathIfExists(a);
-      if (resolved === canonical || resolved.startsWith(canonical + path.sep)) {
+      if (isSameOrDescendantPath(canonical, resolved) || isSameOrDescendantPath(a, resolved)) {
         authorizedBoundary = canonical;
         break;
       }
@@ -545,11 +593,21 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
     if (!fs.existsSync(resolved)) {
       throw new Error('Artifact file does not exist');
     }
-    const relFromBoundary = path.relative(authorizedBoundary, resolved);
+
+    let boundaryForSegments = authorizedBoundary;
+    if (process.platform === 'darwin') {
+      if (resolved.startsWith('/private/') && !boundaryForSegments.startsWith('/private/')) {
+        boundaryForSegments = '/private' + boundaryForSegments;
+      } else if (!resolved.startsWith('/private/') && boundaryForSegments.startsWith('/private/')) {
+        boundaryForSegments = boundaryForSegments.slice('/private'.length);
+      }
+    }
+
+    const relFromBoundary = path.relative(boundaryForSegments, resolved);
     const segments = relFromBoundary.split(path.sep);
-    let cursor = authorizedBoundary;
+    let cursor = boundaryForSegments;
     for (const seg of segments) {
-      if (!seg) continue;
+      if (!seg || seg === '.') continue;
       cursor = path.join(cursor, seg);
       const st = fs.lstatSync(cursor);
       if (st.isSymbolicLink()) {

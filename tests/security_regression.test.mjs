@@ -287,3 +287,23 @@ test('False-PASS Prevention: Passing test without mapped criteria cannot verify 
   assert.equal(resUnmapped.status, 'inconclusive');
   assert.ok(/could not be verified/i.test(resUnmapped.reason));
 });
+
+test('Cross-platform: macOS /private and Windows case-insensitive path boundaries', (t) => {
+  const { ws1, cleanup } = createSecurityFixture();
+  t.after(cleanup);
+
+  const envFile = path.join(ws1, '.env');
+  fs.writeFileSync(envFile, 'SECRET=123');
+
+  const hugeFile = path.join(ws1, 'huge.md');
+  fs.writeFileSync(hugeFile, Buffer.alloc(MAX_ARTIFACT_BYTES + 1024, 'B'));
+
+  const canonicalWs = fs.realpathSync(ws1);
+  assert.throws(() => {
+    safeArtifactPath(canonicalWs, 'conv-cross-plat', envFile);
+  }, /sensitive file denied/i);
+
+  assert.throws(() => {
+    safeArtifactPath(canonicalWs, 'conv-cross-plat', hugeFile);
+  }, /maximum allowed size/i);
+});

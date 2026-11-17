@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
-import {dataDir,sha256,safeArtifactPath,MAX_ARTIFACT_BYTES} from './security.mjs';
+import {dataDir,sha256,safeArtifactPath,MAX_ARTIFACT_BYTES,realpathIfExists} from './security.mjs';
 
 const DDL=fs.readFileSync(new URL('../schemas/database.sql',import.meta.url),'utf8');
 export class Store {
@@ -51,7 +51,7 @@ export class Store {
       throw e;
     }
   }
-  register(ws){let id=sha256(ws).slice(0,24);this.run('INSERT OR IGNORE INTO workspaces(id,canonical_path,created_at) VALUES(?,?,?)',id,ws,new Date().toISOString());return id}
+  register(ws){const canonical=realpathIfExists(ws);let id=sha256(canonical).slice(0,24);this.run('INSERT OR IGNORE INTO workspaces(id,canonical_path,created_at) VALUES(?,?,?)',id,canonical,new Date().toISOString());return id}
   latest(wsId){
     const active=this.get('SELECT r.* FROM workspaces w JOIN revisions r ON r.id=w.current_revision_id WHERE w.id=? AND r.workspace_id=?',wsId,wsId);
     if(active) return active;
