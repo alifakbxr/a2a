@@ -237,7 +237,7 @@ export function formatConversationReport(r){
     '- If cache reads are counted separately: '+num(logs.alternative_total_if_cache_separate)+' tokens.',
     '- Both figures are interpretations of local logs, not confirmed totals.',
     '- Workers included: '+(r.usage_accounting?.worker_conversations??0)+(r.usage_accounting?.overlapping_worker_accounting==='possible'?' (possible overlap; do not sum with parent)':' (excluded by default)'),
-    '- A2A-specific model tokens: unknown; CLI counts do not isolate the plugin\\'s contribution.',
+    "- A2A-specific model tokens: unknown; CLI counts do not isolate the plugin's contribution.",
     '',
   ];
   if(last){
