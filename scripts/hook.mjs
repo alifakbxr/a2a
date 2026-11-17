@@ -5,6 +5,9 @@ import {pathToFileURL} from 'node:url';
 import { dataDir, getA2AMode, getCompactMode, requireAuthorizedWorkspace } from '../src/security.mjs';
 import { sanitizeConversationId } from '../src/tokens.mjs';
 import { Store } from '../src/storage.mjs';
+import {gitChanges} from '../src/scanner.mjs';
+import {CANDIDATE_ARTIFACTS} from '../src/verification.mjs';
+import {safeFile,sha256} from '../src/security.mjs';
 
 function writeJsonSecure(filePath, obj) {
   const dir = path.dirname(filePath);
@@ -188,15 +191,35 @@ function recordCommandRun(payload, baseDir) {
   handleArtifactModification(payload, baseDir);
   const cmd = payload?.toolCall?.args?.CommandLine;
   if (typeof cmd !== 'string' || !cmd.trim()) return;
-  const isTestLike = /\b(?:test|pytest|phpunit|pest|vitest|jest|mocha|cargo\s+test|go\s+test|dotnet\s+test|flutter\s+test|swift\s+test|mvn\s+test|gradlew\s+test)\b/i.test(cmd);
+  const isTestLike = /\\b(?:npm\\s+(?:run\\s+)?test|node\\s+--test|pytest|phpunit|pest|vitest|jest|mocha|cargo\\s+test|go\\s+test|dotnet\\s+test|flutter\\s+test|swift\\s+test|mvn\\s+test|gradlew\\s+test|php\\s+artisan\\s+test)\\b/i.test(cmd);
   if (!isTestLike) return;
-  const reportFile = path.join(baseDir, 'last-test-run.json');
-  writeJsonSecure(reportFile, {
-    updatedAt: new Date().toISOString(),
-    conversationId: sanitizeConversationId(payload?.conversationId),
-    cwd: typeof payload?.cwd === 'string' ? payload.cwd : null,
-    kind: 'test-like-command', // never persist the raw command; it can contain credentials
-    errored: Boolean(payload?.error),
+  const candidates = [payload?.toolCall?.args?.Cwd,payload?.cwd,...(payload?.workspacePaths||[])].filter(p=>typeof p==='string');
+  let root=null;
+  for(const p of candidates){try{root=requireAuthorizedWorkspace(p);break}catch{}}
+  if(!root)return;
+  const sourceHashes={};
+  const changed=gitChanges(root).filter(p=>/\\.(?:js|ts|jsx|tsx|mjs|cjs|php|py|go|rs|kt|java|dart|gd|swift|cs|rb|vue|svelte|sql)$/i.test(p));
+  for(const rel of changed.slice(0,200)){
+    try{sourceHashes[rel]=sha256(fs.readFileSync(safeFile(root,rel)))}catch{}
+  }
+  const reportHashes={};
+  for(const rel of CANDIDATE_ARTIFACTS){
+    try{
+      const file=safeFile(root,rel);
+      const stat=fs.statSync(file);
+      if(stat.size<=1200000 && stat.isFile())reportHashes[rel]=sha256(fs.readFileSync(file));
+    }catch{}
+  }
+  // Local evidence only: does not prove the command's assertions or cryptographically attest execution.
+  const reportFile=path.join(baseDir,'last-test-run.json');
+  writeJsonSecure(reportFile,{
+    updatedAt:new Date().toISOString(),
+    conversationId:sanitizeConversationId(payload?.conversationId),
+    workspace:root,
+    kind:'native-test-tool-completed',
+    succeeded:!payload?.error,
+    source_hashes:sourceHashes,
+    report_hashes:reportHashes,
   });
 }
 
