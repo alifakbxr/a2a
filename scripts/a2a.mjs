@@ -6,6 +6,7 @@ import {
   authorizeWorkspace,revokeWorkspace,dataDir,requireAuthorizedWorkspace
 } from '../src/security.mjs';
 import {readOfficialAgyUsageFile} from '../src/tokens.mjs';
+import {scanConversationHistory,attachReportSize,formatConversationReport} from '../src/conversations.mjs';
 
 const [cmd,...argv]=process.argv.slice(2);
 function print(obj){process.stdout.write(JSON.stringify(obj,null,2)+'\n')}
@@ -19,7 +20,7 @@ Commands:\n  doctor                     show runtime, workspace permissions, act
   allow <absolute-workspace> authorize one project manually
   revoke <absolute-workspace> revoke one project
   inspect <workspace>        index project & show code graph coverage
-  tokens [workspace] [--usage-file output.json] inspect source sizes and optional real agy CLI usage
+  tokens [--json] [--limit 10] [--conversation ID] [--include-subagents] [--usage-file output.json] read all Antigravity conversation usage locally
   skeleton <workspace> <file...>   strip comments via lexer and estimate preview size reduction
   context <workspace> <query> query symbols and feature relations
   impact <workspace> [paths...] analyze impact & calculate tokens affected
@@ -128,25 +129,43 @@ try{
       print({error:'Failed to fetch GitHub traffic stats',details:err.message});
     }
   }
+  else if(cmd==='tokens'){
+    let format='text',limit=10,conversationId=null,includeSubagents=false;
+    const usageFiles=[];
+    for(let i=0;i<argv.length;i++){
+      const item=argv[i];
+      if(item==='--json'){format='json';}
+      else if(item==='--include-subagents'){includeSubagents=true;}
+      else if(item==='--current'){limit=1;}
+      else if(item==='--limit'){
+        const n=Number(argv[++i]);
+        if(!Number.isInteger(n)||n<1||n>30)throw new Error('--limit must be a number from 1 to 30');
+        limit=n;
+      }else if(item.startsWith('--limit=')){
+        const n=Number(item.slice(8));
+        if(!Number.isInteger(n)||n<1||n>30)throw new Error('--limit must be a number from 1 to 30');
+        limit=n;
+      }else if(item==='--conversation'){conversationId=argv[++i];}
+      else if(item.startsWith('--conversation=')){conversationId=item.slice(15);}
+      else if(item==='--usage-file'){usageFiles.push(argv[++i]);}
+      else if(item.startsWith('--usage-file=')){usageFiles.push(item.slice(13));}
+      else if(item.startsWith('--'))throw new Error('Unknown tokens option: '+item);
+      else if(item!=='.'&&!path.isAbsolute(item))throw new Error('Unexpected tokens argument: '+item);
+      // Positional workspace retained for backwards compatibility; global history is intentional.
+    }
+    if(conversationId&&!/^[a-zA-Z0-9._-]{4,128}$/.test(conversationId))throw new Error('Invalid conversation ID');
+    const officialRuns=usageFiles.map(file=>readOfficialAgyUsageFile(file));
+    const report=scanConversationHistory({dataDirPath:dataDir(),limit,conversationId,includeSubagents,officialRuns});
+    attachReportSize(report,{format});
+    if(format==='json')print(report);
+    else process.stdout.write(formatConversationReport(report)+'\n');
+  }
   else if(cmd==='mcp'){await import('../src/mcp.mjs')}
   else {
     const engine=new Engine();let result;
     try{
       if(cmd==='inspect'){result=engine.context({workspace:argv[0]});}
-      else if(cmd==='tokens'){
-        let ws=null,usageFile=null;
-        for(let i=0;i<argv.length;i++){
-          if(argv[i]==='--usage-file'&&argv[i+1]){usageFile=argv[++i];}
-          else if(argv[i].startsWith('--usage-file=')){usageFile=argv[i].slice(13);}
-          else if(argv[i].startsWith('--'))throw new Error('Unknown tokens option: '+argv[i]);
-          else if(!ws){ws=argv[i];}
-          else throw new Error('Unexpected tokens argument: '+argv[i]);
-        }
-        result=engine.context({workspace:ws||process.cwd(),action:'tokens'});
-        if(usageFile){
-          result.session_usage=readOfficialAgyUsageFile(usageFile);
-        }
-      }
+
       else if(cmd==='skeleton'){
         const workspace=argv[0];
         const files=argv.slice(1);
