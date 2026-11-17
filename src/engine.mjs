@@ -136,25 +136,21 @@ export class Engine {
       // Explicit-only telemetry: do not spend computation or context space on every inspect.
       const telemetrySummary=this.store.getTelemetrySummary(s.wsId);
       const wsTokens=analyzeWorkspaceTokens(s.index,[],telemetrySummary);
-      base.coverage.estimated_source_tokens=wsTokens.total_estimated_tokens;
-      base.coverage.tokens_saved_ratio=wsTokens.efficiency.savings_ratio;
+      base.coverage.estimated_workspace_source_tokens=wsTokens.total_estimated_tokens;
+      base.coverage.source_token_estimate_only=true;
       const trimmedWsTokens=compact?{...wsTokens,top_consumers:wsTokens.top_consumers.slice(0,5)}:wsTokens;
-      let sessionTokens=null;
-      try {
-        const active=JSON.parse(fs.readFileSync(path.join(this.store.base,'active-session.json'),'utf8'))?.latest;
-        const activeId=active?.conversationId;
-        const activeWs=active?.workspacePaths||[];
-        const callerMatches=!conversation_id || conversation_id===activeId;
-        const pathMatches=!transcript_path || fs.realpathSync(transcript_path)===fs.realpathSync(active?.transcriptPath||'');
-        if(activeId && callerMatches && pathMatches && activeWs.some(w=>{try{return requireAuthorizedWorkspace(w)===s.root}catch{return false}})){
-          sessionTokens=getSessionTokenUsage(activeId,{workspace:s.root,dataDirPath:this.store.base});
-        }
-      }catch{}
+      // The workspace index cannot measure Gemini usage; never auto-read private
+      // Antigravity transcripts or report fabricated percentages.
       return {
         ...base,
         workspace_tokens:trimmedWsTokens,
-        session_tokens:sessionTokens,
-        ...(compact?{compact:true}:{session_note:'Session usage is only available for the active authorized conversation.'}),
+        session_usage:{
+          status:'not_available',
+          source:null,
+          usage:null,
+          reason:'No provider-reported Antigravity CLI usage supplied. Use a2a tokens --usage-file <official agy JSON output>.',
+        },
+        ...(compact?{compact:true}:{}),
       };
     }
     throw new Error('Unknown context action');
