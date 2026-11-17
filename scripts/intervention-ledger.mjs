@@ -5,12 +5,15 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 const check=(v,m)=>{if(!v)throw new Error(m)};
 function plain(v){return String(v||'').replace(/^["']|["']$/g,'').slice(0,120)}
+const KNOWN=new Set(['a2a_context','a2a_impact','a2a_verify','a2a_evidence','verifykit_context','verifykit_impact','verifykit_verify','verifykit_evidence']);
 export function isA2AInvocation(call){
  const name=plain(call?.name);
- if(name.startsWith('a2a_')||name.startsWith('verifykit_'))return name;
+ if(KNOWN.has(name))return name;
+ if(name.startsWith('a2a_')||name.startsWith('verifykit_'))return 'unknown-a2a-tool';
  if(name!=='call_mcp_tool')return null;
  const tool=plain(call?.args?.ToolName),server=plain(call?.args?.ServerName);
- return (server.includes('a2a')||tool.startsWith('a2a_')||tool.startsWith('verifykit_'))?tool||'unknown-a2a-tool':null;
+ if(!(server.startsWith('a2a')||tool.startsWith('a2a_')||tool.startsWith('verifykit_')))return null;
+ return KNOWN.has(tool)?tool:'unknown-a2a-tool';
 }
 function resultOf(e){
  if(!e)return 'no-result';
@@ -25,7 +28,9 @@ function resultOf(e){
 }
 export function buildInterventionLedger(records){
  check(Array.isArray(records)&&records.length<=250000,'Invalid or oversized transcript');
- const events=records.filter(e=>e&&typeof e==='object'&&Number.isSafeInteger(e.step_index)).sort((a,b)=>a.step_index-b.step_index);
+ const newestPlanner=new Map();
+ for(const e of records)if(e?.type==='PLANNER_RESPONSE'&&Number.isSafeInteger(e.step_index))newestPlanner.set(e.step_index,e);
+ const events=records.filter(e=>e&&typeof e==='object'&&Number.isSafeInteger(e.step_index)&&(e.type!=='PLANNER_RESPONSE'||newestPlanner.get(e.step_index)===e)).sort((a,b)=>a.step_index-b.step_index);
  const ledger=[],counts={succeeded:0,'invalid-arguments':0,'authorization-denied':0,'tool-error':0,'no-result':0,incomplete:0};
  for(let i=0;i<events.length;i++){
   const e=events[i];if(e.type!=='PLANNER_RESPONSE')continue;
