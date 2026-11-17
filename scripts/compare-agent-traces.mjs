@@ -33,7 +33,9 @@ export function analyzeAgentTrace(records){
  for(const e of [...byStep.values()].sort((a,b)=>a.step_index-b.step_index)){
   for(const c of Array.isArray(e.tool_calls)?e.tool_calls:[]){
    toolCalls++;counts[classifyTool(c)]++;
-   const safe=String(c.name||'unknown').slice(0,64).replace(/[^a-zA-Z0-9_.:-]/g,'_');
+   const candidate=String(c.name||'unknown');
+   const known=new Set(['run_command','call_mcp_tool','read_file','write_to_file','edit_file','replace_file','apply_patch','search_files','grep_search','list_dir','find_files','browser','write_file','a2a_context','a2a_impact','a2a_verify','a2a_evidence']);
+   const safe=known.has(candidate)?candidate:'other-tool';
    names.set(safe,(names.get(safe)||0)+1);
    if(safe===previous)consecutive++;previous=safe;
   }
