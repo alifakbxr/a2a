@@ -165,14 +165,16 @@ test('compact mode supports toggle and skeletonization',()=>{
     assert.ok(minified.includes('line 1\n\nline 2'));
   }finally{cleanup()}
 });
-test('detect token usage and savings in workspace',()=>withEngine((e,root)=>{
+test('token diagnostics do not invent net savings in workspace',()=>withEngine((e,root)=>{
   assert.equal(estimateTokens('Hello World 1234'),4);
   const r=e.context({workspace:root,action:'tokens'});
   assert.ok(r.workspace_tokens.total_estimated_tokens>0);
   assert.ok(r.workspace_tokens.total_files>=4);
   assert.ok(r.workspace_tokens.top_consumers.length>0);
-  assert.ok(r.workspace_tokens.efficiency.savings_ratio.includes('%'));
-  assert.equal(r.coverage.estimated_source_tokens,r.workspace_tokens.total_estimated_tokens);
+  assert.equal(r.workspace_tokens.efficiency.savings_ratio,null);
+  assert.equal(r.workspace_tokens.net_token_savings,null);
+  assert.equal(r.session_usage.status,'not_available');
+  assert.equal(r.coverage.estimated_workspace_source_tokens,r.workspace_tokens.total_estimated_tokens);
   const impact=e.impact({workspace:root,changed:['src/auth.js']});
   assert.ok(impact.tokens_affected>0);
 }));
@@ -364,16 +366,14 @@ test('tokens: getSessionTokenUsage parses PLANNER_RESPONSE/USER_INPUT, skips sub
     const usage=getSessionTokenUsage('conv-main-111',{dataDirPath:process.env.VERIFYKIT_DATA_DIR});
     assert.equal(usage.conversation_id,'conv-main-111');
     assert.equal(usage.llm_steps,2);
-    assert.equal(usage.turns_recorded,2);
+    assert.equal(usage.status,'diagnostic_only');
     assert.equal(usage.user_turns,1);
-    assert.equal(usage.current_context_tokens,6000);
-    assert.equal(usage.uncached_input_tokens,1800);
-    assert.equal(usage.total_tokens_consumed,11350);
-    assert.equal(usage.cache_read_tokens,9200);
-    assert.equal(usage.output_tokens,350);
+    assert.equal(usage.total_tokens_consumed,null);
+    assert.equal(usage.usage,null);
+    assert.equal(usage.cache_hit_ratio,null);
     assert.equal(usage.tool_calls.a2a_calls,1);
     assert.equal(usage.tool_calls.read_file_calls,1);
-    assert.equal(usage.cost_estimate.approximate,true);
+    assert.equal(usage.cost_estimate,null);
 
     // Traversal conversationId is rejected
     assert.equal(getSessionTokenUsage('../evil'),null);
@@ -407,7 +407,8 @@ test('engine: skeleton action, measured telemetry, and compact mode output strip
   const tok=e.context({workspace:root,action:'tokens'});
   assert.ok(tok.workspace_tokens.compact_index_tokens>0);
   assert.equal(tok.workspace_tokens.efficiency.verifykit_compact_tokens,undefined);
-  assert.ok(tok.workspace_tokens.measured_cumulative.calls>=1);
+  assert.ok(tok.workspace_tokens.tool_payload_estimates.calls>=1);
+  assert.equal(tok.workspace_tokens.net_token_savings_pct,null);
 
   setCompactMode(true);
   const compactInspect=e.context({workspace:root,action:'inspect'});
