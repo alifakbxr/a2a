@@ -7,13 +7,6 @@
         "timeout": 5
       }
     ],
-    "PreInvocation": [
-      {
-        "type": "command",
-        "command": "node ./scripts/hook.mjs",
-        "timeout": 5
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "run_command",

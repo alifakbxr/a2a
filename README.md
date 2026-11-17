@@ -24,7 +24,7 @@
 
 ## ⚡ Highlights
 
-- 📉 **~90% Context Token Reduction:** Single-pass lexer strips comments and method bodies, keeping context sharp for 30+ turns.
+- 📉 **Scoped code previews:** On-demand symbol queries and comment-stripped source previews can reduce output size, but net session savings require A/B evaluation.
 - 🔍 **Shift-Left Impact Analysis:** Maps reverse imports and dependent test suites *before* modifying code.
 - 🛡️ **The Iron Law of Verification:** Rejects task completion unless fresh machine test evidence (JUnit XML, TAP, or JSON) passes.
 - 🤝 **Subagent & Teamwork Gate:** Enforces test evidence on parallel `/teamwork` workers and subagents before handoff.
@@ -47,6 +47,8 @@ npm install -g @aliip/a2a && a2a doctor
 ---
 
 ## 🎮 Controls & Commands
+
+On-demand is the default for new installations. Existing Always-On settings remain unchanged; run `a2a mode on-demand` to opt out of extra proactive checks.
 
 ### In-Chat Slash Commands
 | Command | Action |
@@ -87,6 +89,9 @@ node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs verify-handoff /path/to/worksp
 ---
 
 ## 📚 Deep Dives & Documentation
+
+- **[Token efficiency evaluation](docs/TOKEN_EFFICIENCY.md):** Reproducible A/B protocol; source-size comparisons are not net session savings.
+- **[Always-On 5 Whys](docs/ALWAYS_ON_5_WHYS.md):** Five causal scenarios, corrective changes, and acceptance checks.
 
 - 🏛️ **[Technical Architecture](docs/ARCHITECTURE.md):** Invariants, SQLite schema, and sequence diagrams.
 - 📜 **[Contracts & Data Dictionary](docs/CONTRACTS.md):** MCP schemas, SQLite tables, and verification constraints.

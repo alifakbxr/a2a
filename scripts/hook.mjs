@@ -201,7 +201,7 @@ export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   if (!payload || typeof payload !== 'object') return {};
   const event = payload.hookEventName || '';
 
-  if (event === 'SessionStart' || event === 'PreInvocation') {
+  if (event === 'SessionStart') {
     recordActiveSession(payload, baseDir);
   } else if (event === 'PostToolUse') {
     recordCommandRun(payload, baseDir);
@@ -209,15 +209,16 @@ export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   }
 
   if (event === 'SessionStart') {
+    // In on-demand mode do not inject instructions into every Antigravity session.
+    if (getA2AMode() !== 'always-on') return {};
     const compact = getCompactMode();
+    const policy = 'A2A Always-On (adaptive): For docs, typos, styles, isolated edits or research, use native tools without A2A calls. For shared APIs, auth, schema or multi-module changes, call a2a_impact once with summary=true. Use targeted symbol queries to navigate; do not fetch a skeleton and then the same full file unless needed. Reuse existing analysis until the changed scope differs. Run targeted native tests for testable behavior and assess evidence once. Verify worker handoffs only for testable code with named criteria. Keep uncertainty and limitations. No forced teamwork, repeated token footers or unverified savings claims.';
     return {
-      injectSteps: [
-        {
-          systemMessage: {
-            systemMessage: compact ? 'A2A Compact active.' : 'A2A active.',
-          },
+      injectSteps: [{
+        systemMessage: {
+          systemMessage: compact ? policy + ' Keep responses concise without dropping evidence.' : policy,
         },
-      ],
+      }],
     };
   }
 

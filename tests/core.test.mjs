@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {Engine} from '../src/engine.mjs';
 import {Store} from '../src/storage.mjs';
@@ -133,10 +134,10 @@ test('input schema validation blocks unknown, invalid and oversized arguments',(
 test('source graph persisted across engine restart',()=>withEngine((e,root)=>{
   const before=e.context({workspace:root});const st=new Store();try{const files=st.all('SELECT * FROM files WHERE workspace_id=?',before.workspace_id);assert.ok(files.length>=4)}finally{st.close()}
 }));
-test('verifykit mode defaults to always-on and supports toggle/set',()=>{
+test('a2a mode defaults to on-demand and supports toggle/set',()=>{
   fixture();
   try{
-    assert.equal(getVerifyKitMode(),'always-on');
+    assert.equal(getVerifyKitMode(),'on-demand');
     assert.equal(setVerifyKitMode('on-demand'),'on-demand');
     assert.equal(getVerifyKitMode(),'on-demand');
     assert.equal(setVerifyKitMode('always-on'),'always-on');
@@ -241,7 +242,7 @@ test('security: Antigravity IDE Workspace Trust (state.vscdb) and CLI settings h
     // Historical workspaceStorage WITHOUT trust should NOT be auto-trusted in default antigravity-trust mode
     const wsStorage=path.join(state.home,'.config','Antigravity IDE','User','workspaceStorage','abc123');
     fs.mkdirSync(wsStorage,{recursive:true});
-    fs.writeFileSync(path.join(wsStorage,'workspace.json'),JSON.stringify({folder:'file://'+untrustedProj}));
+    fs.writeFileSync(path.join(wsStorage,'workspace.json'),JSON.stringify({folder:pathToFileURL(untrustedProj).href}));
 
     // CLI trustedWorkspaces
     const cliDir=path.join(state.home,'.gemini','antigravity-cli');
@@ -383,7 +384,10 @@ test('tokens: getSessionTokenUsage parses PLANNER_RESPONSE/USER_INPUT, skips sub
       workspacePaths:[state.root],
       cwd:state.root,
     },{baseDir:process.env.VERIFYKIT_DATA_DIR});
-    assert.ok(Array.isArray(hookOut.injectSteps));
+    assert.deepEqual(hookOut,{}); // on-demand must not inject instruction tokens
+    setVerifyKitMode('always-on');
+    const activeHook=handleHookEvent({hookEventName:'SessionStart',conversationId:'conv-main-111',transcriptPath:mainFile,workspacePaths:[state.root],cwd:state.root},{baseDir:process.env.VERIFYKIT_DATA_DIR});
+    assert.ok(Array.isArray(activeHook.injectSteps));
     const hookUsage=getSessionTokenUsage(null,{workspace:state.root,dataDirPath:process.env.VERIFYKIT_DATA_DIR});
     assert.equal(hookUsage.source,'active-session-hook');
     assert.equal(hookUsage.conversation_id,'conv-main-111');

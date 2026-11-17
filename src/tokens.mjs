@@ -602,17 +602,18 @@ export function analyzeWorkspaceTokens(index, changedFiles = [], telemetrySummar
             telemetrySummary.raw_scope_tokens > 0
               ? (((telemetrySummary.tokens_saved || 0) / telemetrySummary.raw_scope_tokens) * 100).toFixed(1) + '%'
               : '0%',
-          estimated_cost_saved: estimateCostSavings(telemetrySummary.tokens_saved || 0),
+          estimated_cost_saved: null, // no observed baseline; cost savings cannot be inferred
         }
       : null,
     efficiency: {
-      measurement_basis: hasMeasuredTelemetry ? 'measured-scoped-telemetry' : 'measured-index-vs-source',
+      measurement_basis: hasMeasuredTelemetry ? 'estimated-tool-scope-counterfactual' : 'estimated-index-vs-source',
       raw_source_tokens: basisRaw,
       a2a_compact_tokens: basisDelivered,
       compact_index_tokens: compactIndexTokens,
       estimated_tokens_saved: tokensSaved,
       savings_ratio: savingsPct,
-      estimated_cost_saved: estimateCostSavings(tokensSaved),
+      estimated_cost_saved: null,
+      limitation: 'This compares estimated source size with A2A output; it does not measure net task/session savings. Compare equal tasks with and without A2A.',
     },
   };
 }

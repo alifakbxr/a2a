@@ -105,29 +105,22 @@ export class Engine {
       return {...base,evidence:freshness(this.store,s.wsId,s.root,s.revision),...(compact?{compact:true}:{})};
     }
 
-    const telemetrySummary=this.store.getTelemetrySummary(s.wsId);
-    const wsTokens=analyzeWorkspaceTokens(s.index,[],telemetrySummary);
-    base.coverage.estimated_source_tokens=wsTokens.total_estimated_tokens;
-    base.coverage.tokens_saved_ratio=wsTokens.efficiency.savings_ratio;
-
     if(action==='inspect'){
       const cmdInfo=discoverTestCommands(s.index,s.root);
-      const payload={
+      return {
         ...base,
         ecosystems:cmdInfo.suggestions.map(x=>x.ecosystem),
         test_candidates:cmdInfo.testFiles.slice(0,25),
-        tokens:{
-          estimated_source_tokens:wsTokens.total_estimated_tokens,
-          compact_index_tokens:wsTokens.compact_index_tokens,
-          efficiency:wsTokens.efficiency,
-        },
         limitations:compact?['Static heuristic analysis']:['Language analysis is heuristic and static; relationships may be incomplete.'],
         ...(compact?{compact:true}:{}),
       };
-      this.store.recordTelemetry(s.wsId,{toolName:'a2a_context',action:'inspect',rawScopeTokens:wsTokens.total_estimated_tokens,responseTokens:estimateTokens(JSON.stringify(payload))});
-      return payload;
     }
     if(action==='tokens'){
+      // Explicit-only telemetry: do not spend computation or context space on every inspect.
+      const telemetrySummary=this.store.getTelemetrySummary(s.wsId);
+      const wsTokens=analyzeWorkspaceTokens(s.index,[],telemetrySummary);
+      base.coverage.estimated_source_tokens=wsTokens.total_estimated_tokens;
+      base.coverage.tokens_saved_ratio=wsTokens.efficiency.savings_ratio;
       const trimmedWsTokens=compact?{...wsTokens,top_consumers:wsTokens.top_consumers.slice(0,5)}:wsTokens;
       return {
         ...base,
@@ -138,11 +131,31 @@ export class Engine {
     }
     throw new Error('Unknown context action');
   }
-  impact({workspace,changed=[],depth=3}={}){
+  impact({workspace,changed=[],depth=3,summary=false}={}){
     validateChangedPaths(changed);
     const compact=getCompactMode();
     const s=this.sync(workspace);
     const res=analyzeImpact(this.store,s.wsId,s.root,{changed,depth});
+    // Always-On uses this one-call triage response for risky or multi-module work.
+    // Preserve risk, uncertainty, source freshness, and total counts. Never imply
+    // this bounded preview is complete coverage.
+    if(summary){
+      return {
+        revision:s.revision,
+        changed:res.changed,
+        risk:res.risk,
+        signals:res.signals,
+        affected:res.affected.slice(0,8).map(({kind,path,label})=>({kind,path,label})),
+        affected_total:res.affected_total,
+        related_tests:res.related_tests.slice(0,5),
+        related_tests_total:res.related_tests_total,
+        fallback_test_candidates:res.fallback_test_candidates.slice(0,3),
+        coverage:{...res.coverage,output_bounded:true},
+        uncertainty:res.uncertainty,
+        incomplete_index:s.skipped.some(x=>x==='index_limit_exceeded'||x==='index_byte_budget_exceeded'),
+        summary:true,
+      };
+    }
     const impactTokens=analyzeWorkspaceTokens(s.index,res.changed);
     const affectedPaths=new Set([...res.changed,...res.affected.map(a=>a.path).filter(Boolean)]);
     const fileBytes=new Map(s.index.files.map(f=>[f.path,f.bytes]));
@@ -159,7 +172,7 @@ export class Engine {
       if(res.signals&&res.signals.length>2) res.signals=res.signals.slice(0,2);
       if(res.fallback_test_candidates&&res.related_tests.length>0) delete res.fallback_test_candidates;
     }
-    const isLargeScope=(res.affected.length>=6||(res.changed.length+res.affected.length)>=8||res.risk==='high');
+    const isLargeScope=(res.affected_total>=6||(res.changed.length+res.affected_total)>=8);
     const payload={
       revision:s.revision,
       ...res,
