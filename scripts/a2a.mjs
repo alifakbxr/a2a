@@ -12,15 +12,15 @@ function print(obj){process.stdout.write(JSON.stringify(obj,null,2)+'\n')}
 if(!cmd||['help','--help','-h'].includes(cmd)){
   console.log(`A2A CLI - Smart Code Intelligence & Verification\n
 Commands:\n  doctor                     show runtime, workspace permissions, active mode & telemetry
-  mode [always-on|on-demand] get or set active A2A mode (default: always-on)
+  mode [always-on|on-demand] get or set active A2A mode (default: on-demand)
   toggle                     switch between always-on and on-demand
   compact [on|off|toggle|status] get, set, or toggle A2A Compact mode
   autotrust [antigravity-trust|active-only|project-markers|off] get or set Antigravity workspace auto-trust policy
   allow <absolute-workspace> authorize one project manually
   revoke <absolute-workspace> revoke one project
   inspect <workspace>        index project & show code graph coverage
-  tokens [workspace] [--conv <id>] detect source tokens, session consumption & measured savings
-  skeleton <workspace> <file...>   strip comments via lexer and report measured token savings
+  tokens [workspace] [--conv <id>] inspect source estimates and session token diagnostics
+  skeleton <workspace> <file...>   strip comments via lexer and estimate preview size reduction
   context <workspace> <query> query symbols and feature relations
   impact <workspace> [paths...] analyze impact & calculate tokens affected
   plan <workspace> [criterion ...] suggest native checks
