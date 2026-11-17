@@ -24,7 +24,7 @@
 
 ## ⚡ Highlights
 
-- 📉 **Scoped code previews:** On-demand symbol queries and comment-stripped source previews can reduce output size, but net session savings require A/B evaluation.
+- 📉 **Scoped code previews:** On-demand symbol queries and comment-stripped source previews can reduce output size, but net session savings require A/B evaluation. `a2a tokens` now reports **source-size estimates**, never invented savings.
 - 🔍 **Shift-Left Impact Analysis:** Maps reverse imports and dependent test suites *before* modifying code.
 - 🛡️ **The Iron Law of Verification:** Rejects task completion unless fresh machine test evidence (JUnit XML, TAP, or JSON) passes.
 - 🤝 **Subagent & Teamwork Gate:** Enforces test evidence on parallel `/teamwork` workers and subagents before handoff.
@@ -87,6 +87,18 @@ node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs verify-handoff /path/to/worksp
 | **`a2a_evidence`** | `list`, `runs`, `incidents`, `side_questions` | Historical run verdicts, regression memory, and Antigravity `/btw` side questions. |
 
 ---
+
+
+### Trustworthy token usage
+
+`a2a tokens` no longer invents token-savings percentages from repository size. To inspect **actual CLI-reported usage for one run**, save an Antigravity CLI JSON result and explicitly import it:
+
+```bash
+agy -p "Inspect authentication dependencies without edits." --output-format json > agy-result.json
+node scripts/a2a.mjs tokens . --usage-file agy-result.json
+```
+
+The `session_usage.usage.total_tokens` field comes directly from that CLI result. Cache and thinking counters are **not added again**. This measures that run only, not the improvement attributable to A2A. See [Token efficiency evaluation](docs/TOKEN_EFFICIENCY.md).
 
 ## 📚 Deep Dives & Documentation
 
