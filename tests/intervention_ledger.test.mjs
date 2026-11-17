@@ -12,3 +12,12 @@ test('classifies invalid, denied and successful interventions without leaking te
 });
 test('no result is unknown rather than success',()=>assert.equal(buildInterventionLedger([p(1)]).counts['no-result'],1));
 test('generic non-A2A tool does not count',()=>assert.equal(isA2AInvocation({name:'run_command'}),null));
+
+
+test('replayed planner events count once and unknown tool names never leak',()=>{
+ const replay={type:'PLANNER_RESPONSE',step_index:1,tool_calls:[{name:'call_mcp_tool',args:{ServerName:'a2a_a2a',ToolName:'a2a_token-containing-secret'}}]};
+ const output=buildInterventionLedger([replay,{...replay},{type:'GENERIC',step_index:2,status:'DONE',content:'success'}]);
+ assert.equal(output.total_invocations,1);
+ assert.equal(output.interventions[0].tool,'unknown-a2a-tool');
+ assert.equal(JSON.stringify(output).includes('secret'),false);
+});
