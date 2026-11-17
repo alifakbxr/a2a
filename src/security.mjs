@@ -44,6 +44,47 @@ export function getVerifyKitMode() {
 }
 export const getA2AMode = getVerifyKitMode;
 
+export function getCompactMode() {
+  try {
+    const file = settingsPath();
+    if (fs.existsSync(file)) {
+      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (typeof data.compact === 'boolean') return data.compact;
+      if (data.compact === 'on' || data.compact === 'enabled' || data.compact === 'true') return true;
+    }
+  } catch {}
+  return false;
+}
+
+export function setCompactMode(val) {
+  let boolVal;
+  if (val === 'toggle') {
+    boolVal = !getCompactMode();
+  } else {
+    boolVal = (val === true || val === 'on' || val === 'enable' || val === 'enabled' || val === 'true');
+  }
+  const file = settingsPath();
+  const parent = path.dirname(file);
+  fs.mkdirSync(parent, { recursive: true, mode: 0o700 });
+  let data = {};
+  try {
+    if (fs.existsSync(file)) {
+      data = JSON.parse(fs.readFileSync(file, 'utf8')) || {};
+    }
+  } catch {}
+  data.compact = boolVal;
+  data.updatedAt = new Date().toISOString();
+  const flags = fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC | (fs.constants.O_NOFOLLOW || 0);
+  const fd = fs.openSync(file, flags, 0o600);
+  try {
+    fs.fchmodSync(fd, 0o600);
+    fs.writeFileSync(fd, JSON.stringify(data, null, 2) + '\n');
+  } finally {
+    fs.closeSync(fd);
+  }
+  return boolVal;
+}
+
 export function setVerifyKitMode(mode) {
   if (mode !== 'always-on' && mode !== 'on-demand') {
     throw new Error('Invalid mode. Expected "always-on" or "on-demand"');

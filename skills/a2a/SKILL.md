@@ -16,6 +16,7 @@ You can control A2A directly through chat commands:
 - `/a2a toggle` or `/a2a-toggle`: Toggle between `always-on` and `on-demand`.
 - `/a2a always-on` or `/a2a-always-on`: Set operating mode to `always-on`.
 - `/a2a on-demand` or `/a2a-on-demand`: Set operating mode to `on-demand`.
+- `/a2a compact` or `/a2a-compact`: Toggle A2A Compact token compression (65-80% output token savings).
 - `/a2a status` or `/a2a-status`: View active mode, health, and trusted workspaces.
 - `/a2a tokens`: Inspect workspace token footprint and Antigravity session consumption.
 

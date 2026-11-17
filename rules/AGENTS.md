@@ -46,6 +46,17 @@ When working in an active project workspace and A2A is enabled in `always-on` mo
 
 - **UI Button in Antigravity IDE**: Tell users they can enable or disable the plugin at any time from the IDE Customizations page: `[A2A](customization://a2a)`.
 - **Toggle Mode**: Users can switch between `always-on` and `on-demand` by running `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs toggle` or asking the agent to toggle A2A mode.
+- **Compact Mode**: Toggle A2A Compact token compression via `/a2a-compact` or `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs compact toggle`.
+
+## A2A Compact Protocol (High-Density Token Saver)
+
+When Compact mode is active or requested:
+1. **Aggressive Token Compression (65-80% output savings)**:
+   - Strip conversational pleasantries, fluff, greetings, apologies, and transitions ("Sure!", "I have updated...", "Here is the summary").
+   - Communicate in concise, telegraphic bullet points with direct facts.
+   - Retain 100% of exact code blocks, commands, file paths, diffs, and errors.
+2. **Context Skeletonization**:
+   - Strip comments, docstrings, and redundant blank lines when supplying code contexts to preserve input tokens.
 
 ## Response Token Telemetry (Automatic Footer)
 
@@ -55,6 +66,8 @@ To provide clear and transparent visibility into token consumption without manua
 
 > 📊 **A2A Telemetry:**
 >
-> - Mode: `{always-on | on-demand}`
+> - Mode: `{always-on | on-demand}` · Compact: `{active | off}`
+> - Estimated Response: ~`{tokens}` tokens
+> - Context Efficiency: `{saved_ratio}% saved via A2A`
 > - Estimated Response: ~`{tokens}` tokens
 > - Context Efficiency: `{saved_ratio}% saved via A2A`

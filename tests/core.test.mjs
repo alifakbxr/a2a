@@ -5,8 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {Engine} from '../src/engine.mjs';
 import {Store} from '../src/storage.mjs';
-import {authorizeWorkspace,requireAuthorizedWorkspace,safeFile,shouldIgnore,loadAllowlist,getVerifyKitMode,setVerifyKitMode} from '../src/security.mjs';
-import {estimateTokens,analyzeWorkspaceTokens,getSessionTokenUsage} from '../src/tokens.mjs';
+import {authorizeWorkspace,requireAuthorizedWorkspace,safeFile,shouldIgnore,loadAllowlist,getVerifyKitMode,setVerifyKitMode,getCompactMode,setCompactMode} from '../src/security.mjs';
+import {estimateTokens,analyzeWorkspaceTokens,getSessionTokenUsage,skeletonizeCode,minifyContext} from '../src/tokens.mjs';
 import {parseArtifact} from '../src/verification.mjs';
 import {TOOLS,validateArgs} from '../src/tools.mjs';
 
@@ -114,6 +114,26 @@ test('verifykit mode defaults to always-on and supports toggle/set',()=>{
     assert.equal(setVerifyKitMode('always-on'),'always-on');
     assert.equal(getVerifyKitMode(),'always-on');
     assert.throws(()=>setVerifyKitMode('invalid-mode'),/Invalid mode/);
+  }finally{cleanup()}
+});
+test('compact mode supports toggle and skeletonization',()=>{
+  fixture();
+  try{
+    assert.equal(getCompactMode(),false);
+    assert.equal(setCompactMode(true),true);
+    assert.equal(getCompactMode(),true);
+    assert.equal(setCompactMode('toggle'),false);
+    assert.equal(getCompactMode(),false);
+
+    const rawJs = `// test comment\nfunction test() {\n  /* multiline */\n  return 42;\n}\n\n\n`;
+    const skeleton = skeletonizeCode(rawJs, '.js');
+    assert.ok(!skeleton.includes('test comment'));
+    assert.ok(!skeleton.includes('multiline'));
+    assert.ok(skeleton.includes('return 42;'));
+
+    const minified = minifyContext('line 1\n\n\n\nline 2    multiple   spaces');
+    assert.ok(!minified.includes('    '));
+    assert.ok(minified.includes('line 1\n\nline 2'));
   }finally{cleanup()}
 });
 test('detect token usage and savings in workspace',()=>withEngine((e,root)=>{
