@@ -228,7 +228,7 @@ export function formatConversationReport(r){
 }
 export function attachReportSize(report,{format='text'}={}){
   for(let i=0;i<6;i++){
-    const text=format==='json'?JSON.stringify(report):formatConversationReport(report);
+    const text=format==='json'?JSON.stringify(report,null,2):formatConversationReport(report);
     const bytes=Buffer.byteLength(text,'utf8'),estimate=Math.max(1,Math.round(text.length/3.8));
     if(report.self_report.response_bytes===bytes&&report.self_report.estimated_text_tokens===estimate)break;
     report.self_report.response_bytes=bytes;
