@@ -105,29 +105,22 @@ export class Engine {
       return {...base,evidence:freshness(this.store,s.wsId,s.root,s.revision),...(compact?{compact:true}:{})};
     }
 
-    const telemetrySummary=this.store.getTelemetrySummary(s.wsId);
-    const wsTokens=analyzeWorkspaceTokens(s.index,[],telemetrySummary);
-    base.coverage.estimated_source_tokens=wsTokens.total_estimated_tokens;
-    base.coverage.tokens_saved_ratio=wsTokens.efficiency.savings_ratio;
-
     if(action==='inspect'){
       const cmdInfo=discoverTestCommands(s.index,s.root);
-      const payload={
+      return {
         ...base,
         ecosystems:cmdInfo.suggestions.map(x=>x.ecosystem),
         test_candidates:cmdInfo.testFiles.slice(0,25),
-        tokens:{
-          estimated_source_tokens:wsTokens.total_estimated_tokens,
-          compact_index_tokens:wsTokens.compact_index_tokens,
-          efficiency:wsTokens.efficiency,
-        },
         limitations:compact?['Static heuristic analysis']:['Language analysis is heuristic and static; relationships may be incomplete.'],
         ...(compact?{compact:true}:{}),
       };
-      this.store.recordTelemetry(s.wsId,{toolName:'a2a_context',action:'inspect',rawScopeTokens:wsTokens.total_estimated_tokens,responseTokens:estimateTokens(JSON.stringify(payload))});
-      return payload;
     }
     if(action==='tokens'){
+      // Explicit-only telemetry: do not spend computation or context space on every inspect.
+      const telemetrySummary=this.store.getTelemetrySummary(s.wsId);
+      const wsTokens=analyzeWorkspaceTokens(s.index,[],telemetrySummary);
+      base.coverage.estimated_source_tokens=wsTokens.total_estimated_tokens;
+      base.coverage.tokens_saved_ratio=wsTokens.efficiency.savings_ratio;
       const trimmedWsTokens=compact?{...wsTokens,top_consumers:wsTokens.top_consumers.slice(0,5)}:wsTokens;
       return {
         ...base,
