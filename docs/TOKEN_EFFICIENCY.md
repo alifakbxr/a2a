@@ -1,5 +1,15 @@
 # Token measurement and A/B protocol
 
+## Past and current conversations
+
+`a2a tokens` now scans available `~/.gemini/antigravity*/brain/<conversation-id>/.system_generated/logs/transcript.jsonl` entries, including sessions from before A2A existed. It reports each conversation's recent completed model-step counters and totals recorded locally. Model-step counters may not match official usage accounting; two interpretations (cache included/excluded from input) are displayed, **never treated as a confirmed bill**. Imported official CLI JSON supersedes the same conversation's local counters instead of being added twice.
+
+The report itself includes a size estimate for its printed response; **printing it in a terminal makes no Gemini model call**. When the agent reads the report, a subsequent completed model turn is needed before that consumption can appear in Antigravity's logs.
+
+For performance, `a2a_context(action="tokens")` defaults to the latest available conversation; specify `history_scope="all"` explicitly to include other conversations. Historical scanning is local and read-only; model prompts are parsed only for usage metadata, not stored anew.
+
+For explanation of coverage, privacy, limits and accuracy, see [CONVERSATION_USAGE.md](CONVERSATION_USAGE.md).
+
 ## What A2A can and cannot measure
 
 **Without a provider usage record:** `a2a tokens` reports only an **estimated workspace source inventory** and **estimated tool payload sizes**. These numbers are **not** consumed context, billable tokens, savings, or the Gemini context window. Net savings, percentages, and USD estimates are intentionally `null`. Existing legacy telemetry rows cannot retroactively prove savings.
