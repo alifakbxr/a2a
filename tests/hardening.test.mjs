@@ -34,11 +34,11 @@ function fixture(){
 }
 
 test('security: workspace A cannot snapshot workspace B even if both are authorized',t=>{
-  const x=fixture();t.after(x.cleanup);
+  const x=fixture();
   const file=path.join(x.ws2,'notes.md');
   fs.writeFileSync(file,'workspace B private notes');
   assert.throws(()=>safeArtifactPath(x.ws1,'conv-isolation-11',file),/escapes authorized/);
-  const store=new Store();t.after(()=>store.close());
+  const store=new Store();t.after(()=>{store.close();x.cleanup()});
   const a=store.register(x.ws1),b=store.register(x.ws2);
   assert.throws(()=>store.snapshotArtifact({workspaceId:a,workspaceRoot:x.ws1,conversationId:'conv-isolation-11',artifactPath:file}),/escapes authorized/);
   const bSnap=store.snapshotArtifact({workspaceId:b,workspaceRoot:x.ws2,conversationId:'conv-isolation-11',artifactPath:file});
@@ -51,8 +51,8 @@ test('security: workspace A cannot snapshot workspace B even if both are authori
 });
 
 test('security: same conversation and artifact name remain isolated across workspaces',t=>{
-  const x=fixture();t.after(x.cleanup);
-  const store=new Store();t.after(()=>store.close());
+  const x=fixture();
+  const store=new Store();t.after(()=>{store.close();x.cleanup()});
   const a=store.register(x.ws1),b=store.register(x.ws2),id='conv-both-workspaces';
   const p1=path.join(x.ws1,'status.md'),p2=path.join(x.ws2,'status.md');
   fs.writeFileSync(p1,'Workspace A only');fs.writeFileSync(p2,'Workspace B only');
@@ -65,8 +65,8 @@ test('security: same conversation and artifact name remain isolated across works
 });
 
 test('verification: a passed report is not a verified handoff without native-run proof',t=>{
-  const x=fixture();t.after(x.cleanup);
-  const store=new Store();t.after(()=>store.close());
+  const x=fixture();
+  const store=new Store();t.after(()=>{store.close();x.cleanup()});
   const wsId=store.register(x.ws1);
   fs.writeFileSync(path.join(x.ws1,'math.js'),'export const add=(a,b)=>a+b;\n');
   fs.writeFileSync(path.join(x.ws1,'report.xml'),'<testsuite tests="1" failures="0" errors="0" skipped="0"><testcase name="addition works"/></testsuite>');
@@ -79,7 +79,7 @@ test('verification: a passed report is not a verified handoff without native-run
 });
 
 test('verification: native-run report + source hashes permit local PASS; changed source invalidates it',t=>{
-  const x=fixture();t.after(x.cleanup);
+  const x=fixture();
   const {ws1}=x;
   const git=(...args)=>{const z=spawnSync('git',args,{cwd:ws1,encoding:'utf8'});assert.equal(z.status,0,z.stderr)};
   git('init');git('config','user.name','A2A Test');git('config','user.email','test@example.com');
@@ -96,7 +96,7 @@ test('verification: native-run report + source hashes permit local PASS; changed
   assert.equal(run.report_hashes['report.xml'],sha256(xml));
   assert.equal(run.source_hashes['src/math.js'],sha256(fs.readFileSync(path.join(ws1,'src','math.js'))));
   assert.equal(run.command,undefined,'Never persist raw shell commands');
-  const store=new Store();t.after(()=>store.close());const wsId=store.register(ws1);
+  const store=new Store();t.after(()=>{store.close();x.cleanup()});const wsId=store.register(ws1);
   const good=verifyHandoff(store,wsId,ws1,'rev-a',{changed:['src/math.js'],artifact:'report.xml',criteria:['addition works']});
   assert.equal(good.verified,true);
   fs.writeFileSync(path.join(ws1,'src','math.js'),'export const add=(a,b)=>a-b+0;\n');
@@ -105,9 +105,9 @@ test('verification: native-run report + source hashes permit local PASS; changed
 });
 
 test('context: skeleton output is bounded and warns when truncated',t=>{
-  const x=fixture();t.after(x.cleanup);
+  const x=fixture();
   fs.writeFileSync(path.join(x.ws1,'long.js'),'export const content = "'+'a'.repeat(45000)+'";');
-  const engine=new Engine();t.after(()=>engine.close());
+  const engine=new Engine();t.after(()=>{engine.close();x.cleanup()});
   const result=engine.context({workspace:x.ws1,action:'skeleton',file:'long.js'});
   assert.equal(result.files.length,1);
   assert.equal(result.files[0].truncated,true);
