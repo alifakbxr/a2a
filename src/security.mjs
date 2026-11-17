@@ -82,7 +82,8 @@ function writeSettings(patch) {
 export function getVerifyKitMode() {
   const data = readSettings();
   if (data.mode === 'always-on' || data.mode === 'on-demand') return data.mode;
-  return 'always-on';
+  // Opt-in to proactive analysis; avoid extra model/tool turns for ordinary tasks.
+  return 'on-demand';
 }
 export const getA2AMode = getVerifyKitMode;
 
