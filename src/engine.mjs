@@ -131,11 +131,31 @@ export class Engine {
     }
     throw new Error('Unknown context action');
   }
-  impact({workspace,changed=[],depth=3}={}){
+  impact({workspace,changed=[],depth=3,summary=false}={}){
     validateChangedPaths(changed);
     const compact=getCompactMode();
     const s=this.sync(workspace);
     const res=analyzeImpact(this.store,s.wsId,s.root,{changed,depth});
+    // Always-On uses this one-call triage response for risky or multi-module work.
+    // Preserve risk, uncertainty, source freshness, and total counts. Never imply
+    // this bounded preview is complete coverage.
+    if(summary){
+      return {
+        revision:s.revision,
+        changed:res.changed,
+        risk:res.risk,
+        signals:res.signals,
+        affected:res.affected.slice(0,8).map(({kind,path,label})=>({kind,path,label})),
+        affected_total:res.affected.length,
+        related_tests:res.related_tests.slice(0,5),
+        related_tests_total:res.related_tests.length,
+        fallback_test_candidates:res.fallback_test_candidates.slice(0,3),
+        coverage:{...res.coverage,output_bounded:true},
+        uncertainty:res.uncertainty,
+        incomplete_index:s.skipped.some(x=>x==='index_limit_exceeded'||x==='index_byte_budget_exceeded'),
+        summary:true,
+      };
+    }
     const impactTokens=analyzeWorkspaceTokens(s.index,res.changed);
     const affectedPaths=new Set([...res.changed,...res.affected.map(a=>a.path).filter(Boolean)]);
     const fileBytes=new Map(s.index.files.map(f=>[f.path,f.bytes]));
