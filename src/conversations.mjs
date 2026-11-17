@@ -107,11 +107,12 @@ function view(r){
   };
 }
 export function scanConversationHistory({brainRoots=localBrainRoots(),dataDirPath=null,limit=10,
-  includeSubagents=false,conversationId=null,officialRuns=[],maxConversations=3000,maxTotalBytes=1024*1024*1024}={}){
+  includeSubagents=false,conversationId=null,onlyLatest=false,officialRuns=[],maxConversations=3000,maxTotalBytes=1024*1024*1024}={}){
   const active=activeConversationId(dataDirPath),records=new Map();
   const warnings=[];
   let found=0,skipped=0,bytes=0,partial=0;
-  for(const dir of [...new Set(brainRoots.map(x=>path.resolve(x)))]){
+  const candidates=[];
+  for(const dir of [...new Set(brainRoots.map(x=>path.resolve(x)))]) {
     let root,entries;
     try{
       if(!fs.lstatSync(dir).isDirectory())continue;
@@ -119,21 +120,33 @@ export function scanConversationHistory({brainRoots=localBrainRoots(),dataDirPat
     }catch{continue}
     for(const entry of entries){
       if(!entry.isDirectory()||!VALID_ID.test(entry.name))continue;
-      found++;
       if(conversationId&&entry.name!==conversationId)continue;
+      found++;
       if(found>maxConversations){skipped++;continue}
       const file=path.join(root,entry.name,'.system_generated','logs','transcript.jsonl');
       if(!safeLog(file,root))continue;
       try{
         const stat=fs.statSync(file);
-        if(stat.size>128*1024*1024||bytes+stat.size>maxTotalBytes){skipped++;continue}
-        bytes+=stat.size;
-        const r=parseLocalLog(file,entry.name);
-        if(!r.complete)partial++;
-        const value={...r,date:stat.mtime.toISOString(),mtime:stat.mtimeMs,active:entry.name===active};
-        if(!records.has(entry.name)||records.get(entry.name).mtime<value.mtime)records.set(entry.name,value);
+        candidates.push({id:entry.name,file,stat});
       }catch{skipped++}
     }
+  }
+  // A request for the current session should not read all historical transcripts.
+  // Stat the directories, prefer the active hook session, then the freshest file.
+  if(onlyLatest){
+    candidates.sort((a,b)=>Number(b.id===active)-Number(a.id===active)||b.stat.mtimeMs-a.stat.mtimeMs);
+    candidates.splice(1);
+  }
+  for(const candidate of candidates){
+    const {id,file,stat}=candidate;
+    if(stat.size>128*1024*1024||bytes+stat.size>maxTotalBytes){skipped++;continue}
+    try{
+      bytes+=stat.size;
+      const r=parseLocalLog(file,id);
+      if(!r.complete)partial++;
+      const value={...r,date:stat.mtime.toISOString(),mtime:stat.mtimeMs,active:id===active};
+      if(!records.has(id)||records.get(id).mtime<value.mtime)records.set(id,value);
+    }catch{skipped++}
   }
   // User-supplied official result supersedes, rather than double-counts, an internal transcript.
   for(const report of officialRuns){
