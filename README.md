@@ -94,7 +94,7 @@ node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs verify-handoff /path/to/worksp
 A2A can read **older Antigravity conversations even if they were created before A2A was installed**. There is no background collection, no upload, and no need to re-run an old conversation.
 
 ```bash
-node scripts/a2a.mjs tokens                      # All available local conversations; readable Indonesian report
+node scripts/a2a.mjs tokens                      # All available local conversations; plain-English report
 node scripts/a2a.mjs tokens --limit 5            # Show five recent conversations
 node scripts/a2a.mjs tokens --current            # Focus display on the latest conversation
 node scripts/a2a.mjs tokens --json               # Machine-readable report
