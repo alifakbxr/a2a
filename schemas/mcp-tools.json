@@ -3,7 +3,7 @@
   "tools": [
     {
       "name": "a2a_context",
-      "description": "A2A read-only project index, symbol relationships, code skeletonizer, freshness & measured token telemetry.",
+      "description": "A2A project context and transparent conversation token history. Internal log counters are not provider-verified.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -58,6 +58,20 @@
             },
             "maxItems": 20,
             "description": "Relative file paths for action=\"skeleton\"."
+          },
+          "history_scope": {
+            "type": "string",
+            "enum": [
+              "current",
+              "all"
+            ],
+            "description": "For tokens: current session by default; all explicitly reads local historical conversations."
+          },
+          "history_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Maximum recent conversations returned for history."
           }
         }
       }
