@@ -146,9 +146,9 @@ export class Engine {
         risk:res.risk,
         signals:res.signals,
         affected:res.affected.slice(0,8).map(({kind,path,label})=>({kind,path,label})),
-        affected_total:res.affected.length,
+        affected_total:res.affected_total,
         related_tests:res.related_tests.slice(0,5),
-        related_tests_total:res.related_tests.length,
+        related_tests_total:res.related_tests_total,
         fallback_test_candidates:res.fallback_test_candidates.slice(0,3),
         coverage:{...res.coverage,output_bounded:true},
         uncertainty:res.uncertainty,
@@ -172,7 +172,7 @@ export class Engine {
       if(res.signals&&res.signals.length>2) res.signals=res.signals.slice(0,2);
       if(res.fallback_test_candidates&&res.related_tests.length>0) delete res.fallback_test_candidates;
     }
-    const isLargeScope=(res.affected.length>=6||(res.changed.length+res.affected.length)>=8||res.risk==='high');
+    const isLargeScope=(res.affected_total>=6||(res.changed.length+res.affected_total)>=8);
     const payload={
       revision:s.revision,
       ...res,
