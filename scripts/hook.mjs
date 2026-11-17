@@ -209,27 +209,16 @@ export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   }
 
   if (event === 'SessionStart') {
-    const mode = getA2AMode();
     const compact = getCompactMode();
-    if (mode === 'always-on' || compact) {
-      const convId = sanitizeConversationId(payload.conversationId) || 'unknown';
-      const parts = [`A2A session active (mode=${mode}, compact=${compact ? 'on' : 'off'}, conversation_id=${convId}).`];
-      if (mode === 'always-on') {
-        parts.push('Always-On active: 1) Run a2a_impact before code edits. 2) Use skeleton previews to conserve context. 3) Assess test reports with a2a_verify. 4) Use Chrome DevTools for UI verification. 5) Enforce OWASP security checks on sensitive files.');
-      }
-      if (compact) {
-        parts.push('Compact protocol active: concise bullet output, zero filler, preserve exact code/paths/commands.');
-      }
-      return {
-        injectSteps: [
-          {
-            systemMessage: {
-              systemMessage: parts.join(' '),
-            },
+    return {
+      injectSteps: [
+        {
+          systemMessage: {
+            systemMessage: compact ? 'A2A Compact active.' : 'A2A active.',
           },
-        ],
-      };
-    }
+        },
+      ],
+    };
   }
 
   return {};

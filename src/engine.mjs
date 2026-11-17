@@ -34,11 +34,12 @@ export class Engine {
     if(!current) return this.sync(workspace);
     return {root,wsId,revision:current.id,git:current.git_head};
   }
-  context({workspace,action='inspect',query='',limit=12,conversation_id=null,transcript_path=null,file=null,files=[]}={}){
+  context({workspace,action='inspect',query='',limit=12,conversation_id=null,transcript_path=null,file=null,files=[],path:targetPath=null}={}){
     const compact=getCompactMode();
     if(action==='skeleton'){
       const s=this.resolveMeta(workspace);
-      const targets=[...(typeof file==='string'&&file.trim()?[file.trim()]:[]),...(Array.isArray(files)?files:[])].filter(Boolean);
+      const singleTarget=file||targetPath;
+      const targets=[...(typeof singleTarget==='string'&&singleTarget.trim()?[singleTarget.trim()]:[]),...(Array.isArray(files)?files:[])].filter(Boolean);
       const uniqueTargets=[...new Set(targets)].slice(0,20);
       if(!uniqueTargets.length) throw new Error('Provide file or files for action="skeleton"');
       let totalRaw=0, totalSkel=0;
@@ -53,10 +54,7 @@ export class Engine {
         totalRaw+=rawTokens;totalSkel+=skelTokens;
         items.push({
           file:rel,
-          raw_tokens:rawTokens,
-          skeleton_tokens:skelTokens,
-          tokens_saved:saved,
-          saved_pct:rawTokens>0?((saved/rawTokens)*100).toFixed(1)+'%':'0%',
+          ...(compact?{}:{raw_tokens:rawTokens,skeleton_tokens:skelTokens,tokens_saved:saved,saved_pct:rawTokens>0?((saved/rawTokens)*100).toFixed(1)+'%':'0%'}),
           skeleton,
         });
       }
@@ -69,8 +67,7 @@ export class Engine {
         summary:{
           raw_tokens:totalRaw,
           skeleton_tokens:totalSkel,
-          tokens_saved:totalSaved,
-          saved_pct:totalRaw>0?((totalSaved/totalRaw)*100).toFixed(1)+'%':'0%',
+          ...(compact?{}:{tokens_saved:totalSaved,saved_pct:totalRaw>0?((totalSaved/totalRaw)*100).toFixed(1)+'%':'0%'}),
         },
         ...(compact?{compact:true}:{}),
       };
@@ -148,7 +145,15 @@ export class Engine {
     const fileBytes=new Map(s.index.files.map(f=>[f.path,f.bytes]));
     let rawScopeBytes=0;
     for(const p of affectedPaths) rawScopeBytes+=fileBytes.get(p)||0;
-    if(compact) delete res.uncertainty;
+    if(compact){
+      delete res.uncertainty;
+      if(res.coverage){
+        delete res.coverage.graph_nodes_visited;
+        delete res.coverage.traversal_depth;
+      }
+      if(res.signals&&res.signals.length>2) res.signals=res.signals.slice(0,2);
+      if(res.fallback_test_candidates&&res.related_tests.length>0) delete res.fallback_test_candidates;
+    }
     const isLargeScope=(res.affected.length>=6||(res.changed.length+res.affected.length)>=8||res.risk==='high');
     const payload={
       revision:s.revision,
