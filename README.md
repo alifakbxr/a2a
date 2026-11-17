@@ -52,6 +52,42 @@ You can manage and toggle A2A directly in your Antigravity chat:
 
 ### CLI Commands (Terminal)
 
+### Method 1: Easiest — Direct via Chat Command (Recommended)
+Simply type this command in your Antigravity chat:
+```text
+/plugin install alifakbxr/a2a
+```
+*(Or specify the full GitHub URL: `/plugin install https://github.com/alifakbxr/a2a`)*
+
+### Method 2: Via Antigravity CLI
+In your terminal, execute:
+```bash
+agy plugin install alifakbxr/a2a
+```
+
+### Method 3: Direct Git Clone
+Clone directly into your Antigravity plugins directory:
+```bash
+git clone https://github.com/alifakbxr/a2a.git ~/.gemini/config/plugins/a2a
+```
+Antigravity automatically discovers and activates the plugin instantly.
+
+## Setup & Configuration
+
+### Direct Chat Commands (Fastest)
+
+You can manage and toggle A2A directly in your Antigravity chat:
+
+| Command | Action |
+|---|---|
+| `/a2a-toggle` *(or `/a2a toggle`)* | Quickly switch between **Always-On** and **On-Demand** |
+| `/a2a-always-on` *(or `/a2a always-on`)* | Enable **Always-On** (proactive impact check & verification) |
+| `/a2a-on-demand` *(or `/a2a on-demand`)* | Switch to **On-Demand** (tools run only when requested) |
+| `/a2a-status` *(or `/a2a status`)* | Show current mode, health diagnostics & trusted workspaces |
+| `/a2a tokens` | Show token consumption and context savings |
+
+### CLI Commands (Terminal)
+
 1. Check runtime and permissions:
    ```bash
    node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs doctor
