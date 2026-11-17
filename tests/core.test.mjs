@@ -344,8 +344,8 @@ test('tokens: getSessionTokenUsage parses PLANNER_RESPONSE/USER_INPUT, skips sub
     const mainLog=[
       JSON.stringify({type:'USER_INPUT',step_index:0}),
       JSON.stringify({type:'GENERIC',step_index:1}),
-      JSON.stringify({type:'PLANNER_RESPONSE',step_index:2,model:'gemini-4-hydrogen-tiered-high',input_tokens:1000,cache_read_tokens:4000,output_tokens:200,tool_calls:[{name:'call_mcp_tool',args:{ServerName:'a2a_a2a',ToolName:'a2a_impact'}}]}),
-      JSON.stringify({type:'PLANNER_RESPONSE',step_index:3,model:'gemini-4-hydrogen-tiered-high',input_tokens:500,cache_read_tokens:5200,output_tokens:150,tool_calls:[{name:'read_file',args:{Path:'/tmp/a'}}]}),
+      JSON.stringify({type:'PLANNER_RESPONSE',step_index:2,model:'gemini-4-hydrogen-tiered-high',input_tokens:5000,cache_read_tokens:4000,output_tokens:200,tool_calls:[{name:'call_mcp_tool',args:{ServerName:'a2a_a2a',ToolName:'a2a_impact'}}]}),
+      JSON.stringify({type:'PLANNER_RESPONSE',step_index:3,model:'gemini-4-hydrogen-tiered-high',input_tokens:6000,cache_read_tokens:5200,output_tokens:150,tool_calls:[{name:'read_file',args:{Path:'/tmp/a'}}]}),
     ].join('\n')+'\n';
     const subLog=[
       JSON.stringify({type:'SYSTEM_MESSAGE',content:'<subagent_reminder>subagent</subagent_reminder>'}),
@@ -359,14 +359,16 @@ test('tokens: getSessionTokenUsage parses PLANNER_RESPONSE/USER_INPUT, skips sub
     const future=new Date(Date.now()+5000);
     fs.utimesSync(subFile,future,future);
 
-    // Fallback should skip subagent transcript even though it has newer mtime
-    const usage=getSessionTokenUsage(null,{dataDirPath:process.env.VERIFYKIT_DATA_DIR});
+    // Never fall back to another conversation by timestamp, including subagents.
+    assert.equal(getSessionTokenUsage(null,{dataDirPath:process.env.VERIFYKIT_DATA_DIR}),null);
+    const usage=getSessionTokenUsage('conv-main-111',{dataDirPath:process.env.VERIFYKIT_DATA_DIR});
     assert.equal(usage.conversation_id,'conv-main-111');
     assert.equal(usage.llm_steps,2);
     assert.equal(usage.turns_recorded,2);
     assert.equal(usage.user_turns,1);
-    assert.equal(usage.current_context_tokens,5700);
-    assert.equal(usage.uncached_input_tokens,1500);
+    assert.equal(usage.current_context_tokens,6000);
+    assert.equal(usage.uncached_input_tokens,1800);
+    assert.equal(usage.total_tokens_consumed,11350);
     assert.equal(usage.cache_read_tokens,9200);
     assert.equal(usage.output_tokens,350);
     assert.equal(usage.tool_calls.a2a_calls,1);
@@ -520,10 +522,10 @@ test('teamwork & subagent verification: verify_handoff enforces machine evidence
   fs.utimesSync(path.join(root,'report.xml'),futureTime,futureTime);
 
   const passingRes=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',artifact:'report.xml',changed:['feature.mjs'],criteria:['testAdd']});
-  assert.equal(passingRes.verified,true);
+  assert.equal(passingRes.verified,false);
   assert.equal(passingRes.tests_passed,true);
-  assert.equal(passingRes.deliverable_verified,true);
-  assert.equal(passingRes.status,'passed');
+  assert.equal(passingRes.deliverable_verified,false);
+  assert.equal(passingRes.status,'unattested_report');
   assert.equal(passingRes.assertions,2);
   assert.equal(passingRes.failed,0);
   assert.equal(passingRes.fresh,true);
@@ -543,9 +545,10 @@ test('teamwork & subagent verification: verify_handoff enforces machine evidence
   assert.equal(staleRes.status,'stale');
   assert.equal(staleRes.fresh,false);
 
-  // allow_stale flag bypasses freshness rejection if explicitly requested
+  // Even an explicit stale override must not authorize verified=true
   const allowedStale=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',artifact:'report.xml',changed:['feature.mjs'],criteria:['testAdd'],allow_stale:true});
-  assert.equal(allowedStale.verified,true);
+  assert.equal(allowedStale.verified,false);
+  assert.equal(allowedStale.status,'stale');
 
   // 4. Failing test report
   const failXml='<testsuite tests="2" failures="1" errors="0" skipped="0"><testcase name="testAdd"/><testcase name="testAddBroken"><failure message="Assertion error"/></testcase></testsuite>';
@@ -565,16 +568,16 @@ test('artifact versioning: snapshots versions, computes unified diffs, and integ
   const walkFile=path.join(brainDir,'walkthrough.md');
 
   fs.writeFileSync(walkFile,'# Walkthrough\nInitial task overview\n- Item 1\n');
-  const snap1=e.store.snapshotArtifact({conversationId:'conv-art-123',artifactPath:walkFile});
+  const snap1=e.store.snapshotArtifact({workspaceId:e.store.register(root),workspaceRoot:root,conversationId:'conv-art-123',artifactPath:walkFile});
   assert.equal(snap1.version_number,1);
   assert.equal(snap1.changed,true);
 
-  const snapDup=e.store.snapshotArtifact({conversationId:'conv-art-123',artifactPath:walkFile});
+  const snapDup=e.store.snapshotArtifact({workspaceId:e.store.register(root),workspaceRoot:root,conversationId:'conv-art-123',artifactPath:walkFile});
   assert.equal(snapDup.changed,false);
   assert.equal(snapDup.version_number,1);
 
   fs.writeFileSync(walkFile,'# Walkthrough\nInitial task overview\n- Item 1 (verified)\n- Item 2 added\n');
-  const snap2=e.store.snapshotArtifact({conversationId:'conv-art-123',artifactPath:walkFile});
+  const snap2=e.store.snapshotArtifact({workspaceId:e.store.register(root),workspaceRoot:root,conversationId:'conv-art-123',artifactPath:walkFile});
   assert.equal(snap2.version_number,2);
   assert.equal(snap2.changed,true);
   assert.ok(snap2.diff_from_previous.includes('-- Item 1'));
