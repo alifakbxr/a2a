@@ -6,6 +6,7 @@ import {Engine} from './engine.mjs';
 import {getListedTools,validateArgs} from './tools.mjs';
 import {dataDir,getA2AMode,getCompactMode,getAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces,requireAuthorizedWorkspace} from './security.mjs';
 import {getSessionTokenUsage} from './tokens.mjs';
+import {classifyMcpFailure} from './mcp-diagnostics.mjs';
 
 const server={name:'a2a',version:'2.0.0'}, engine=new Engine();
 const io=readline.createInterface({input:process.stdin,crlfDelay:Infinity,terminal:false});
@@ -110,7 +111,7 @@ io.on('line',(line)=>{
   if(!req || Array.isArray(req)){answer(null,null,{code:-32600,message:'Invalid JSON-RPC request'});return}
   if(req.id===undefined){try{if(req.method!=='notifications/initialized'&&req.method!=='notifications/cancelled')route(req)}catch{}return}
   try{answer(req.id,route(req))}catch(e){
-    if(req.method==='tools/call'){answer(req.id,{content:[{type:'text',text:JSON.stringify({status:'error',message:String(e.message||e).slice(0,350)})}],isError:true});return}
+    if(req.method==='tools/call'){answer(req.id,{content:[{type:'text',text:JSON.stringify(classifyMcpFailure(req.params?.name,e))}],isError:true});return}
     answer(req.id,null,e);
   }
 });
