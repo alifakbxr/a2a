@@ -86,12 +86,20 @@ test('Always-On bounded impact summary preserves risk, uncertainty and full coun
     assert.equal(quick.coverage.static_only,true);
     assert.equal(quick.coverage.output_bounded,true);
     assert.deepEqual(quick.uncertainty,full.uncertainty);
-    assert.equal(quick.affected_total,full.affected.length);
+    assert.equal(quick.affected_total,full.affected_total);
+    assert.ok(quick.affected_total>=full.affected.length);
     assert.ok(quick.affected.length<=8);
     assert.ok(quick.affected.length<=full.affected.length);
     assert.ok(quick.related_tests.length<=5);
     assert.ok(JSON.stringify(quick).length<JSON.stringify(full).length);
     assert.equal(quick.tokens_affected,undefined);
+    assert.ok(full.teamwork_advisory, 'Broad dependency changes may justify Teamwork advisory');
+    // Sensitive risk alone is not evidence that parallel execution is beneficial.
+    const solo=path.join(root,'src','payments.js');
+    fs.writeFileSync(solo,'export const payment = true;');
+    const highRisk=engine.impact({workspace:root,changed:['src/payments.js']});
+    assert.equal(highRisk.risk,'high');
+    assert.equal(highRisk.teamwork_advisory,undefined);
   }finally{
     try{engine?.close()}catch{}
     for(const [k,v] of Object.entries(saved))if(v===undefined)delete process.env[k];else process.env[k]=v;
