@@ -24,7 +24,7 @@
 
 ## ⚡ Highlights
 
-- 📉 **~90% Context Token Reduction:** Single-pass lexer strips comments and method bodies, keeping context sharp for 30+ turns.
+- 📉 **Scoped code previews:** On-demand symbol queries and comment-stripped source previews can reduce output size, but net session savings require A/B evaluation.
 - 🔍 **Shift-Left Impact Analysis:** Maps reverse imports and dependent test suites *before* modifying code.
 - 🛡️ **The Iron Law of Verification:** Rejects task completion unless fresh machine test evidence (JUnit XML, TAP, or JSON) passes.
 - 🤝 **Subagent & Teamwork Gate:** Enforces test evidence on parallel `/teamwork` workers and subagents before handoff.
