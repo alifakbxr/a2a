@@ -307,6 +307,19 @@ export class Engine {
       const convId=conversation_id||id||this.#resolveActiveConversationId();
       if(!artifact_path&&!artifact_name)throw new Error('artifact_path or artifact_name is required');
       const targetPath=artifact_path||path.join(process.env.HOME||'','.gemini/antigravity/brain',convId,artifact_name);
+      // Authorization for a project does not grant access to every conversation's
+      // brain files. Require this conversation to be active in that workspace.
+      const absolute=path.resolve(targetPath);
+      const inWorkspace=absolute!==s.root && absolute.startsWith(s.root+path.sep);
+      if(!inWorkspace){
+        const sessionFile=path.join(this.store.base,'active-session.json');
+        let latest=null;
+        try{latest=JSON.parse(fs.readFileSync(sessionFile,'utf8'))?.latest}catch{}
+        if(latest?.conversationId!==convId || !Array.isArray(latest.workspacePaths)
+            || !latest.workspacePaths.some(w=>{try{return requireAuthorizedWorkspace(w)===s.root}catch{return false}})){
+          throw new Error('Brain artifact does not belong to the active authorized workspace/session');
+        }
+      }
       const snap=this.store.snapshotArtifact({workspaceId:wsId,conversationId:convId,artifactPath:targetPath,workspaceRoot:s.root});
       return {status:'snapshotted',snapshot:snap,...(compact?{compact:true}:{})};
     }
