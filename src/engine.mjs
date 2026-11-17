@@ -151,11 +151,9 @@ export class Engine {
       const trimmedWsTokens=compact?{...wsTokens,top_consumers:wsTokens.top_consumers.slice(0,5)}:wsTokens;
       // Current conversation is selected from A2A's SessionStart hook when
       // present. This still works for conversations created before installing A2A.
-      const all=scanConversationHistory({dataDirPath:this.store.base,limit:1});
-      const currentId=all.latest_conversation?.active?all.latest_conversation.conversation_id:null;
-      const latest=currentId
-        ? scanConversationHistory({dataDirPath:this.store.base,conversationId:currentId,limit:1})
-        : all;
+      const latest=scanConversationHistory({
+        dataDirPath:this.store.base,limit:1,onlyLatest:true
+      });
       attachReportSize(latest,{format:'json'});
       // The workspace index cannot measure Gemini usage; never auto-read private
       // Antigravity transcripts or report fabricated percentages.
