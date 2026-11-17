@@ -3,9 +3,10 @@ import {Engine} from '../src/engine.mjs';
 import {
   allowlistPath,settingsPath,getA2AMode,setA2AMode,getCompactMode,setCompactMode,
   getAutoTrustMode,setAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces,
-  authorizeWorkspace,revokeWorkspace,dataDir
+  authorizeWorkspace,revokeWorkspace,dataDir,requireAuthorizedWorkspace
 } from '../src/security.mjs';
-import {getSessionTokenUsage} from '../src/tokens.mjs';
+import {readOfficialAgyUsageFile} from '../src/tokens.mjs';
+import {scanConversationHistory,attachReportSize,formatConversationReport} from '../src/conversations.mjs';
 
 const [cmd,...argv]=process.argv.slice(2);
 function print(obj){process.stdout.write(JSON.stringify(obj,null,2)+'\n')}
@@ -19,7 +20,7 @@ Commands:\n  doctor                     show runtime, workspace permissions, act
   allow <absolute-workspace> authorize one project manually
   revoke <absolute-workspace> revoke one project
   inspect <workspace>        index project & show code graph coverage
-  tokens [workspace] [--conv <id>] inspect source estimates and session token diagnostics
+  tokens [--json] [--limit 10] [--conversation ID] [--include-subagents] [--usage-file output.json] read all Antigravity conversation usage locally
   skeleton <workspace> <file...>   strip comments via lexer and estimate preview size reduction
   context <workspace> <query> query symbols and feature relations
   impact <workspace> [paths...] analyze impact & calculate tokens affected
@@ -50,7 +51,7 @@ try{
       allowlist:allowlistPath(),
       allowed_workspaces:loadAllowlist(),
       antigravity_workspaces:loadAntigravityWorkspaces(),
-      session_tokens:getSessionTokenUsage(null,{dataDirPath:dataDir()}),
+      session_usage:{status:'not_collected',reason:'Doctor does not read internal conversation transcripts.'},
       network:'no outbound requests',
       shell_execution:'disabled',
     });
@@ -128,20 +129,43 @@ try{
       print({error:'Failed to fetch GitHub traffic stats',details:err.message});
     }
   }
+  else if(cmd==='tokens'){
+    let format='text',limit=10,conversationId=null,includeSubagents=false;
+    const usageFiles=[];
+    for(let i=0;i<argv.length;i++){
+      const item=argv[i];
+      if(item==='--json'){format='json';}
+      else if(item==='--include-subagents'){includeSubagents=true;}
+      else if(item==='--current'){limit=1;}
+      else if(item==='--limit'){
+        const n=Number(argv[++i]);
+        if(!Number.isInteger(n)||n<1||n>30)throw new Error('--limit must be a number from 1 to 30');
+        limit=n;
+      }else if(item.startsWith('--limit=')){
+        const n=Number(item.slice(8));
+        if(!Number.isInteger(n)||n<1||n>30)throw new Error('--limit must be a number from 1 to 30');
+        limit=n;
+      }else if(item==='--conversation'){conversationId=argv[++i];}
+      else if(item.startsWith('--conversation=')){conversationId=item.slice(15);}
+      else if(item==='--usage-file'){usageFiles.push(argv[++i]);}
+      else if(item.startsWith('--usage-file=')){usageFiles.push(item.slice(13));}
+      else if(item.startsWith('--'))throw new Error('Unknown tokens option: '+item);
+      else if(item!=='.'&&!path.isAbsolute(item))throw new Error('Unexpected tokens argument: '+item);
+      // Positional workspace retained for backwards compatibility; global history is intentional.
+    }
+    if(conversationId&&!/^[a-zA-Z0-9._-]{4,128}$/.test(conversationId))throw new Error('Invalid conversation ID');
+    const officialRuns=usageFiles.map(file=>readOfficialAgyUsageFile(file));
+    const report=scanConversationHistory({dataDirPath:dataDir(),limit,conversationId,includeSubagents,officialRuns});
+    attachReportSize(report,{format});
+    if(format==='json')print(report);
+    else process.stdout.write(formatConversationReport(report)+'\n');
+  }
   else if(cmd==='mcp'){await import('../src/mcp.mjs')}
   else {
     const engine=new Engine();let result;
     try{
       if(cmd==='inspect'){result=engine.context({workspace:argv[0]});}
-      else if(cmd==='tokens'){
-        let ws=null, convId=null;
-        for(let i=0;i<argv.length;i++){
-          if(argv[i]==='--conv'&&argv[i+1]){convId=argv[++i];}
-          else if(argv[i].startsWith('--conv=')){convId=argv[i].slice(7);}
-          else if(!ws){ws=argv[i];}
-        }
-        result=engine.context({workspace:ws||process.cwd(),action:'tokens',conversation_id:convId});
-      }
+
       else if(cmd==='skeleton'){
         const workspace=argv[0];
         const files=argv.slice(1);
@@ -179,8 +203,8 @@ try{
           else if(argv[i].startsWith('--parent=')){parentId=argv[i].slice(9);}
           else if(!ws&&!argv[i].startsWith('-')){ws=argv[i];}
         }
-        let wsId=null;
-        if(ws){try{wsId=engine.store.register(normalizeWorkspace(ws));}catch{}}
+        const root=requireAuthorizedWorkspace(ws||process.cwd());
+        const wsId=engine.store.register(root);
         const items=engine.store.listSideQuestions({workspaceId:wsId,conversationId:convId,parentConversationId:parentId});
         result={count:items.length,side_questions:items};
       }
@@ -188,13 +212,16 @@ try{
         const sub=argv[0]||'list';
         let artifactName=null;
         let convId=null;
+        let workspaceArg=null;
         let v1=null;
         let v2=null;
         const subIsCmd=['list','diff','show','snapshot'].includes(sub);
         const action=subIsCmd?sub:'list';
         const restArgs=subIsCmd?argv.slice(1):argv;
         for(let i=0;i<restArgs.length;i++){
-          if(restArgs[i]==='--conv'&&restArgs[i+1]){convId=restArgs[++i];}
+          if(restArgs[i]==='--workspace'&&restArgs[i+1]){workspaceArg=restArgs[++i];}
+          else if(restArgs[i].startsWith('--workspace=')){workspaceArg=restArgs[i].slice(12);}
+          else if(restArgs[i]==='--conv'&&restArgs[i+1]){convId=restArgs[++i];}
           else if(restArgs[i].startsWith('--conv=')){convId=restArgs[i].slice(7);}
           else if(restArgs[i]==='--v1'&&restArgs[i+1]){v1=Number(restArgs[++i]);}
           else if(restArgs[i].startsWith('--v1=')){v1=Number(restArgs[i].slice(5));}
@@ -212,22 +239,29 @@ try{
           }catch{}
           if(!convId) convId=process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
         }
+        let activeWorkspace=null;
+        try {
+          const sf=path.join(engine.store.base,'active-session.json');
+          const sess=JSON.parse(fs.readFileSync(sf,'utf8'));
+          activeWorkspace=sess?.latest?.workspacePaths?.[0]||null;
+        }catch{}
+        const root=requireAuthorizedWorkspace(workspaceArg||activeWorkspace||process.cwd());
+        const wsId=engine.store.register(root);
         if(action==='list'){
-          const items=engine.store.listArtifactVersions({conversationId:convId,artifactName});
+          const items=engine.store.listArtifactVersions({workspaceId:wsId,conversationId:convId,artifactName});
           result={conversation_id:convId,artifact_name:artifactName||null,count:items.length,versions:items};
         }else if(action==='diff'){
           if(!artifactName)throw new Error('artifact name required for diff (e.g. a2a artifacts diff walkthrough.md)');
-          const diffRes=engine.store.getArtifactDiff({conversationId:convId,artifactName,v1,v2});
+          const diffRes=engine.store.getArtifactDiff({workspaceId:wsId,conversationId:convId,artifactName,v1,v2});
           result={conversation_id:convId,...(diffRes||{artifact_name:artifactName,v1,v2,diff:''})};
         }else if(action==='show'){
           if(!artifactName)throw new Error('artifact name required for show');
-          const row=engine.store.getArtifactVersion({conversationId:convId,artifactName,versionNumber:v1||v2});
+          const row=engine.store.getArtifactVersion({workspaceId:wsId,conversationId:convId,artifactName,versionNumber:v1||v2});
           result=row||{status:'not_found'};
         }else if(action==='snapshot'){
           if(!artifactName)throw new Error('artifact name or path required for snapshot');
           const targetPath=path.isAbsolute(artifactName)?artifactName:path.join(process.env.HOME||'','.gemini/antigravity/brain',convId,artifactName);
-          const snap=engine.store.snapshotArtifact({conversationId:convId,artifactPath:targetPath});
-          result={status:'snapshotted',snapshot:snap};
+          result=engine.evidence({workspace:root,operation:'snapshot_artifact',conversation_id:convId,artifact_path:targetPath});
         }
       }
       else throw new Error('Unknown command '+cmd);

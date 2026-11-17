@@ -4,7 +4,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import {Engine} from './engine.mjs';
 import {getListedTools,validateArgs} from './tools.mjs';
-import {dataDir,getA2AMode,getCompactMode,getAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces} from './security.mjs';
+import {dataDir,getA2AMode,getCompactMode,getAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces,requireAuthorizedWorkspace} from './security.mjs';
 import {getSessionTokenUsage} from './tokens.mjs';
 
 const server={name:'a2a',version:'2.0.0'}, engine=new Engine();
@@ -16,11 +16,20 @@ const answer=(id,result,error)=>{
 
 const RESOURCES = [
   {uri:'a2a://status',name:'A2A Status',description:'Current A2A mode, compact mode, auto-trust policy, and authorized workspaces.',mimeType:'application/json'},
-  {uri:'a2a://tokens/session',name:'A2A Session Token Telemetry',description:'Current Antigravity session token usage and cache hit metrics.',mimeType:'application/json'},
-  {uri:'a2a://workspace/summary',name:'A2A Workspace Summary',description:'Active workspace graph coverage and measured token summary.',mimeType:'application/json'},
+  {uri:'a2a://tokens/session',name:'A2A Session Diagnostics',description:'Local session event counts only; model token totals require official Antigravity CLI JSON output.',mimeType:'application/json'},
+  {uri:'a2a://workspace/summary',name:'A2A Workspace Summary',description:'Active workspace graph coverage and estimated source inventory; not model token usage.',mimeType:'application/json'},
   {uri:'a2a://side-questions',name:'A2A Side Questions',description:'Recorded Antigravity side questions (/btw) and exploration notes.',mimeType:'application/json'},
 ];
 
+function getActiveSession(){
+  try{
+    const file=path.join(engine.store.base,'active-session.json');
+    if(!fs.existsSync(file))return null;
+    const active=JSON.parse(fs.readFileSync(file,'utf8'))?.latest;
+    const workspace=active?.workspacePaths?.[0] || active?.cwd;
+    return active?.conversationId && workspace ? {conversationId:active.conversationId,workspace} : null;
+  }catch{return null}
+}
 function readResource(uri){
   if(uri==='a2a://status'){
     return {
@@ -35,27 +44,21 @@ function readResource(uri){
     };
   }
   if(uri==='a2a://tokens/session'){
-    return getSessionTokenUsage(null,{dataDirPath:engine.store.base})||{status:'unavailable',reason:'No active transcript found'};
+    const active=getActiveSession();
+    if(!active)return {status:'unavailable',reason:'No active session found'};
+    requireAuthorizedWorkspace(active.workspace);
+    return getSessionTokenUsage(active.conversationId,{workspace:active.workspace,dataDirPath:engine.store.base})||{status:'unavailable',reason:'No session transcript found'};
   }
   if(uri==='a2a://side-questions'){
-    return {
-      side_questions: engine.store.listSideQuestions({ limit: 50 })
-    };
+    const active=getActiveSession();
+    if(!active?.conversationId || !active?.workspace) return {status:'no_active_session',side_questions:[]};
+    const root=requireAuthorizedWorkspace(active.workspace);
+    const wsId=engine.store.register(root);
+    return {side_questions:engine.store.listSideQuestions({workspaceId:wsId,conversationId:active.conversationId,limit:20})};
   }
   if(uri==='a2a://workspace/summary'){
-    let activeWs=null;
-    try{
-      const sf=path.join(engine.store.base,'active-session.json');
-      if(fs.existsSync(sf)){
-        const sd=JSON.parse(fs.readFileSync(sf,'utf8'));
-        activeWs=sd?.latest?.workspacePaths?.[0]||null;
-      }
-    }catch{}
-    if(!activeWs){
-      const candidates=[...loadAllowlist(),...loadAntigravityWorkspaces()];
-      activeWs=candidates[0]||null;
-    }
-    if(!activeWs)return {status:'no_active_workspace',reason:'Authorize or open a workspace first.'};
+    const activeWs=getActiveSession()?.workspace;
+    if(!activeWs)return {status:'no_active_workspace',reason:'Open an authorized workspace in a session first.'};
     return engine.context({workspace:activeWs,action:'inspect'});
   }
   throw Object.assign(new Error('Resource not found: '+String(uri||'')),{code:-32002});
@@ -83,6 +86,7 @@ function route(req){
       }
       const text=JSON.stringify(result);
       if(!text)throw new Error('Empty tool response');
+      if(Buffer.byteLength(text,'utf8')>64*1024)throw new Error('MCP response exceeds 64 KiB. Narrow the file list, query, or diff range.');
       return {content:[{type:'text',text}],isError:false};
     }
     case 'resources/list':return {resources:RESOURCES};
@@ -90,7 +94,9 @@ function route(req){
       const uri=req.params?.uri;
       if(typeof uri!=='string'||!uri)throw Object.assign(new Error('Missing resource uri'),{code:-32602});
       const payload=readResource(uri);
-      return {contents:[{uri,mimeType:'application/json',text:JSON.stringify(payload,null,2)}]};
+      const content=JSON.stringify(payload);
+      if(Buffer.byteLength(content,'utf8')>64*1024)throw new Error('MCP resource response exceeds 64 KiB');
+      return {contents:[{uri,mimeType:'application/json',text:content}]};
     }
     case 'prompts/list':return {prompts:[]};
     default:throw Object.assign(new Error('Method not found'),{code:-32601});

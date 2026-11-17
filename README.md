@@ -24,7 +24,7 @@
 
 ## ⚡ Highlights
 
-- 📉 **Scoped code previews:** On-demand symbol queries and comment-stripped source previews can reduce output size, but net session savings require A/B evaluation.
+- 📉 **Scoped code previews:** On-demand symbol queries and comment-stripped source previews can reduce output size, but net session savings require A/B evaluation. `a2a tokens` now reports **source-size estimates**, never invented savings.
 - 🔍 **Shift-Left Impact Analysis:** Maps reverse imports and dependent test suites *before* modifying code.
 - 🛡️ **The Iron Law of Verification:** Rejects task completion unless fresh machine test evidence (JUnit XML, TAP, or JSON) passes.
 - 🤝 **Subagent & Teamwork Gate:** Enforces test evidence on parallel `/teamwork` workers and subagents before handoff.
@@ -87,6 +87,24 @@ node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs verify-handoff /path/to/worksp
 | **`a2a_evidence`** | `list`, `runs`, `incidents`, `side_questions` | Historical run verdicts, regression memory, and Antigravity `/btw` side questions. |
 
 ---
+
+
+### Token usage across all conversations
+
+A2A can read **older Antigravity conversations even if they were created before A2A was installed**. There is no background collection, no upload, and no need to re-run an old conversation.
+
+```bash
+node scripts/a2a.mjs tokens                      # All available local conversations; plain-English report
+node scripts/a2a.mjs tokens --limit 5            # Show five recent conversations
+node scripts/a2a.mjs tokens --current            # Focus display on the latest conversation
+node scripts/a2a.mjs tokens --json               # Machine-readable report
+node scripts/a2a.mjs tokens --include-subagents  # Also include worker/subagent transcripts
+node scripts/a2a.mjs tokens --usage-file run.json # Attach actual CLI-reported usage for a captured run
+```
+
+A2A separates **official CLI token totals** from **internal log counters**, which are not validated as Gemini billing usage. The current session shows its latest *completed* model step where available; the actual context window and current in-progress model call are not directly observable. The report also estimates the size of its **own response** if passed back into Gemini, but never calls that estimate billable tokens.
+
+Inside Antigravity, `a2a_context(action="tokens", history_scope="all")` explicitly requests global history. The default `history_scope="current"` is restricted to the latest recorded conversation. Full explanation: [Conversation usage and privacy](docs/CONVERSATION_USAGE.md).
 
 ## 📚 Deep Dives & Documentation
 

@@ -5,7 +5,7 @@ const paths={type:'array',items:{type:'string',maxLength:500},maxItems:200};
 const BASE_SPECS = [
   {
     name:'context',
-    description:'A2A read-only project index, symbol relationships, code skeletonizer, freshness & measured token telemetry.',
+    description:'A2A project context and transparent conversation token history. History totals from internal logs are not provider-verified.',
     inputSchema:{
       type:'object',
       additionalProperties:false,
@@ -17,6 +17,8 @@ const BASE_SPECS = [
         limit:{type:'integer',minimum:1,maximum:40},
         conversation_id:{type:'string',maxLength:128,description:'Optional Antigravity conversation ID for exact session token lookup.'},
         transcript_path:{type:'string',maxLength:500,description:'Optional path to transcript.jsonl for exact session token lookup.'},
+        history_scope:{type:'string',enum:['current','all'],description:'For tokens: current session by default; all explicitly reads local historical conversations.'},
+        history_limit:{type:'integer',minimum:1,maximum:10,description:'Maximum recent conversations returned for history.'},
         file:{type:'string',maxLength:500,description:'Relative file path for action="skeleton".'},
         files:{type:'array',items:{type:'string',maxLength:500},maxItems:20,description:'Relative file paths for action="skeleton".'}
       }

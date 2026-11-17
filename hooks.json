@@ -19,17 +19,7 @@
         ]
       },
       {
-        "matcher": "write_file",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ./scripts/hook.mjs",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "edit_file",
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
         "hooks": [
           {
             "type": "command",

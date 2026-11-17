@@ -332,27 +332,16 @@ export function minifyContext(text) {
 }
 
 /**
- * Approximate USD savings estimate from saved tokens based on configurable rate.
+ * A2A cannot infer billable savings from tool/source-size estimates. Retained
+ * as a compatibility helper but deliberately does not fabricate a USD amount.
  */
-export function estimateCostSavings(tokensSaved, ratePerMillion = 3.50) {
-  if (!tokensSaved || tokensSaved <= 0) return '$0.00';
-  const val = (tokensSaved / 1_000_000) * ratePerMillion;
-  return `$${val.toFixed(4)}`;
-}
+export function estimateCostSavings() { return null; }
 
-export function estimateSessionCost({ uncachedInputTokens = 0, cacheReadTokens = 0, outputTokens = 0 } = {}) {
-  const inputRate = 2.50;
-  const cacheRate = 0.25;
-  const outputRate = 10.00;
-  const usd =
-    (uncachedInputTokens / 1_000_000) * inputRate +
-    (cacheReadTokens / 1_000_000) * cacheRate +
-    (outputTokens / 1_000_000) * outputRate;
+export function estimateSessionCost() {
   return {
-    approximate: true,
-    estimated_usd: `$${usd.toFixed(4)}`,
-    rates_per_million_usd: { uncached_input: inputRate, cache_read: cacheRate, output: outputRate },
-    note: 'Approximate estimate using configurable blended rates; actual billing varies by model and tier.',
+    approximate:false,
+    estimated_usd:null,
+    reason:'Model-specific price, billing plan, and verified token accounting were not provided.',
   };
 }
 
@@ -395,8 +384,13 @@ function resolveTranscriptTarget({ conversationId = null, transcriptPath = null,
 
   if (transcriptPath && typeof transcriptPath === 'string') {
     try {
-      const resolved = path.resolve(transcriptPath);
-      if (resolved.endsWith('transcript.jsonl') && fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+      const resolved = fs.realpathSync(path.resolve(transcriptPath));
+      const inBrain = getBrainRoots().some(brain=>{
+        const canonical=fs.existsSync(brain)?fs.realpathSync(brain):path.resolve(brain);
+        const rel=path.relative(canonical,resolved);
+        return rel && rel!=='.' && rel!=='..' && !rel.startsWith('..'+path.sep) && !path.isAbsolute(rel);
+      });
+      if (inBrain && path.basename(resolved)==='transcript.jsonl' && fs.statSync(resolved).isFile()) {
         const inferredId = cleanId || sanitizeConversationId(path.basename(path.dirname(path.dirname(path.dirname(resolved))))) || 'explicit';
         return { convId: inferredId, logFile: resolved, source: 'explicit-transcript-path' };
       }
@@ -446,26 +440,7 @@ function resolveTranscriptTarget({ conversationId = null, transcriptPath = null,
     }
   } catch {}
 
-  // Fallback: scan brain directories by mtimeMs, skipping subagent transcripts first
-  const candidates = [];
-  for (const brainDir of getBrainRoots()) {
-    try {
-      if (!fs.existsSync(brainDir)) continue;
-      for (const d of fs.readdirSync(brainDir)) {
-        const sid = sanitizeConversationId(d);
-        if (!sid) continue;
-        const logFile = path.join(brainDir, sid, '.system_generated', 'logs', 'transcript.jsonl');
-        try {
-          const st = fs.statSync(logFile);
-          if (st.isFile()) candidates.push({ convId: sid, logFile, mtimeMs: st.mtimeMs });
-        } catch {}
-      }
-    } catch {}
-  }
-  candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
-  const nonSubagent = candidates.find(c => !isSubagentTranscript(c.logFile));
-  if (nonSubagent) return { convId: nonSubagent.convId, logFile: nonSubagent.logFile, source: 'latest-primary-transcript' };
-  if (candidates.length > 0) return { convId: candidates[0].convId, logFile: candidates[0].logFile, source: 'latest-transcript-fallback' };
+  // Never guess the most recent transcript: it may belong to another session.
   return null;
 }
 
@@ -474,6 +449,9 @@ export function getSessionTokenUsage(conversationId = null, opts = {}) {
   if (!target || !fs.existsSync(target.logFile)) return null;
 
   try {
+    if(fs.statSync(target.logFile).size > 8*1024*1024){
+      return {status:'unavailable',reason:'Transcript is too large for safe synchronous parsing',source:target.source};
+    }
     const content = fs.readFileSync(target.logFile, 'utf8');
     const lines = content.split('\n').filter(Boolean);
 
@@ -501,7 +479,7 @@ export function getSessionTokenUsage(conversationId = null, opts = {}) {
           uncachedInputTokens += inp;
           cacheReadTokens += cr;
           outputTokens += out;
-          if (inp > 0 || cr > 0) currentContextTokens = inp + cr;
+          if (inp > 0 || cr > 0) currentContextTokens = inp;
         }
         if (obj.model) lastModel = obj.model;
         if (Array.isArray(obj.tool_calls)) {
@@ -518,29 +496,26 @@ export function getSessionTokenUsage(conversationId = null, opts = {}) {
       } catch {}
     }
 
-    const totalInput = uncachedInputTokens + cacheReadTokens;
-    const cacheHitRatio = totalInput > 0 ? ((cacheReadTokens / totalInput) * 100).toFixed(1) + '%' : '0%';
-
+    // PLANNER_RESPONSE is an undocumented internal format. Its input/cache
+    // accounting is not guaranteed to match the CLI's official usage object.
+    // Expose diagnostics only, not invented billable tokens or fake totals.
     return {
-      conversation_id: target.convId,
-      source: target.source,
-      turns_recorded: llmSteps,
-      llm_steps: llmSteps,
-      user_turns: userTurns,
-      latest_model: lastModel,
-      current_context_tokens: currentContextTokens,
-      input_tokens: uncachedInputTokens,
-      uncached_input_tokens: uncachedInputTokens,
-      cache_read_tokens: cacheReadTokens,
-      output_tokens: outputTokens,
-      cache_hit_ratio: cacheHitRatio,
-      total_tokens_consumed: uncachedInputTokens + outputTokens + cacheReadTokens,
-      tool_calls: {
-        total: totalToolCalls,
-        a2a_calls: a2aToolCalls,
-        read_file_calls: readFileCalls,
+      status:'diagnostic_only',
+      source:target.source,
+      conversation_id:target.convId,
+      latest_model:lastModel,
+      llm_steps:llmSteps,
+      user_turns:userTurns,
+      tool_calls:{
+        total:totalToolCalls,
+        a2a_calls:a2aToolCalls,
+        read_file_calls:readFileCalls,
       },
-      cost_estimate: estimateSessionCost({ uncachedInputTokens, cacheReadTokens, outputTokens }),
+      usage:null,
+      total_tokens_consumed:null,
+      cache_hit_ratio:null,
+      cost_estimate:null,
+      note:'Internal transcript counters have unknown accounting semantics. For real token totals, import Antigravity CLI JSON usage with a2a tokens --usage-file <path>.',
     };
   } catch {
     return null;
@@ -548,72 +523,98 @@ export function getSessionTokenUsage(conversationId = null, opts = {}) {
 }
 
 export function analyzeWorkspaceTokens(index, changedFiles = [], telemetrySummary = null) {
-  const files = index?.files || [];
-  let totalBytes = 0;
-  const fileBreakdown = [];
-  const compactIndexRows = [];
-
-  for (const f of files) {
-    const b = f.bytes || 0;
-    totalBytes += b;
-    fileBreakdown.push({
-      path: f.path,
-      language: f.language,
-      bytes: b,
-      estimated_tokens: estimateTokens(b),
-    });
-    compactIndexRows.push({ p: f.path, l: f.language, b });
-  }
-
-  fileBreakdown.sort((a, b) => b.estimated_tokens - a.estimated_tokens);
-  const totalTokens = estimateTokens(totalBytes);
-  const compactIndexTokens = files.length > 0 ? estimateTokens(JSON.stringify(compactIndexRows)) : 0;
-
-  let affectedTokens = 0;
-  if (Array.isArray(changedFiles) && changedFiles.length > 0) {
-    const changedSet = new Set(changedFiles);
-    for (const f of fileBreakdown) {
-      if (changedSet.has(f.path)) affectedTokens += f.estimated_tokens;
-    }
-  }
-
-  const hasMeasuredTelemetry = Boolean(telemetrySummary && telemetrySummary.calls > 0 && telemetrySummary.raw_scope_tokens > 0);
-  const basisRaw = hasMeasuredTelemetry ? telemetrySummary.raw_scope_tokens : totalTokens;
-  const basisDelivered = hasMeasuredTelemetry ? telemetrySummary.response_tokens : compactIndexTokens;
-  const tokensSaved = hasMeasuredTelemetry
-    ? telemetrySummary.tokens_saved
-    : Math.max(0, totalTokens - compactIndexTokens);
-  const savingsPct = basisRaw > 0 ? ((tokensSaved / basisRaw) * 100).toFixed(1) + '%' : '0%';
-
-  return {
-    total_files: files.length,
-    total_source_bytes: totalBytes,
-    total_estimated_tokens: totalTokens,
-    compact_index_tokens: compactIndexTokens,
-    changed_files_tokens: affectedTokens,
-    top_consumers: fileBreakdown.slice(0, 10),
-    measured_cumulative: telemetrySummary
-      ? {
-          calls: telemetrySummary.calls || 0,
-          raw_scope_tokens: telemetrySummary.raw_scope_tokens || 0,
-          response_tokens: telemetrySummary.response_tokens || 0,
-          tokens_saved: telemetrySummary.tokens_saved || 0,
-          savings_ratio:
-            telemetrySummary.raw_scope_tokens > 0
-              ? (((telemetrySummary.tokens_saved || 0) / telemetrySummary.raw_scope_tokens) * 100).toFixed(1) + '%'
-              : '0%',
-          estimated_cost_saved: null, // no observed baseline; cost savings cannot be inferred
-        }
-      : null,
-    efficiency: {
-      measurement_basis: hasMeasuredTelemetry ? 'estimated-tool-scope-counterfactual' : 'estimated-index-vs-source',
-      raw_source_tokens: basisRaw,
-      a2a_compact_tokens: basisDelivered,
-      compact_index_tokens: compactIndexTokens,
-      estimated_tokens_saved: tokensSaved,
-      savings_ratio: savingsPct,
-      estimated_cost_saved: null,
-      limitation: 'This compares estimated source size with A2A output; it does not measure net task/session savings. Compare equal tasks with and without A2A.',
-    },
+  const files=index?.files||[];
+  const fileBreakdown=files.map(f=>{
+    const bytes=Math.max(0,Number(f.bytes)||0);
+    return {path:f.path,language:f.language,bytes,estimated_source_tokens:estimateTokens(bytes)};
+  }).sort((a,b)=>b.bytes-a.bytes);
+  const totalBytes=fileBreakdown.reduce((n,f)=>n+f.bytes,0);
+  const indexBytes=Buffer.byteLength(JSON.stringify(files.map(f=>({p:f.path,l:f.language,b:f.bytes||0}))),'utf8');
+  const changedSet=new Set(changedFiles||[]);
+  const changedBytes=fileBreakdown.filter(f=>changedSet.has(f.path)).reduce((n,f)=>n+f.bytes,0);
+  const scopeEstimate={
+    calls:Math.max(0,Number(telemetrySummary?.calls)||0),
+    estimated_scope_tokens:Math.max(0,Number(telemetrySummary?.raw_scope_tokens)||0),
+    estimated_tool_response_tokens:Math.max(0,Number(telemetrySummary?.response_tokens)||0),
+    data_quality:'estimated_character_count',
+    note:'These are approximate tool/source payload sizes, NOT actual model usage. Summed tool calls may overlap and cached content is not accounted for.',
   };
+  return {
+    measurement_status:'source_inventory_only',
+    total_files:files.length,
+    total_source_bytes:totalBytes,
+    total_estimated_tokens:estimateTokens(totalBytes),
+    compact_index_tokens:estimateTokens(indexBytes),
+    changed_files_tokens:estimateTokens(changedBytes),
+    top_consumers:fileBreakdown.slice(0,10),
+    tool_payload_estimates:scopeEstimate,
+    net_token_savings:null,
+    net_token_savings_pct:null,
+    model_usage:null,
+    // Explicitly preserve compatibility with consumers of the old efficiency
+    // object, but do not populate its unreliable token-savings claims.
+    efficiency:{
+      measurement_basis:'no_controlled_baseline',
+      raw_source_tokens:null,
+      a2a_compact_tokens:null,
+      estimated_tokens_saved:null,
+      savings_ratio:null,
+      estimated_cost_saved:null,
+      limitation:'No A/B baseline or provider token usage was observed. Source-byte estimates cannot prove actual Gemini token savings.',
+    },
+    caveat:'Estimated source inventory size is NOT Gemini context window, session token usage, or billed tokens.',
+  };
+}
+
+// Only provider-reported output can be used for a trustworthy per-run total.
+// The official CLI emits usage.total_tokens, with total=input+output;
+// cache_read and thinking are separate informational counters, not additions.
+export function parseOfficialAgyUsage(envelope) {
+  const result=envelope?.event==='result'?envelope.result:envelope?.result?.usage?envelope.result:envelope;
+  const usage=result?.usage;
+  if(!usage||typeof usage!=='object')throw new Error('Missing official Antigravity CLI usage object');
+  const read=(key,required=true)=>{
+    const value=usage[key];
+    if(value===undefined||value===null){
+      if(required)throw new Error('Missing usage.'+key);
+      return null;
+    }
+    if(typeof value!=='number'||!Number.isSafeInteger(value)||value<0)throw new Error('Invalid usage.'+key);
+    return value;
+  };
+  const input=read('input_tokens'),output=read('output_tokens'),total=read('total_tokens');
+  const thinking=read('thinking_tokens',false),cache=read('cache_read_tokens',false);
+  if(total!==input+output)throw new Error('Inconsistent CLI usage total: expected input_tokens + output_tokens');
+  return {
+    status:'reported',
+    source:'antigravity-cli-json',
+    conversation_id:typeof result.conversation_id==='string'?result.conversation_id:null,
+    run_status:typeof result.status==='string'?result.status:null,
+    duration_seconds:typeof result.duration_seconds==='number'&&result.duration_seconds>=0?result.duration_seconds:null,
+    num_turns:Number.isSafeInteger(result.num_turns)&&result.num_turns>=0?result.num_turns:null,
+    usage:{input_tokens:input,output_tokens:output,total_tokens:total,thinking_tokens:thinking,cache_read_tokens:cache},
+    cost_usd:null,
+    net_token_savings:null,
+    note:'Reported by Antigravity CLI for this specific run only. Cache/thinking fields are not added to the reported total. No native-versus-A2A baseline is available.',
+  };
+}
+
+export function readOfficialAgyUsageFile(file) {
+  if(typeof file!=='string'||!file.trim())throw new Error('Provide a JSON file path');
+  const full=fs.realpathSync(path.resolve(file));
+  const stat=fs.statSync(full);
+  if(!stat.isFile()||stat.size>4*1024*1024)throw new Error('Usage file must be a regular JSON/NDJSON file of at most 4 MiB');
+  const raw=fs.readFileSync(full,'utf8');
+  try{return parseOfficialAgyUsage(JSON.parse(raw))}catch(e){
+    // Stream JSON ends with event=result. Ignore earlier step_update totals:
+    // summing them would double-count a run already summarized by result. 
+    const lines=raw.trimEnd().split(/\r?\n/);
+    for(let i=lines.length-1;i>=0;i--){
+      try{
+        const event=JSON.parse(lines[i]);
+        if(event?.event==='result')return parseOfficialAgyUsage(event);
+      }catch{}
+    }
+    throw e;
+  }
 }

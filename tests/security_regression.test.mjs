@@ -223,7 +223,8 @@ test('Security: Source fingerprint staleness detects post-test modifications', (
   });
 
   assert.equal(res1.tests_passed, true);
-  assert.equal(res1.deliverable_verified, true);
+  assert.equal(res1.deliverable_verified, false);
+  assert.equal(res1.status,'unattested_report');
   assert.equal(res1.source_fingerprint, fp1);
 
   // Backdate test report by 5 seconds to simulate prior test run before modification

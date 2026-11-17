@@ -559,33 +559,15 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
   }
   if (!authorizedBoundary && conversationId && /^[a-zA-Z0-9_\-.]{4,64}$/.test(conversationId)) {
     const brainDir = path.resolve(getHomeDir(), '.gemini', 'antigravity', 'brain', conversationId);
-    if (isSameOrDescendantPath(brainDir, resolved)) {
+    // Only top-level Markdown artifacts can be read from a conversation brain.
+    // Never allow .system_generated or nested internal conversation content.
+    if (path.dirname(resolved) === brainDir && path.extname(resolved).toLowerCase()==='.md'
+        && !path.basename(resolved).startsWith('.')) {
       authorizedBoundary = brainDir;
     }
   }
-  if (!authorizedBoundary) {
-    const allowed = loadAllowlist();
-    for (const a of allowed) {
-      if (isProtectedRoot(a)) continue;
-      const canonical = realpathIfExists(a);
-      if (isSameOrDescendantPath(canonical, resolved) || isSameOrDescendantPath(a, resolved)) {
-        authorizedBoundary = canonical;
-        break;
-      }
-    }
-  }
-  if (!authorizedBoundary) {
-    const agWorkspaces = loadAntigravityWorkspaces();
-    for (const a of agWorkspaces) {
-      if (isProtectedRoot(a)) continue;
-      const canonical = realpathIfExists(a);
-      if (isSameOrDescendantPath(canonical, resolved) || isSameOrDescendantPath(a, resolved)) {
-        authorizedBoundary = canonical;
-        break;
-      }
-    }
-  }
-
+  // No global allowlist fallback: authorization is bound to the *requested* workspace.
+  // For hook-driven snapshots (no workspaceRoot), only the session's brain directory is valid.
   if (!authorizedBoundary) {
     throw new Error('Path escapes authorized workspace or brain boundary');
   }

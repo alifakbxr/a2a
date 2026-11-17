@@ -7,14 +7,15 @@ import {discover,createGraph,snapshotOf,gitHead,discoverTestCommands} from './sc
 import {contextQuery,analyzeImpact,shortGraphSummary,validateChangedPaths} from './graph.mjs';
 import {planVerification,assessVerification,listEvidence,freshness,verifyHandoff} from './verification.mjs';
 import {estimateTokens,getSessionTokenUsage,analyzeWorkspaceTokens,skeletonizeCode} from './tokens.mjs';
+import {scanConversationHistory,attachReportSize} from './conversations.mjs';
 
 export class Engine {
   constructor({store}={}) {this.store=store||new Store();this.owned=!store;}
   close(){if(this.owned)this.store.close()}
-  sync(workspace){
+  sync(workspace,{verifyIntegrity=false}={}){
     const root=requireAuthorizedWorkspace(workspace),wsId=this.store.register(root);
     const cachedFiles=new Map(this.store.all('SELECT path,content_sha AS hash,language,bytes,mtime_ms FROM files WHERE workspace_id=?',wsId).map(r=>[r.path,r]));
-    const index=discover(root,{cachedFiles}), git=gitHead(root);
+    const index=discover(root,{cachedFiles:verifyIntegrity?null:cachedFiles}), git=gitHead(root);
     const snapshot=sha256((git||'no-git')+'|'+snapshotOf(index));const current=this.store.latest(wsId);
     const revision=this.store.insertRevision(wsId,snapshot,git,{os:os.platform(),arch:os.arch(),node:process.versions.node});
     if(!current||current.id!==revision||cachedFiles.size!==index.files.length){
@@ -34,8 +35,19 @@ export class Engine {
     if(!current) return this.sync(workspace);
     return {root,wsId,revision:current.id,git:current.git_head};
   }
-  context({workspace,action='inspect',query='',limit=12,conversation_id=null,transcript_path=null,file=null,files=[],path:targetPath=null}={}){
+  context({workspace,action='inspect',query='',limit=12,conversation_id=null,transcript_path=null,history_scope='current',history_limit=10,file=null,files=[],path:targetPath=null}={}){
     const compact=getCompactMode();
+    if(action==='tokens'&&history_scope==='all'){
+      // This must be an explicit tokens action. Do not walk private transcripts
+      // as a side effect of ordinary inspect/impact calls.
+      requireAuthorizedWorkspace(workspace);
+      const output=scanConversationHistory({
+        dataDirPath:this.store.base,
+        limit:Math.min(10,history_limit||10),
+      });
+      attachReportSize(output,{format:'json'});
+      return {action:'tokens',history:output,note:'Historical token counters are not equivalent to provider-reported usage.'};
+    }
     if(action==='skeleton'){
       const s=this.resolveMeta(workspace);
       const singleTarget=file||targetPath;
@@ -43,31 +55,46 @@ export class Engine {
       const uniqueTargets=[...new Set(targets)].slice(0,20);
       if(!uniqueTargets.length) throw new Error('Provide file or files for action="skeleton"');
       let totalRaw=0, totalSkel=0;
+      let remainingOutputChars=32000;
+      let omittedFiles=0;
       const items=[];
       for(const rel of uniqueTargets){
         const full=safeFile(s.root,rel);
+        const stat=fs.statSync(full);
+        if(stat.size>160*1024 || remainingOutputChars<100){
+          omittedFiles++;
+          items.push({file:rel,skipped:true,reason:stat.size>160*1024?'source_too_large':'response_budget_exhausted'});
+          continue;
+        }
         const raw=fs.readFileSync(full,'utf8');
-        const skeleton=skeletonizeCode(raw,path.extname(rel));
+        const wholeSkeleton=skeletonizeCode(raw,path.extname(rel));
+        const cap=Math.min(6000,remainingOutputChars);
+        const skeleton=wholeSkeleton.length>cap?wholeSkeleton.slice(0,cap):wholeSkeleton;
+        const truncated=skeleton.length<wholeSkeleton.length;
+        remainingOutputChars-=skeleton.length;
         const rawTokens=estimateTokens(raw);
         const skelTokens=estimateTokens(skeleton);
-        const saved=Math.max(0,rawTokens-skelTokens);
         totalRaw+=rawTokens;totalSkel+=skelTokens;
         items.push({
           file:rel,
-          ...(compact?{}:{raw_tokens:rawTokens,skeleton_tokens:skelTokens,tokens_saved:saved,saved_pct:rawTokens>0?((saved/rawTokens)*100).toFixed(1)+'%':'0%'}),
+          ...(compact?{}:{estimated_source_tokens:rawTokens,estimated_preview_tokens:skelTokens}),
           skeleton,
+          truncated,
+          ...(truncated?{warning:'Preview truncated. Do not infer complete code behavior from this excerpt.'}:{}),
         });
       }
-      const totalSaved=Math.max(0,totalRaw-totalSkel);
       const payload={
         workspace_id:s.wsId,
         revision:s.revision,
         action:'skeleton',
         files:items,
         summary:{
-          raw_tokens:totalRaw,
-          skeleton_tokens:totalSkel,
-          ...(compact?{}:{tokens_saved:totalSaved,saved_pct:totalRaw>0?((totalSaved/totalRaw)*100).toFixed(1)+'%':'0%'}),
+          estimated_source_tokens:totalRaw,
+          estimated_preview_tokens:totalSkel,
+          estimated_preview_only:true,
+          omitted_files:omittedFiles,
+          truncated_files:items.filter(x=>x.truncated).length,
+          note:'These are relative payload-size estimates; no model usage or net savings were measured.',
         },
         ...(compact?{compact:true}:{}),
       };
@@ -75,7 +102,7 @@ export class Engine {
       return payload;
     }
 
-    const s=this.sync(workspace);
+    const s=this.sync(workspace,{verifyIntegrity:action==='freshness'});
     const base={
       workspace_id:s.wsId,
       revision:s.revision,
@@ -119,13 +146,27 @@ export class Engine {
       // Explicit-only telemetry: do not spend computation or context space on every inspect.
       const telemetrySummary=this.store.getTelemetrySummary(s.wsId);
       const wsTokens=analyzeWorkspaceTokens(s.index,[],telemetrySummary);
-      base.coverage.estimated_source_tokens=wsTokens.total_estimated_tokens;
-      base.coverage.tokens_saved_ratio=wsTokens.efficiency.savings_ratio;
+      base.coverage.estimated_workspace_source_tokens=wsTokens.total_estimated_tokens;
+      base.coverage.source_token_estimate_only=true;
       const trimmedWsTokens=compact?{...wsTokens,top_consumers:wsTokens.top_consumers.slice(0,5)}:wsTokens;
+      // Current conversation is selected from A2A's SessionStart hook when
+      // present. This still works for conversations created before installing A2A.
+      const latest=scanConversationHistory({
+        dataDirPath:this.store.base,limit:1,onlyLatest:true
+      });
+      attachReportSize(latest,{format:'json'});
+      // The workspace index cannot measure Gemini usage; never auto-read private
+      // Antigravity transcripts or report fabricated percentages.
       return {
         ...base,
         workspace_tokens:trimmedWsTokens,
-        session_tokens:getSessionTokenUsage(conversation_id,{transcriptPath:transcript_path,workspace:s.root,dataDirPath:this.store.base}),
+        conversation_history:latest,
+        session_usage:{
+          status:'not_available',
+          source:null,
+          usage:null,
+          reason:'No provider-reported Antigravity CLI usage supplied. Use a2a tokens --usage-file <official agy JSON output>.',
+        },
         ...(compact?{compact:true}:{}),
       };
     }
@@ -176,7 +217,8 @@ export class Engine {
     const payload={
       revision:s.revision,
       ...res,
-      tokens_affected:impactTokens.changed_files_tokens,
+      estimated_source_tokens_affected:impactTokens.changed_files_tokens,
+      source_token_estimate_only:true,
       incomplete_index:s.skipped.some(x=>x==='index_limit_exceeded'||x==='index_byte_budget_exceeded'),
       ...(isLargeScope?{
         teamwork_advisory:{
@@ -193,7 +235,7 @@ export class Engine {
   }
   verify({workspace,operation='plan',criteria=[],changed=[],worker_name,artifact,allow_stale}={}){
     const compact=getCompactMode();
-    const s=this.sync(workspace);
+    const s=this.sync(workspace,{verifyIntegrity:operation!=='plan'});
     if(operation==='plan'){
       validateChangedPaths(changed);
       const plan=planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria});
@@ -290,6 +332,19 @@ export class Engine {
       const convId=conversation_id||id||this.#resolveActiveConversationId();
       if(!artifact_path&&!artifact_name)throw new Error('artifact_path or artifact_name is required');
       const targetPath=artifact_path||path.join(process.env.HOME||'','.gemini/antigravity/brain',convId,artifact_name);
+      // Authorization for a project does not grant access to every conversation's
+      // brain files. Require this conversation to be active in that workspace.
+      const absolute=path.resolve(targetPath);
+      const inWorkspace=absolute!==s.root && absolute.startsWith(s.root+path.sep);
+      if(!inWorkspace){
+        const sessionFile=path.join(this.store.base,'active-session.json');
+        let latest=null;
+        try{latest=JSON.parse(fs.readFileSync(sessionFile,'utf8'))?.latest}catch{}
+        if(latest?.conversationId!==convId || !Array.isArray(latest.workspacePaths)
+            || !latest.workspacePaths.some(w=>{try{return requireAuthorizedWorkspace(w)===s.root}catch{return false}})){
+          throw new Error('Brain artifact does not belong to the active authorized workspace/session');
+        }
+      }
       const snap=this.store.snapshotArtifact({workspaceId:wsId,conversationId:convId,artifactPath:targetPath,workspaceRoot:s.root});
       return {status:'snapshotted',snapshot:snap,...(compact?{compact:true}:{})};
     }

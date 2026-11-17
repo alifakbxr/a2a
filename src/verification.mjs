@@ -113,9 +113,10 @@ export function listEvidence(store,wsId,root,currentRevision,{limit=20,id}={}){
 }
 export function freshness(store,wsId,root,revision){const items=store.all('SELECT id,revision_id,criterion_id,status,artifact_path,artifact_sha FROM evidence WHERE workspace_id=? ORDER BY created_at DESC LIMIT 30',wsId);return items.map(x=>{let artifact_intact=false;try{artifact_intact=sha256(fs.readFileSync(safeFile(root,x.artifact_path)))===x.artifact_sha}catch{};return {id:x.id,revision_id:x.revision_id,criterion_id:x.criterion_id,status:x.status,artifact_intact,fresh:x.revision_id===revision&&artifact_intact}})}
 
-const CANDIDATE_ARTIFACTS = [
+export const CANDIDATE_ARTIFACTS = [
   'report.xml',
   'junit.xml',
+  'report.xml',
   'test-results.xml',
   'test-report.xml',
   'junit-report.xml',
@@ -142,6 +143,37 @@ export function computeSourceFingerprint(root, changedFiles = []) {
   }
   fileHashes.sort();
   return sha256(fileHashes.join('\n'));
+}
+
+export function nativeRunProvenance(store,root,changedFiles,relReport,reportHash){
+  // This is a local hook-derived record, not a cryptographic attestation.
+  if(!changedFiles.length || !store?.base)return {matched:false,reason:'No changed source files were bound to the native run'};
+  try{
+    const sameWorkspace=(a,b)=>a&&b&&fs.realpathSync(a)===fs.realpathSync(b);
+    const file=path.join(store.base,'last-test-run.json');
+    const st=fs.statSync(file);
+    if(!st.isFile() || st.size>128*1024)return {matched:false,reason:'Native run metadata is unavailable'};
+    const record=JSON.parse(fs.readFileSync(file,'utf8'));
+    const active=JSON.parse(fs.readFileSync(path.join(store.base,'active-session.json'),'utf8'))?.latest;
+    if(!active?.conversationId || active.conversationId!==record.conversationId
+       || !Array.isArray(active.workspacePaths)
+       || !active.workspacePaths.some(w=>{try{return sameWorkspace(w,root)}catch{return false}})){
+      return {matched:false,reason:'Native-run record is not bound to the active workspace session'};
+    }
+    if(record.kind!=='native-test-tool-completed'||record.succeeded!==true||!sameWorkspace(record.workspace,root)){
+      return {matched:false,reason:'No successful native test run recorded for this workspace'};
+    }
+    const age=Date.now()-Date.parse(record.updatedAt||'');
+    if(!Number.isFinite(age)||age< -2000||age>15*60*1000)return {matched:false,reason:'Native run is outside freshness window'};
+    if(record.report_hashes?.[relReport]!==reportHash)return {matched:false,reason:'Report hash differs from the last native test run'};
+    for(const rel of changedFiles){
+      const expected=record.source_hashes?.[rel];
+      if(!expected || expected!==sha256(fs.readFileSync(safeFile(root,rel)))){
+        return {matched:false,reason:'Changed source does not match the native test run'};
+      }
+    }
+    return {matched:true,reason:null};
+  }catch{return {matched:false,reason:'Native run provenance cannot be read'}}
 }
 
 export function verifyHandoff(store,wsId,root,rev,{
@@ -196,7 +228,7 @@ export function verifyHandoff(store,wsId,root,rev,{
   const stat=fs.statSync(full);
   if(stat.size>1200000)throw new Error('Evidence report exceeds 1.2 MB');
 
-  const isFresh=allow_stale||maxSourceMtimeMs===0||(stat.mtimeMs>=maxSourceMtimeMs-1500);
+  const isFresh=maxSourceMtimeMs===0||(stat.mtimeMs>=maxSourceMtimeMs-1500); // allow_stale never authorizes a PASS
   if(!isFresh){
     return {
       operation:'verify_handoff',
@@ -240,8 +272,11 @@ export function verifyHandoff(store,wsId,root,rev,{
       const testName=typeof c==='object'&&c.test_name?c.test_name.trim():(typeof c==='string'?c.trim():'*');
       let cStatus='passed';
       let cReason=null;
-      if(testName!=='*'){
-        const matching=parsed.cases.filter(tc=>tc.name===testName||tc.name.includes(testName));
+      if(testName==='*'){
+        cStatus='inconclusive';
+        cReason='Handoff verification requires an exact named testcase, not a wildcard';
+      }else{
+        const matching=parsed.cases.filter(tc=>tc.name===testName); // exact-case binding prevents ambiguous PASS
         if(!matching.length){
           cStatus='inconclusive';
           cReason=`Test case "${testName}" not found in report`;
@@ -252,9 +287,6 @@ export function verifyHandoff(store,wsId,root,rev,{
           cStatus='inconclusive';
           cReason=`Test case "${testName}" was skipped`;
         }
-      }else if(parsed.status!=='passed'){
-        cStatus=parsed.status;
-        cReason=reason;
       }
       criteriaResults.push({id:cid,status:cStatus,...(cReason?{reason:cReason}:{})});
     }
@@ -270,6 +302,8 @@ export function verifyHandoff(store,wsId,root,rev,{
   const sourceFingerprint=computeSourceFingerprint(root,detectedChanged);
 
   const testsPassed=parsed.status==='passed'&&parsed.failed===0&&(parsed.assertions||0)>0;
+  const provenance=nativeRunProvenance(store,root,detectedChanged,relArtifact,hash);
+
   let deliverableVerified=false;
   if(!hasExplicitCriteria){
     deliverableVerified=false;
@@ -278,7 +312,11 @@ export function verifyHandoff(store,wsId,root,rev,{
       reason='Test suite passed, but no acceptance criteria were mapped to test cases proving the deliverable.';
     }
   }else{
-    deliverableVerified=testsPassed&&isFresh&&derivedStatus==='passed';
+    deliverableVerified=testsPassed&&isFresh&&derivedStatus==='passed'&&provenance.matched;
+    if(testsPassed&&isFresh&&derivedStatus==='passed'&&!provenance.matched){
+      derivedStatus='unattested_report';
+      reason='Report passed named criteria, but evidence is not bound to a recent native test execution: '+provenance.reason;
+    }
   }
 
   const verified=deliverableVerified;
@@ -306,7 +344,11 @@ export function verifyHandoff(store,wsId,root,rev,{
       tests_passed:testsPassed,
       deliverable_verified:deliverableVerified,
       verified,
-      trust:'local-machine-report'
+      trust:provenance.matched?'native-hook-local-evidence':'unattested-local-report',
+      provenance_matched:provenance.matched,
+      provenance_reason:provenance.reason,
+      allow_stale_requested:allow_stale===true,
+      evidence_limit:'Local run metadata is not cryptographically attested'
     }),
     new Date().toISOString()
   );

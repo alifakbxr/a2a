@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { dataDir, getA2AMode, getCompactMode } from '../src/security.mjs';
+import {pathToFileURL} from 'node:url';
+import { dataDir, getA2AMode, getCompactMode, requireAuthorizedWorkspace } from '../src/security.mjs';
 import { sanitizeConversationId } from '../src/tokens.mjs';
 import { Store } from '../src/storage.mjs';
+import {gitChanges} from '../src/scanner.mjs';
+import {CANDIDATE_ARTIFACTS} from '../src/verification.mjs';
+import {safeFile,sha256} from '../src/security.mjs';
 
 function writeJsonSecure(filePath, obj) {
   const dir = path.dirname(filePath);
@@ -24,7 +28,8 @@ export function detectSideQuestionInfo(payload, transcriptPath) {
   let initialQuestion = null;
   const currentConvId = sanitizeConversationId(payload?.conversationId);
 
-  if (transcriptPath && fs.existsSync(transcriptPath)) {
+  // Internal transcripts are diagnostic only; never read arbitrarily large logs in a hook.
+  if (transcriptPath && fs.existsSync(transcriptPath) && fs.statSync(transcriptPath).size <= 64 * 1024) {
     try {
       const stream = fs.readFileSync(transcriptPath, 'utf8');
       if (stream.includes('<side_question>') || stream.includes('side question (/btw)')) {
@@ -100,7 +105,9 @@ function recordActiveSession(payload, baseDir) {
     return;
   }
 
-  const sideQ = detectSideQuestionInfo(payload, transcriptPath);
+  const sideQ = process.env.A2A_TRACK_SIDE_QUESTIONS==='1'
+    ? detectSideQuestionInfo(payload, transcriptPath)
+    : {isSideQuestion:false,parentConversationId:null,initialQuestion:null};
   const now = new Date().toISOString();
   const entry = {
     conversationId: convId,
@@ -124,9 +131,9 @@ function recordActiveSession(payload, baseDir) {
       try {
         let wsId = null;
         if (workspacePaths.length > 0) {
-          try { wsId = store.register(workspacePaths[0]); } catch {}
+          try { wsId = store.register(requireAuthorizedWorkspace(workspacePaths[0])); } catch {}
         }
-        store.recordSideQuestion({
+        if(wsId) store.recordSideQuestion({
           workspaceId: wsId,
           conversationId: convId,
           parentConversationId: sideQ.parentConversationId,
@@ -150,50 +157,71 @@ function recordActiveSession(payload, baseDir) {
 
   writeJsonSecure(sessionFile, { updatedAt: now, latest: entry, byWorkspace });
 
-  if (convId) {
-    try {
-      const store = new Store(baseDir);
-      try {
-        store.scanAndSnapshotBrainArtifacts(convId);
-      } finally {
-        store.close();
-      }
-    } catch {}
-  }
+  // Do not bulk-copy conversation artifacts when a session starts. Only snapshot
+  // explicit edit events or direct user requests; avoids needless I/O and retention.
 }
 
 function handleArtifactModification(payload, baseDir) {
-  const toolName = payload?.toolName || payload?.toolCall?.name || '';
-  if (toolName !== 'write_file' && toolName !== 'edit_file') return;
-  const args = payload?.toolArgs || payload?.toolCall?.args || payload?.toolInput || payload?.arguments || {};
-  const filePath = args?.Path || args?.path;
-  if (typeof filePath !== 'string' || !filePath.includes('/brain/')) return;
-  if (!filePath.endsWith('.md')) return;
+  if(payload?.error) return;
+  const toolName = payload?.toolCall?.name || payload?.toolName || '';
+  if (!['write_to_file','replace_file_content','multi_replace_file_content','write_file','edit_file'].includes(toolName)) return;
+  const args = payload?.toolCall?.args || payload?.toolArgs || payload?.toolInput || payload?.arguments || {};
+  const filePath = args?.TargetFile || args?.Path || args?.path;
   const convId = sanitizeConversationId(payload?.conversationId);
-  if (!convId) return;
-  try {
-    const store = new Store(baseDir);
-    try {
-      store.snapshotArtifact({ conversationId: convId, artifactPath: filePath });
-    } finally {
-      store.close();
-    }
-  } catch {}
+  if (!convId || typeof filePath !== 'string' || !filePath.endsWith('.md')) return;
+  // Accept Windows separators for matching, but let safeArtifactPath validate the
+  // actual OS path and session-specific boundary (including symlinks).
+  const normalized = filePath.replaceAll('\\','/');
+  if (!normalized.includes('/brain/'+convId+'/')) return;
+  const workspaces = Array.isArray(payload?.workspacePaths) ? payload.workspacePaths : [];
+  const candidates = [...workspaces, payload?.cwd].filter(p=>typeof p==='string');
+  let root=null;
+  for(const candidate of candidates){
+    try{root=requireAuthorizedWorkspace(candidate);break}catch{}
+  }
+  if(!root) return;
+  try{
+    const store=new Store(baseDir);
+    try{
+      const wsId=store.register(root);
+      store.snapshotArtifact({workspaceId:wsId,workspaceRoot:root,conversationId:convId,artifactPath:filePath});
+    }finally{store.close()}
+  }catch{}
 }
 
 function recordCommandRun(payload, baseDir) {
   handleArtifactModification(payload, baseDir);
   const cmd = payload?.toolCall?.args?.CommandLine;
   if (typeof cmd !== 'string' || !cmd.trim()) return;
-  const isTestLike = /\b(?:test|pytest|phpunit|pest|vitest|jest|mocha|cargo\s+test|go\s+test|dotnet\s+test|flutter\s+test|swift\s+test|mvn\s+test|gradlew\s+test)\b/i.test(cmd);
+  const isTestLike = /\b(?:npm\s+(?:run\s+)?test|node\s+--test|pytest|phpunit|pest|vitest|jest|mocha|cargo\s+test|go\s+test|dotnet\s+test|flutter\s+test|swift\s+test|mvn\s+test|gradlew\s+test|php\s+artisan\s+test)\b/i.test(cmd);
   if (!isTestLike) return;
-  const reportFile = path.join(baseDir, 'last-test-run.json');
-  writeJsonSecure(reportFile, {
-    updatedAt: new Date().toISOString(),
-    conversationId: sanitizeConversationId(payload?.conversationId),
-    cwd: typeof payload?.cwd === 'string' ? payload.cwd : null,
-    command: cmd.slice(0, 200),
-    errored: Boolean(payload?.error),
+  const candidates = [payload?.toolCall?.args?.Cwd,payload?.cwd,...(payload?.workspacePaths||[])].filter(p=>typeof p==='string');
+  let root=null;
+  for(const p of candidates){try{root=requireAuthorizedWorkspace(p);break}catch{}}
+  if(!root)return;
+  const sourceHashes={};
+  const changed=gitChanges(root).filter(p=>/\.(?:js|ts|jsx|tsx|mjs|cjs|php|py|go|rs|kt|java|dart|gd|swift|cs|rb|vue|svelte|sql)$/i.test(p));
+  for(const rel of changed.slice(0,200)){
+    try{sourceHashes[rel]=sha256(fs.readFileSync(safeFile(root,rel)))}catch{}
+  }
+  const reportHashes={};
+  for(const rel of CANDIDATE_ARTIFACTS){
+    try{
+      const file=safeFile(root,rel);
+      const stat=fs.statSync(file);
+      if(stat.size<=1200000 && stat.isFile())reportHashes[rel]=sha256(fs.readFileSync(file));
+    }catch{}
+  }
+  // Local evidence only: does not prove the command's assertions or cryptographically attest execution.
+  const reportFile=path.join(baseDir,'last-test-run.json');
+  writeJsonSecure(reportFile,{
+    updatedAt:new Date().toISOString(),
+    conversationId:sanitizeConversationId(payload?.conversationId),
+    workspace:root,
+    kind:'native-test-tool-completed',
+    succeeded:!payload?.error,
+    source_hashes:sourceHashes,
+    report_hashes:reportHashes,
   });
 }
 
@@ -225,7 +253,7 @@ export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   return {};
 }
 
-const isEntry = import.meta.url === new URL(`file://${path.resolve(process.argv[1] || '')}`).href;
+const isEntry = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 if (isEntry) {
   let raw = '';
   try {
