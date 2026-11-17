@@ -22,7 +22,8 @@
               "query",
               "freshness",
               "tokens",
-              "skeleton"
+              "skeleton",
+              "orchestration"
             ],
             "default": "inspect"
           },
@@ -72,6 +73,63 @@
             "minimum": 1,
             "maximum": 10,
             "description": "Maximum recent conversations returned for history."
+          },
+          "task": {
+            "type": "object",
+            "description": "For action=orchestration: user-declared available native commands, tier, workstreams, milestones; no workers launched.",
+            "additionalProperties": false,
+            "properties": {
+              "tier": {
+                "type": "string",
+                "enum": [
+                  "free",
+                  "pro",
+                  "ultra",
+                  "paid-other",
+                  "unknown"
+                ]
+              },
+              "available_commands": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "/swarm",
+                    "/teamwork",
+                    "/boost",
+                    "@subagent"
+                  ]
+                },
+                "maxItems": 4
+              },
+              "workstreams": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "maxItems": 30
+              },
+              "dependencies": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "high",
+                  "unknown"
+                ]
+              },
+              "milestones": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "long_horizon": {
+                "type": "boolean"
+              },
+              "hard_reasoning": {
+                "type": "boolean"
+              }
+            }
           }
         }
       }
