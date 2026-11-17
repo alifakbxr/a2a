@@ -48,6 +48,8 @@ npm install -g @aliip/a2a && a2a doctor
 
 ## 🎮 Controls & Commands
 
+On-demand is the default for new installations. Existing Always-On settings remain unchanged; run `a2a mode on-demand` to opt out of extra proactive checks.
+
 ### In-Chat Slash Commands
 | Command | Action |
 | :--- | :--- |
@@ -87,6 +89,8 @@ node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs verify-handoff /path/to/worksp
 ---
 
 ## 📚 Deep Dives & Documentation
+
+- **[Token efficiency evaluation](docs/TOKEN_EFFICIENCY.md):** Reproducible A/B protocol; source-size comparisons are not net session savings.
 
 - 🏛️ **[Technical Architecture](docs/ARCHITECTURE.md):** Invariants, SQLite schema, and sequence diagrams.
 - 📜 **[Contracts & Data Dictionary](docs/CONTRACTS.md):** MCP schemas, SQLite tables, and verification constraints.
