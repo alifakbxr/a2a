@@ -46,7 +46,7 @@
 4. **Why** aren't those included? Local telemetry sees size of its own outputs, not a counterfactual native task.
 5. **Why** was this called measured? Scoped data was confused with controlled model-session consumption.
 
-**Fix:** Explicitly label the metric `estimated-tool-scope-counterfactual` / `estimated-index-vs-source`, do not assign claimed dollar savings, remove unsolicited footer, and use [A/B evaluation](TOKEN_EFFICIENCY.md) for task-level claims.
+**Fix (implemented in PR #2):** Stop exposing computed `tokens_saved`, savings percentages or dollar savings as if observed. Display source-size and tool-response estimates separately, keep net savings `null`, and accept only officially reported Antigravity CLI JSON for per-run usage. For task-level savings, a controlled [A/B evaluation](TOKEN_EFFICIENCY.md) is mandatory.
 
 ## Always-On policy invariants
 - **Correctness first:** no output compression that hides `risk`, `uncertainty`, `freshness`, or evidence status.
