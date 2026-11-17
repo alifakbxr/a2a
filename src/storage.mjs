@@ -110,15 +110,15 @@ export class Store {
   recordTelemetry(wsId,{toolName,action,rawScopeTokens=0,responseTokens=0}){
     const raw=Math.max(0,Math.round(rawScopeTokens));
     const resp=Math.max(0,Math.round(responseTokens));
-    const saved=Math.max(0,raw-resp);
+    const saved=0; // Deprecated schema column: there is no observed native baseline.
     this.run('INSERT INTO telemetry(workspace_id,tool_name,action,raw_scope_tokens,response_tokens,tokens_saved,created_at) VALUES(?,?,?,?,?,?,?)',wsId,String(toolName||'a2a'),String(action||''),raw,resp,saved,new Date().toISOString());
     try {
       this.run('DELETE FROM telemetry WHERE workspace_id=? AND id NOT IN (SELECT id FROM telemetry WHERE workspace_id=? ORDER BY created_at DESC LIMIT 500)', wsId, wsId);
     } catch {}
   }
   getTelemetrySummary(wsId){
-    const row=this.get('SELECT COUNT(*) AS calls, COALESCE(SUM(raw_scope_tokens),0) AS raw_scope_tokens, COALESCE(SUM(response_tokens),0) AS response_tokens, COALESCE(SUM(tokens_saved),0) AS tokens_saved FROM telemetry WHERE workspace_id=?',wsId);
-    return row||{calls:0,raw_scope_tokens:0,response_tokens:0,tokens_saved:0};
+    const row=this.get('SELECT COUNT(*) AS calls, COALESCE(SUM(raw_scope_tokens),0) AS raw_scope_tokens, COALESCE(SUM(response_tokens),0) AS response_tokens FROM telemetry WHERE workspace_id=?',wsId);
+    return row||{calls:0,raw_scope_tokens:0,response_tokens:0};
   }
   recordSideQuestion({
     id=null,
