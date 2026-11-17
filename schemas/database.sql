@@ -17,4 +17,8 @@ CREATE INDEX IF NOT EXISTS incidents_lookup ON incidents(workspace_id,created_at
 CREATE TABLE IF NOT EXISTS hypotheses (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, incident_id TEXT, description TEXT NOT NULL, status TEXT NOT NULL, experiment TEXT, evidence_ids_json TEXT NOT NULL, created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS telemetry (workspace_id TEXT NOT NULL, tool_name TEXT NOT NULL, action TEXT NOT NULL, raw_scope_tokens INTEGER NOT NULL DEFAULT 0, response_tokens INTEGER NOT NULL DEFAULT 0, tokens_saved INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS telemetry_by_ws ON telemetry(workspace_id,created_at DESC);
+CREATE TABLE IF NOT EXISTS side_questions (id TEXT PRIMARY KEY, workspace_id TEXT, conversation_id TEXT NOT NULL, parent_conversation_id TEXT, title TEXT, question TEXT NOT NULL, summary TEXT, status TEXT NOT NULL DEFAULT 'resolved', transcript_path TEXT, metadata_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS side_q_conv ON side_questions(conversation_id);
+CREATE INDEX IF NOT EXISTS side_q_parent ON side_questions(parent_conversation_id);
+CREATE INDEX IF NOT EXISTS side_q_ws ON side_questions(workspace_id);
 

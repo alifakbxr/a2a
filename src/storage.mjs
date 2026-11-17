@@ -113,6 +113,57 @@ export class Store {
     const row=this.get('SELECT COUNT(*) AS calls, COALESCE(SUM(raw_scope_tokens),0) AS raw_scope_tokens, COALESCE(SUM(response_tokens),0) AS response_tokens, COALESCE(SUM(tokens_saved),0) AS tokens_saved FROM telemetry WHERE workspace_id=?',wsId);
     return row||{calls:0,raw_scope_tokens:0,response_tokens:0,tokens_saved:0};
   }
+  recordSideQuestion({
+    id=null,
+    workspaceId=null,
+    conversationId,
+    parentConversationId=null,
+    title=null,
+    question,
+    summary=null,
+    status='resolved',
+    transcriptPath=null,
+    metadata={}
+  }){
+    if(!conversationId||!question)throw new Error('conversationId and question are required');
+    const existing=this.get('SELECT * FROM side_questions WHERE conversation_id=?',conversationId);
+    const sid=id||existing?.id||sha256(conversationId+':'+(parentConversationId||'')).slice(0,32);
+    const now=new Date().toISOString();
+    const createdAt=existing?.created_at||now;
+    const metaJson=JSON.stringify(metadata||{});
+    this.run(
+      `INSERT INTO side_questions(id,workspace_id,conversation_id,parent_conversation_id,title,question,summary,status,transcript_path,metadata_json,created_at,updated_at)
+       VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+       ON CONFLICT(id) DO UPDATE SET
+         workspace_id=COALESCE(excluded.workspace_id,side_questions.workspace_id),
+         parent_conversation_id=COALESCE(excluded.parent_conversation_id,side_questions.parent_conversation_id),
+         title=COALESCE(excluded.title,side_questions.title),
+         question=excluded.question,
+         summary=COALESCE(excluded.summary,side_questions.summary),
+         status=excluded.status,
+         transcript_path=COALESCE(excluded.transcript_path,side_questions.transcript_path),
+         metadata_json=excluded.metadata_json,
+         updated_at=excluded.updated_at`,
+      sid,workspaceId,conversationId,parentConversationId,title,question,summary,status,transcriptPath,metaJson,createdAt,now
+    );
+    const saved=this.get('SELECT * FROM side_questions WHERE id=?',sid);
+    return {...saved,metadata:JSON.parse(saved.metadata_json||'{}'),metadata_json:undefined};
+  }
+  listSideQuestions({workspaceId=null,parentConversationId=null,conversationId=null,limit=20}={}){
+    let sql='SELECT * FROM side_questions WHERE 1=1';
+    const params=[];
+    if(workspaceId){sql+=' AND (workspace_id=? OR workspace_id IS NULL)';params.push(workspaceId);}
+    if(parentConversationId){sql+=' AND parent_conversation_id=?';params.push(parentConversationId);}
+    if(conversationId){sql+=' AND conversation_id=?';params.push(conversationId);}
+    sql+=' ORDER BY updated_at DESC LIMIT ?';
+    params.push(Math.max(1,Math.min(100,Number(limit)||20)));
+    return this.all(sql,...params).map(r=>({...r,metadata:JSON.parse(r.metadata_json||'{}'),metadata_json:undefined}));
+  }
+  getSideQuestion(idOrConvId){
+    const row=this.get('SELECT * FROM side_questions WHERE id=? OR conversation_id=? LIMIT 1',idOrConvId,idOrConvId);
+    if(!row)return null;
+    return {...row,metadata:JSON.parse(row.metadata_json||'{}'),metadata_json:undefined};
+  }
 }
 export const uniqueId=(prefix)=>`${prefix}-${cryptoRandom()}`;
 function cryptoRandom(){return globalThis.crypto.randomUUID()}

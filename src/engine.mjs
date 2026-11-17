@@ -149,11 +149,20 @@ export class Engine {
     let rawScopeBytes=0;
     for(const p of affectedPaths) rawScopeBytes+=fileBytes.get(p)||0;
     if(compact) delete res.uncertainty;
+    const isLargeScope=(res.affected.length>=6||(res.changed.length+res.affected.length)>=8||res.risk==='high');
     const payload={
       revision:s.revision,
       ...res,
       tokens_affected:impactTokens.changed_files_tokens,
       incomplete_index:s.skipped.some(x=>x==='index_limit_exceeded'||x==='index_byte_budget_exceeded'),
+      ...(isLargeScope?{
+        teamwork_advisory:{
+          large_scope:true,
+          recommendation:'Use /teamwork to orchestrate parallel discovery, worker implementation, and independent verification on this multi-module task.',
+          affected_count:res.affected.length,
+          risk:res.risk,
+        }
+      }:{}),
       ...(compact?{compact:true}:{}),
     };
     this.store.recordTelemetry(s.wsId,{toolName:'a2a_impact',action:'impact',rawScopeTokens:estimateTokens(rawScopeBytes),responseTokens:estimateTokens(JSON.stringify(payload))});
@@ -181,9 +190,9 @@ export class Engine {
     }
     throw new Error('Unknown verify operation');
   }
-  evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id}={}){
+  evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id,conversation_id,parent_conversation_id,question,summary,status}={}){
     const compact=getCompactMode();
-    const isReadOnly=operation==='list'||operation==='runs'||operation==='incidents'||operation==='hypotheses';
+    const isReadOnly=operation==='list'||operation==='runs'||operation==='incidents'||operation==='hypotheses'||operation==='side_questions'||operation==='side-questions';
     const s=isReadOnly?this.resolveMeta(workspace):this.sync(workspace);
     const wsId=s.wsId;
     if(operation==='list')return {revision:s.revision,...listEvidence(this.store,wsId,s.root,s.revision,{limit,id}),...(compact?{compact:true}:{})};
@@ -204,6 +213,25 @@ export class Engine {
       const hid=uniqueId('hyp');this.store.run('INSERT INTO hypotheses VALUES(?,?,?,?,?,?,?,?)',hid,wsId,incident_id||null,hypothesis,'untested',experiment,JSON.stringify([]),new Date().toISOString());return {id:hid,status:'untested'};
     }
     if(operation==='hypotheses')return {items:this.store.all('SELECT id,incident_id,description,status,experiment,created_at FROM hypotheses WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20))),...(compact?{compact:true}:{})};
+    if(operation==='side_questions'||operation==='side-questions'){
+      const items=this.store.listSideQuestions({workspaceId:wsId,parentConversationId:parent_conversation_id,conversationId:conversation_id||id,limit});
+      return {workspace:s.root,count:items.length,items,...(compact?{compact:true}:{})};
+    }
+    if(operation==='record_side_question'||operation==='record-side-question'){
+      const cid=conversation_id||id;
+      const qText=question||title;
+      if(!cid||!qText)throw new Error('conversation_id (or id) and question (or title) are required to record a side question');
+      const record=this.store.recordSideQuestion({
+        workspaceId:wsId,
+        conversationId:cid,
+        parentConversationId:parent_conversation_id||null,
+        title:title||null,
+        question:qText,
+        summary:summary||null,
+        status:status||'resolved'
+      });
+      return {status:'recorded',side_question:record,...(compact?{compact:true}:{})};
+    }
     throw new Error('Unknown evidence operation');
   }
 }

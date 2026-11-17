@@ -34,8 +34,31 @@ const BASE_SPECS = [
   },
   {
     name:'evidence',
-    description:'A2A historical evidence, runs, regression hypotheses, and incident tracking.',
-    inputSchema:{type:'object',additionalProperties:false,required:['workspace','operation'],properties:{workspace:ws,operation:{type:'string',enum:['list','runs','incidents','record_incident','add_hypothesis','hypotheses']},id:string,limit:{type:'integer',minimum:1,maximum:50},title:{type:'string',maxLength:240},root_cause:{type:'string',maxLength:1400},paths,criteria:{type:'array',items:string,maxItems:40},evidence_ids:{type:'array',items:string,maxItems:20},hypothesis:{type:'string',maxLength:1000},experiment:{type:'string',maxLength:1000},incident_id:string}}
+    description:'A2A historical evidence, runs, regression hypotheses, incident tracking, and side question persistence.',
+    inputSchema:{
+      type:'object',
+      additionalProperties:false,
+      required:['workspace','operation'],
+      properties:{
+        workspace:ws,
+        operation:{type:'string',enum:['list','runs','incidents','record_incident','add_hypothesis','hypotheses','side_questions','record_side_question']},
+        id:string,
+        limit:{type:'integer',minimum:1,maximum:50},
+        title:{type:'string',maxLength:240},
+        root_cause:{type:'string',maxLength:1400},
+        paths,
+        criteria:{type:'array',items:string,maxItems:40},
+        evidence_ids:{type:'array',items:string,maxItems:20},
+        hypothesis:{type:'string',maxLength:1000},
+        experiment:{type:'string',maxLength:1000},
+        incident_id:string,
+        conversation_id:{type:'string',maxLength:128},
+        parent_conversation_id:{type:'string',maxLength:128},
+        question:{type:'string',maxLength:4000},
+        summary:{type:'string',maxLength:4000},
+        status:{type:'string',maxLength:40}
+      }
+    }
   }
 ];
 

@@ -26,6 +26,7 @@ Commands:\n  doctor                     show runtime, workspace permissions, act
   plan <workspace> [criterion ...] suggest native checks
   assess <workspace> <criterion_id> <relative-report-file> <test-name|*> validate test report
   evidence <workspace>       list verified evidence and regression history
+  side-questions [workspace] [--conv <id>] [--parent <id>] list recorded Antigravity side questions (/btw)
   refresh [serverName]       hot-reload A2A MCP server via Antigravity Language Server RPC
   stats                      view install metrics, clone traffic & unique users from GitHub
   mcp                        start A2A stdio server via src/mcp.mjs`);process.exit(0);
@@ -149,6 +150,20 @@ try{
       else if(cmd==='plan')result=engine.verify({workspace:argv[0],operation:'plan',criteria:argv.slice(1)});
       else if(cmd==='assess')result=engine.verify({workspace:argv[0],operation:'assess',criteria:[{id:argv[1],artifact:argv[2],test_name:argv[3]}]});
       else if(cmd==='evidence')result=engine.evidence({workspace:argv[0]});
+      else if(cmd==='side-questions'||cmd==='side_questions'){
+        let ws=null;let convId=null;let parentId=null;
+        for(let i=0;i<argv.length;i++){
+          if(argv[i]==='--conv'&&argv[i+1]){convId=argv[++i];}
+          else if(argv[i].startsWith('--conv=')){convId=argv[i].slice(7);}
+          else if(argv[i]==='--parent'&&argv[i+1]){parentId=argv[++i];}
+          else if(argv[i].startsWith('--parent=')){parentId=argv[i].slice(9);}
+          else if(!ws&&!argv[i].startsWith('-')){ws=argv[i];}
+        }
+        let wsId=null;
+        if(ws){try{wsId=engine.store.register(normalizeWorkspace(ws));}catch{}}
+        const items=engine.store.listSideQuestions({workspaceId:wsId,conversationId:convId,parentConversationId:parentId});
+        result={count:items.length,side_questions:items};
+      }
       else throw new Error('Unknown command '+cmd);
     }finally{engine.close();}
     print(result);

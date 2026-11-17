@@ -67,3 +67,8 @@ Query symbol declarations and call relations:
 Assess test evidence (JUnit XML, TAP, `a2a-test-report-v1` JSON) against acceptance criteria:
 - MCP Tool: `a2a_verify` with `operation="assess"`, `criteria=[{"id": "c1", "artifact": "report.xml", "test_name": "*"}]`.
 - For web/HTTP applications, use Chrome DevTools MCP (`list_console_messages`, `list_network_requests`, `evaluate_script`, `take_snapshot`) to verify zero uncaught console errors and expected HTTP responses.
+
+### 6. Large Scope & Antigravity /teamwork Handoff
+When `a2a_impact` flags `teamwork_advisory.large_scope=true` or when a task touches multiple architectural layers:
+- Advise the user to execute `/teamwork` for parallel multi-agent execution.
+- Pass A2A's pre-computed affected files, dependencies, and test targets into the teamwork prompt so explorers and workers bypass redundant token-heavy file scans.

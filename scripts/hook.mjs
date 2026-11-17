@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { dataDir, getA2AMode, getCompactMode } from '../src/security.mjs';
 import { sanitizeConversationId } from '../src/tokens.mjs';
+import { Store } from '../src/storage.mjs';
 
 function writeJsonSecure(filePath, obj) {
   const dir = path.dirname(filePath);
@@ -15,6 +16,64 @@ function writeJsonSecure(filePath, obj) {
   } finally {
     fs.closeSync(fd);
   }
+}
+
+export function detectSideQuestionInfo(payload, transcriptPath) {
+  let isSideQuestion = Boolean(payload?.isSideQuestion || payload?.sideQuestion);
+  let parentConversationId = payload?.parentConversationId || null;
+  let initialQuestion = null;
+  const currentConvId = sanitizeConversationId(payload?.conversationId);
+
+  if (transcriptPath && fs.existsSync(transcriptPath)) {
+    try {
+      const stream = fs.readFileSync(transcriptPath, 'utf8');
+      if (stream.includes('<side_question>') || stream.includes('side question (/btw)')) {
+        isSideQuestion = true;
+      }
+      if (!parentConversationId) {
+        const matches = [...stream.matchAll(/brain\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/gi)];
+        for (const m of matches) {
+          if (m[1] && m[1] !== currentConvId) {
+            parentConversationId = m[1];
+            break;
+          }
+        }
+      }
+      const lines = stream.split('\n');
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const row = JSON.parse(line);
+          if (row.type === 'USER_INPUT' && row.content) {
+            const cleanText = row.content
+              .replace(/<USER_REQUEST>|<\/USER_REQUEST>/g, '')
+              .replace(/<ADDITIONAL_METADATA>[\s\S]*?<\/ADDITIONAL_METADATA>/g, '')
+              .replace(/<CONTEXT_SUMMARY>[\s\S]*?<\/CONTEXT_SUMMARY>/g, '')
+              .trim();
+            if (cleanText) {
+              initialQuestion = cleanText.slice(0, 1000);
+              break;
+            }
+          }
+        } catch {}
+      }
+    } catch {}
+  }
+
+  if (!isSideQuestion && currentConvId) {
+    try {
+      const metaCache = path.join(process.env.HOME || '', '.gemini/antigravity-cli/cache/conversation_metadata.json');
+      if (fs.existsSync(metaCache)) {
+        const data = JSON.parse(fs.readFileSync(metaCache, 'utf8'));
+        const conv = data?.conversations?.[currentConvId];
+        if (conv?.is_internal) {
+          isSideQuestion = true;
+        }
+      }
+    } catch {}
+  }
+
+  return { isSideQuestion, parentConversationId, initialQuestion };
 }
 
 function recordActiveSession(payload, baseDir) {
@@ -41,6 +100,7 @@ function recordActiveSession(payload, baseDir) {
     return;
   }
 
+  const sideQ = detectSideQuestionInfo(payload, transcriptPath);
   const now = new Date().toISOString();
   const entry = {
     conversationId: convId,
@@ -49,7 +109,36 @@ function recordActiveSession(payload, baseDir) {
     cwd,
     modelName: typeof payload?.modelName === 'string' ? payload.modelName : null,
     updatedAt: now,
+    ...(sideQ.isSideQuestion ? {
+      sideQuestion: {
+        isSideQuestion: true,
+        parentConversationId: sideQ.parentConversationId,
+        question: sideQ.initialQuestion,
+      }
+    } : {}),
   };
+
+  if (sideQ.isSideQuestion && convId) {
+    try {
+      const store = new Store(baseDir);
+      try {
+        let wsId = null;
+        if (workspacePaths.length > 0) {
+          try { wsId = store.register(workspacePaths[0]); } catch {}
+        }
+        store.recordSideQuestion({
+          workspaceId: wsId,
+          conversationId: convId,
+          parentConversationId: sideQ.parentConversationId,
+          question: sideQ.initialQuestion || 'Side Question',
+          transcriptPath,
+          status: 'active'
+        });
+      } finally {
+        store.close();
+      }
+    } catch {}
+  }
 
   const byWorkspace = (existing.byWorkspace && typeof existing.byWorkspace === 'object') ? { ...existing.byWorkspace } : {};
   for (const ws of workspacePaths) {
@@ -95,7 +184,7 @@ export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
       const convId = sanitizeConversationId(payload.conversationId) || 'unknown';
       const parts = [`A2A session active (mode=${mode}, compact=${compact ? 'on' : 'off'}, conversation_id=${convId}).`];
       if (mode === 'always-on') {
-        parts.push('Run a2a_impact before edits and a2a_verify(assess) after tests.');
+        parts.push('Always-On active: 1) Run a2a_impact before code edits. 2) Use skeleton previews to conserve context. 3) Assess test reports with a2a_verify. 4) Use Chrome DevTools for UI verification. 5) Enforce OWASP security checks on sensitive files.');
       }
       if (compact) {
         parts.push('Compact protocol active: concise bullet output, zero filler, preserve exact code/paths/commands.');

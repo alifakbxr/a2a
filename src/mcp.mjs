@@ -18,6 +18,7 @@ const RESOURCES = [
   {uri:'a2a://status',name:'A2A Status',description:'Current A2A mode, compact mode, auto-trust policy, and authorized workspaces.',mimeType:'application/json'},
   {uri:'a2a://tokens/session',name:'A2A Session Token Telemetry',description:'Current Antigravity session token usage and cache hit metrics.',mimeType:'application/json'},
   {uri:'a2a://workspace/summary',name:'A2A Workspace Summary',description:'Active workspace graph coverage and measured token summary.',mimeType:'application/json'},
+  {uri:'a2a://side-questions',name:'A2A Side Questions',description:'Recorded Antigravity side questions (/btw) and exploration notes.',mimeType:'application/json'},
 ];
 
 function readResource(uri){
@@ -35,6 +36,11 @@ function readResource(uri){
   }
   if(uri==='a2a://tokens/session'){
     return getSessionTokenUsage(null,{dataDirPath:engine.store.base})||{status:'unavailable',reason:'No active transcript found'};
+  }
+  if(uri==='a2a://side-questions'){
+    return {
+      side_questions: engine.store.listSideQuestions({ limit: 50 })
+    };
   }
   if(uri==='a2a://workspace/summary'){
     let activeWs=null;
