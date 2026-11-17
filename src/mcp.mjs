@@ -16,8 +16,8 @@ const answer=(id,result,error)=>{
 
 const RESOURCES = [
   {uri:'a2a://status',name:'A2A Status',description:'Current A2A mode, compact mode, auto-trust policy, and authorized workspaces.',mimeType:'application/json'},
-  {uri:'a2a://tokens/session',name:'A2A Session Token Telemetry',description:'Current Antigravity session token usage and cache hit metrics.',mimeType:'application/json'},
-  {uri:'a2a://workspace/summary',name:'A2A Workspace Summary',description:'Active workspace graph coverage and measured token summary.',mimeType:'application/json'},
+  {uri:'a2a://tokens/session',name:'A2A Session Diagnostics',description:'Local session event counts only; model token totals require official Antigravity CLI JSON output.',mimeType:'application/json'},
+  {uri:'a2a://workspace/summary',name:'A2A Workspace Summary',description:'Active workspace graph coverage and estimated source inventory; not model token usage.',mimeType:'application/json'},
   {uri:'a2a://side-questions',name:'A2A Side Questions',description:'Recorded Antigravity side questions (/btw) and exploration notes.',mimeType:'application/json'},
 ];
 
