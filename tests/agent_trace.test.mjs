@@ -17,3 +17,11 @@ test('two-run comparison is descriptive',()=>{
  assert.equal(compareAgentTraces(n,a).delta.tool_calls,1);
  assert.equal(classifyTool({name:'call_mcp_tool',args:{workspace:'/secret'}}),'mcp');
 });
+
+
+test('unknown tool name containing secrets is never copied into trace report',()=>{
+ const sample=[{type:'PLANNER_RESPONSE',step_index:1,tool_calls:[{name:'secret-token-abc123'}]}];
+ const report=analyzeAgentTrace(sample);
+ assert.equal(report.most_used_tools[0].name,'other-tool');
+ assert.equal(JSON.stringify(report).includes('abc123'),false);
+});
