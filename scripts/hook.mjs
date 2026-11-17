@@ -191,7 +191,7 @@ function recordCommandRun(payload, baseDir) {
   handleArtifactModification(payload, baseDir);
   const cmd = payload?.toolCall?.args?.CommandLine;
   if (typeof cmd !== 'string' || !cmd.trim()) return;
-  const isTestLike = /\\b(?:npm\\s+(?:run\\s+)?test|node\\s+--test|pytest|phpunit|pest|vitest|jest|mocha|cargo\\s+test|go\\s+test|dotnet\\s+test|flutter\\s+test|swift\\s+test|mvn\\s+test|gradlew\\s+test|php\\s+artisan\\s+test)\\b/i.test(cmd);
+  const isTestLike = /\b(?:npm\s+(?:run\s+)?test|node\s+--test|pytest|phpunit|pest|vitest|jest|mocha|cargo\s+test|go\s+test|dotnet\s+test|flutter\s+test|swift\s+test|mvn\s+test|gradlew\s+test|php\s+artisan\s+test)\b/i.test(cmd);
   if (!isTestLike) return;
   const candidates = [payload?.toolCall?.args?.Cwd,payload?.cwd,...(payload?.workspacePaths||[])].filter(p=>typeof p==='string');
   let root=null;
