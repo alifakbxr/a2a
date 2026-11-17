@@ -170,73 +170,78 @@ export function scanConversationHistory({brainRoots=localBrainRoots(),dataDirPat
     }else if(r.totals.steps){internalSessions++;add(internal,r.totals)}
     else noCounts++;
   }
-  if(skipped)warnings.push('Ada file tidak terbaca atau melewati batas pemindaian; laporan belum mencakup semuanya.');
-  if(partial)warnings.push('Ada transcript rusak atau terpotong, sehingga angka lokal bisa tidak lengkap.');
-  if(!sessions.length)warnings.push('Belum ada percakapan dengan data yang bisa dibaca.');
+  if(skipped)warnings.push('Some files could not be read or exceeded scan limits. This report may not include your entire history.');
+  if(partial)warnings.push('Some conversation logs are damaged or incomplete, so their local counts may be partial.');
+  if(!sessions.length)warnings.push('No readable conversations were found in the local Antigravity history.');
   const last=sessions[0]||null;
   return {
-    title:'Pemakaian token percakapan Antigravity',
+    title:'Antigravity conversation token usage',
     status:skipped||partial?'partial':'available_local_history',
     scans:{found_dirs:found,conversations:sessions.length,skipped,partial,bytes_scanned:bytes,
       excluded_subagents:all.filter(r=>r.subagent).length},
     official_usage:{conversations:officialSessions,total_tokens:officialSessions?official:null,
       input_tokens:officialSessions?officialInput:null,output_tokens:officialSessions?officialOutput:null,
       cache_read_tokens:officialSessions?officialCache:null,
-      note:'Hanya dari laporan penggunaan resmi, bukan seluruh percakapan tanpa ekspor resmi.'},
+      note:'Only conversations with an official Antigravity usage report are included in this confirmed total.'},
     historical_log_counters:{conversations:internalSessions,input:internal.input,
       cache_read:internal.cache,output:internal.output,
       alternative_total_if_cache_included:internal.input+internal.output,
       alternative_total_if_cache_separate:internal.input+internal.cache+internal.output,
-      note:'Counter transcript lama belum punya kontrak resmi; dua angka ini kemungkinan interpretasi, bukan token tagihan.'},
+      note:'These are counters found in older local logs. Cache accounting is undocumented; neither interpretation is a confirmed usage total or bill.'},
     latest_conversation:last?view(last):null,
     recent_conversations:sessions.slice(0,Math.min(30,Math.max(1,limit))).map(view),
     a2a_calls_seen:sessions.reduce((n,r)=>n+r.totals.a2a,0),
     conversations_without_counts:noCounts,
     self_report:{current_invocation:1,response_bytes:null,estimated_text_tokens:null,
-      included_in_model_usage:false,note:'Laporan ini tidak memanggil Gemini. Jika dibaca model, token barunya baru terlihat setelah giliran model selesai.'},
+      included_in_model_usage:false,note:'Running this report does not call Gemini. If an AI agent reads it, any additional model usage can only be observed after the model turn completes.'},
     warnings,
   };
 }
 export function formatConversationReport(r){
-  const num=x=>Number(x||0).toLocaleString('id-ID');
-  const o=r.official_usage,h=r.historical_log_counters,l=r.latest_conversation;
+  const num=x=>Number(x||0).toLocaleString('en-US');
+  const official=r.official_usage,logs=r.historical_log_counters,last=r.latest_conversation;
   const lines=[
-    'A2A • Pemakaian token percakapan',
-    '─────────────────────────────────',
-    'Riwayat ditemukan: '+num(r.scans.conversations)+' percakapan (termasuk yang belum pernah memakai A2A).',
+    'A2A | Conversation Token Usage',
+    '-----------------------------------',
+    'Conversations found: '+num(r.scans.conversations)+' (including chats from before A2A was installed).',
     '',
-    'Penggunaan yang dikonfirmasi Antigravity:',
-    o.conversations?'• '+num(o.total_tokens)+' token dari '+num(o.conversations)+' percakapan yang memiliki data resmi.':'• Belum ada angka token resmi untuk riwayat ini.',
+    'Confirmed by Antigravity:',
+    official.conversations
+      ? '- '+num(official.total_tokens)+' tokens from '+num(official.conversations)+' conversations with official usage data.'
+      : '- No official token totals were available for these conversations.',
     '',
-    'Riwayat lama dari log lokal (belum pasti sama dengan tagihan):',
-    '• '+num(h.conversations)+' percakapan; input '+num(h.input)+', cache '+num(h.cache_read)+', output '+num(h.output)+'.',
-    '• Bila cache sudah masuk input: '+num(h.alternative_total_if_cache_included)+' token.',
-    '• Bila cache terpisah dari input: '+num(h.alternative_total_if_cache_separate)+' token.',
-    '• Angka di atas adalah dua cara membaca log, bukan total resmi.',
+    'From local conversation logs (not confirmed billing usage):',
+    '- '+num(logs.conversations)+' conversations | Input: '+num(logs.input)+' | Cache reads: '+num(logs.cache_read)+' | Output: '+num(logs.output),
+    '- If cache reads are already included in input: '+num(logs.alternative_total_if_cache_included)+' tokens.',
+    '- If cache reads are counted separately: '+num(logs.alternative_total_if_cache_separate)+' tokens.',
+    '- Both figures are interpretations of local logs, not confirmed totals.',
     '',
   ];
-  if(l){
-    lines.push('Percakapan terakhir: '+l.short_id+(l.active?' (tercatat aktif)':' (terakhir diperbarui)'));
-    lines.push('• Model: '+(l.model||'tidak tercatat')+' · langkah model '+num(l.steps)+' · panggilan alat '+num(l.tool_calls));
-    if(l.official_tokens!==null)lines.push('• Pemakaian resmi: '+num(l.official_tokens)+' token.');
-    else if(l.latest_step)lines.push('• Langkah terakhir: input '+num(l.latest_step.input)+', cache '+num(l.latest_step.cache)+', output '+num(l.latest_step.output)+' (counter internal).');
+  if(last){
+    lines.push('Latest conversation: '+last.short_id+(last.active?' (marked active)':' (most recently updated)'));
+    lines.push('- Model: '+(last.model||'not recorded')+' | Model steps: '+num(last.steps)+' | Tool calls: '+num(last.tool_calls));
+    if(last.official_tokens!==null)lines.push('- Official usage: '+num(last.official_tokens)+' tokens.');
+    else if(last.latest_step){
+      lines.push('- Latest completed step: Input '+num(last.latest_step.input)+', Cache reads '+num(last.latest_step.cache)+', Output '+num(last.latest_step.output)+' (local log counters).');
+    }
     lines.push('');
   }
-  lines.push('Penggunaan A2A:');
-  lines.push('• Pemanggilan A2A yang terlihat di log: '+num(r.a2a_calls_seen)+'.');
-  lines.push('• Laporan ini sendiri: sekitar '+num(r.self_report.estimated_text_tokens)+' token teks ('+num(r.self_report.response_bytes)+' byte).');
-  lines.push('• Ini hanya ukuran laporan, bukan token yang sudah ditagihkan ke Gemini.');
+  lines.push('A2A activity:');
+  lines.push('- A2A tool calls found in these logs: '+num(r.a2a_calls_seen)+'.');
+  lines.push('- Size of this report: about '+num(r.self_report.estimated_text_tokens)+' estimated text tokens ('+num(r.self_report.response_bytes)+' bytes).');
+  lines.push('- This is the report\'s approximate size, not tokens already billed by Gemini.');
   if(r.recent_conversations.length){
-    lines.push('','Percakapan terbaru:');
+    lines.push('','Recent conversations:');
     for(const c of r.recent_conversations.slice(0,10)){
-      const v=c.official_tokens!==null?num(c.official_tokens)+' token resmi'
-        :num(c.local_counters?.input)+' input, '+num(c.local_counters?.cache)+' cache (log)';
-      lines.push('• '+c.short_id+' · '+v+(c.a2a_calls===0?' · belum terlihat panggilan A2A':''));
+      const usage=c.official_tokens!==null
+        ? num(c.official_tokens)+' confirmed tokens'
+        : num(c.local_counters?.input)+' input / '+num(c.local_counters?.cache)+' cache-read (local logs)';
+      lines.push('- '+c.short_id+' | '+usage+(c.a2a_calls===0?' | No A2A tool calls found':''));
     }
   }
-  if(r.warnings.length)lines.push('','Catatan: '+r.warnings.join(' '));
-  lines.push('','Untuk angka resmi: a2a tokens --usage-file laporan-agy.json');
-  lines.push('Semua dibaca secara lokal; isi percakapan tidak disalin atau dikirim.');
+  if(r.warnings.length)lines.push('','Notes: '+r.warnings.join(' '));
+  lines.push('','For confirmed run usage: a2a tokens --usage-file agy-result.json');
+  lines.push('Your conversations are read locally. Their contents are not copied or sent anywhere.');
   return lines.join('\n');
 }
 export function attachReportSize(report,{format='text'}={}){
