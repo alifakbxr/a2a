@@ -5,7 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 const MAX=8*1024*1024;
 const states=new Set(['passed','failed','blocked','partial','not-tested','running']);
-const validId=s=>typeof s==='string'&&/^[a-zA-Z0-9._-]{4,128}$/.test(s);
+const validId=s=>typeof s==='string'&&/^[a-zA-Z0-9][a-zA-Z0-9._-]{3,127}$/.test(s);
 const check=(ok,message)=>{if(!ok)throw new Error(message)};
 const count=(arr,s)=>arr.filter(x=>x.status===s).length;
 export function checkpointFromStream(events,scenarioRecord){
@@ -15,7 +15,7 @@ export function checkpointFromStream(events,scenarioRecord){
  for(const s of scenarioRecord.scenarios){
   check(s&&typeof s.id==='string'&&/^[a-zA-Z0-9_.:-]{1,100}$/.test(s.id)&&!seen.has(s.id)&&states.has(s.status),'Invalid or duplicate scenario');
   seen.add(s.id);
-  scenarios.push({id:s.id,status:s.status,...(typeof s.evidence_ref==='string'&&s.evidence_ref.length<=200?{evidence_ref:s.evidence_ref}:{}),...((s.status==='failed'||s.status==='blocked')&&typeof s.reason_code==='string'?{reason_code:s.reason_code.slice(0,60)}:{})});
+  scenarios.push({id:s.id,status:s.status,...(typeof s.evidence_ref==='string'&&/^(?:ci|test|run|evidence)[/-][a-zA-Z0-9_.-]{1,100}$/.test(s.evidence_ref)&&!s.evidence_ref.includes('..')?{evidence_ref:s.evidence_ref}:{}),...((s.status==='failed'||s.status==='blocked')&&typeof s.reason_code==='string'&&/^[a-z][a-z0-9_-]{1,59}$/.test(s.reason_code)?{reason_code:s.reason_code}:{})});
  }
  let lastResult=null,active=new Set(),closed=new Set(),lastId=null,completed=0;
  for(const event of events){
