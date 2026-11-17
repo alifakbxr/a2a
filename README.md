@@ -1,5 +1,9 @@
 # A2A (Agent to Alif)
 
+[![npm version](https://img.shields.io/npm/v/@aliip/a2a?style=flat-square&color=00f2fe)](https://www.npmjs.com/package/@aliip/a2a)
+[![GitHub release](https://img.shields.io/github/v/release/alifakbxr/a2a?style=flat-square&color=38bdf8)](https://github.com/alifakbxr/a2a/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+
 **Local-first engineering intelligence, impact analysis, token telemetry & verification plugin for Google Antigravity.**
 
 > **A2A** stands for **Agent to Alif** — providing intelligent local-first code analysis, dependency mapping, token telemetry, and evidence-based test verification.
@@ -31,12 +35,22 @@ Inside any Antigravity conversation, simply type:
 ```
 *(Or specify the full GitHub URL: `/plugin install https://github.com/alifakbxr/a2a`)*
 
-### Method 3: Via Antigravity CLI
+### Method 3: Run or Install via npm / npx
+Run doctor / CLI directly without installing:
+```bash
+npx @aliip/a2a doctor
+```
+Or install globally via npm:
+```bash
+npm install -g @aliip/a2a
+```
+
+### Method 4: Via Antigravity CLI
 ```bash
 agy plugin install alifakbxr/a2a
 ```
 
-### Method 4: Direct Git Clone
+### Method 5: Direct Git Clone
 ```bash
 git clone https://github.com/alifakbxr/a2a.git ~/.gemini/config/plugins/a2a
 ```
