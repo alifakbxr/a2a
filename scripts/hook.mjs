@@ -105,7 +105,9 @@ function recordActiveSession(payload, baseDir) {
     return;
   }
 
-  const sideQ = detectSideQuestionInfo(payload, transcriptPath);
+  const sideQ = process.env.A2A_TRACK_SIDE_QUESTIONS==='1'
+    ? detectSideQuestionInfo(payload, transcriptPath)
+    : {isSideQuestion:false,parentConversationId:null,initialQuestion:null};
   const now = new Date().toISOString();
   const entry = {
     conversationId: convId,
