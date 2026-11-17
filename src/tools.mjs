@@ -12,7 +12,8 @@ const BASE_SPECS = [
       required:['workspace'],
       properties:{
         workspace:ws,
-        action:{type:'string',enum:['inspect','query','freshness','tokens','skeleton'],default:'inspect'},
+        action:{type:'string',enum:['inspect','query','freshness','tokens','skeleton','orchestration'],default:'inspect'},
+        task:{type:'object',description:'For action=orchestration: user-declared available native commands, tier, workstreams, milestones; no workers launched.',additionalProperties:false,properties:{tier:{type:'string',enum:['free','pro','ultra','paid-other','unknown']},available_commands:{type:'array',items:{type:'string',enum:['/swarm','/teamwork','/boost','@subagent']},maxItems:4},workstreams:{type:'array',items:{type:'string',maxLength:120},maxItems:30},dependencies:{type:'string',enum:['low','high','unknown']},milestones:{type:'integer',minimum:0,maximum:100},long_horizon:{type:'boolean'},hard_reasoning:{type:'boolean'}}},
         query:{type:'string',maxLength:160},
         limit:{type:'integer',minimum:1,maximum:40},
         conversation_id:{type:'string',maxLength:128,description:'Optional Antigravity conversation ID for exact session token lookup.'},
