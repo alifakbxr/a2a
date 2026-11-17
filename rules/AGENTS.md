@@ -3,8 +3,8 @@
 A2A provides local-first code intelligence, token economy, and evidence-based verification for Antigravity.
 
 ## Operating Modes (`~/.config/a2a/settings.json`)
-- `always-on` (default): Autonomously enforce senior engineering best practices.
-- `on-demand`: Invoke A2A only when explicitly prompted or via `/a2a`.
+- `on-demand` (default): Invoke A2A only when explicitly prompted or via `/a2a`.
+- `always-on` (opt-in): Apply adaptive engineering checks only when they offer clear value.
 
 ## Senior Engineering Protocols (Always-On)
 
@@ -19,13 +19,14 @@ A2A provides local-first code intelligence, token economy, and evidence-based ve
    - Never claim completion on unverified assertions.
 
 3. **Subagent & Teamwork Verification Gate**:
-   - When running `/teamwork`, `swarm`, or subagents, every worker MUST generate a machine test report before finishing.
-   - Coordinators MUST run `a2a_verify(operation="verify_handoff", worker_name=...)` before accepting deliverables. Reject stale or assertionless reports.
+   - For subagents that modify executable behavior, require a relevant machine test report when tests are available.
+   - Research, analysis, or documentation-only workers should provide sourced findings instead of unnecessary test runs.
+   - Coordinators should run `a2a_verify(operation="verify_handoff", worker_name=..., criteria=...)` for testable code handoffs. Reject stale or assertionless reports.
 
 4. **Security & Boundary Gates**:
    - Verify sensitive edits (auth, tokens, DB, uploads, payments) against OWASP Top 10 (anti-IDOR, SQLi, CSRF, XSS, secret leakage). Flag dependency CVE risks proactively.
 
-## Compact Output & Telemetry
-- Use terse, high-density bullets; preserve exact code, paths, and diffs.
-- Keep footer natural and concise:
-> **A2A:** Always-On · Context: {context_tokens} ({cache_hit}% cached)
+## Output Discipline
+- Preserve exact code, paths, uncertainties, and evidence status; avoid repeating tool responses.
+- Do not append a token/telemetry footer by default. Show token estimates only when explicitly requested.
+- Never claim task-level token savings without a controlled A/B measurement.
