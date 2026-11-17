@@ -89,16 +89,22 @@ node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs verify-handoff /path/to/worksp
 ---
 
 
-### Trustworthy token usage
+### Token usage across all conversations
 
-`a2a tokens` no longer invents token-savings percentages from repository size. To inspect **actual CLI-reported usage for one run**, save an Antigravity CLI JSON result and explicitly import it:
+A2A can read **older Antigravity conversations even if they were created before A2A was installed**. There is no background collection, no upload, and no need to re-run an old conversation.
 
 ```bash
-agy -p "Inspect authentication dependencies without edits." --output-format json > agy-result.json
-node scripts/a2a.mjs tokens . --usage-file agy-result.json
+node scripts/a2a.mjs tokens                      # All available local conversations; readable Indonesian report
+node scripts/a2a.mjs tokens --limit 5            # Show five recent conversations
+node scripts/a2a.mjs tokens --current            # Focus display on the latest conversation
+node scripts/a2a.mjs tokens --json               # Machine-readable report
+node scripts/a2a.mjs tokens --include-subagents  # Also include worker/subagent transcripts
+node scripts/a2a.mjs tokens --usage-file run.json # Attach actual CLI-reported usage for a captured run
 ```
 
-The `session_usage.usage.total_tokens` field comes directly from that CLI result. Cache and thinking counters are **not added again**. This measures that run only, not the improvement attributable to A2A. See [Token efficiency evaluation](docs/TOKEN_EFFICIENCY.md).
+A2A separates **official CLI token totals** from **internal log counters**, which are not validated as Gemini billing usage. The current session shows its latest *completed* model step where available; the actual context window and current in-progress model call are not directly observable. The report also estimates the size of its **own response** if passed back into Gemini, but never calls that estimate billable tokens.
+
+Inside Antigravity, `a2a_context(action="tokens", history_scope="all")` explicitly requests global history. The default `history_scope="current"` is restricted to the latest recorded conversation. Full explanation: [Conversation usage and privacy](docs/CONVERSATION_USAGE.md).
 
 ## 📚 Deep Dives & Documentation
 
