@@ -1,0 +1,55 @@
+name: CI Test & Quality Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test & Validate (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22', '24']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Syntax & Compilation Check
+        run: |
+          node --check src/engine.mjs
+          node --check src/mcp.mjs
+          node --check src/verification.mjs
+          node --check src/storage.mjs
+          node --check src/security.mjs
+          node --check src/tokens.mjs
+          node --check src/scanner.mjs
+          node --check src/graph.mjs
+          node --check src/tools.mjs
+          node --check scripts/a2a.mjs
+          node --check scripts/hook.mjs
+
+      - name: Run Test Suite
+        run: npm test
+
+      - name: Verify Release Contracts & Schema Drift
+        run: node scripts/check-release.mjs
+
+      - name: Inspect Package Tarball Contents (Dry-Run)
+        run: |
+          npm pack --dry-run
+          # Ensure sensitive or unwanted files are never packaged
+          ! npm pack --dry-run 2>&1 | grep -E '\.env|\.pem|\.key|\.sqlite|\.tmp|tests\/|benchmarks\/'

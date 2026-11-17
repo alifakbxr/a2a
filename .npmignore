@@ -4,3 +4,10 @@ docs/5-WHYS.md
 .tmp/
 *.sqlite*
 .DS_Store
+.github/
+*.tap
+*.xml
+*.log
+.env*
+coverage/
+test-results/

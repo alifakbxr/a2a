@@ -19,7 +19,7 @@
 | `tokens` | source text/bytes, `transcript.jsonl`, telemetry | lexer-safe skeletons, measured savings, session metrics | fabricate efficiency percentages |
 | `verification` | named criteria and test report | status, evidence hash, revision-bound result | claim an untested behavior passed |
 | `engine` | authorized MCP/CLI request | aggregated structured outputs | override Antigravity policy |
-| `mcp` | JSON-RPC 2.0 stdio messages | 4 `a2a_*` tools (+ opt-in legacy aliases) & 3 resources | expose generic shell or credentials |
+| `mcp` | JSON-RPC 2.0 stdio messages | 4 `a2a_*` tools (+ opt-in legacy aliases) & 4 resources | expose generic shell or credentials |
 
 ## Sequence diagrams
 

@@ -1,0 +1,98 @@
+name: Publish to npmjs
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      force_publish:
+        description: 'Force publish even if version tag check is bypassed'
+        type: boolean
+        default: false
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Pre-Publish Security & Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Syntax & Lint Check
+        run: |
+          node --check src/engine.mjs
+          node --check src/mcp.mjs
+          node --check src/verification.mjs
+          node --check scripts/a2a.mjs
+
+      - name: Run Full Test Suite (100% Pass Required)
+        run: npm test
+
+      - name: Release Contract & Schema Drift Check
+        run: node scripts/check-release.mjs
+
+      - name: Verify Package Contents Hygiene
+        run: |
+          npm pack --dry-run
+          # Assert zero secrets, test fixtures, or databases in tarball
+          ! npm pack --dry-run 2>&1 | grep -E '\.env|\.pem|\.key|\.sqlite|\.tmp|tests\/|benchmarks\/'
+
+  publish:
+    name: Publish @aliip/a2a to npmjs.com
+    needs: [validate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Required for npm Provenance (SLSA Level 3 cryptographic attestation)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js with npm Registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Check Current Version vs npm Registry
+        id: version_check
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VER=$(node -p "require('./package.json').version")
+          echo "Target package: $PKG_NAME@$PKG_VER"
+          echo "pkg_name=$PKG_NAME" >> $GITHUB_OUTPUT
+          echo "pkg_ver=$PKG_VER" >> $GITHUB_OUTPUT
+
+          # Check if version already exists on npm
+          EXISTS=$(npm view "$PKG_NAME@$PKG_VER" version 2>/dev/null || true)
+          if [ "$EXISTS" = "$PKG_VER" ]; then
+            echo "Version $PKG_NAME@$PKG_VER is already published on npm."
+            echo "already_published=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version $PKG_NAME@$PKG_VER is new and ready to publish."
+            echo "already_published=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to npmjs.com
+        if: steps.version_check.outputs.already_published == 'false' || inputs.force_publish == true
+        run: |
+          npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verification & Publication Summary
+        if: steps.version_check.outputs.already_published == 'false' || inputs.force_publish == true
+        run: |
+          echo "🎉 Successfully published ${{ steps.version_check.outputs.pkg_name }}@${{ steps.version_check.outputs.pkg_ver }} to npmjs.com with SLSA provenance!"
