@@ -237,8 +237,7 @@ try{
         }else if(action==='snapshot'){
           if(!artifactName)throw new Error('artifact name or path required for snapshot');
           const targetPath=path.isAbsolute(artifactName)?artifactName:path.join(process.env.HOME||'','.gemini/antigravity/brain',convId,artifactName);
-          const snap=engine.store.snapshotArtifact({workspaceId:wsId,workspaceRoot:root,conversationId:convId,artifactPath:targetPath});
-          result={status:'snapshotted',snapshot:snap};
+          result=engine.evidence({workspace:root,operation:'snapshot_artifact',conversation_id:convId,artifact_path:targetPath});
         }
       }
       else throw new Error('Unknown command '+cmd);
