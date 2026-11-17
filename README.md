@@ -91,6 +91,7 @@ node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs verify-handoff /path/to/worksp
 ## 📚 Deep Dives & Documentation
 
 - **[Token efficiency evaluation](docs/TOKEN_EFFICIENCY.md):** Reproducible A/B protocol; source-size comparisons are not net session savings.
+- **[Always-On 5 Whys](docs/ALWAYS_ON_5_WHYS.md):** Five causal scenarios, corrective changes, and acceptance checks.
 
 - 🏛️ **[Technical Architecture](docs/ARCHITECTURE.md):** Invariants, SQLite schema, and sequence diagrams.
 - 📜 **[Contracts & Data Dictionary](docs/CONTRACTS.md):** MCP schemas, SQLite tables, and verification constraints.
