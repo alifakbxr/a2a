@@ -13,7 +13,7 @@ A2A is optional intelligence for Antigravity, not a replacement for its native e
 - `/a2a toggle` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs toggle`
 - `/a2a compact [on|off|toggle|status]` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs compact <value>`
 - `/a2a status` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs doctor`
-- `/a2a tokens` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs tokens /absolute/workspace`
+- `/a2a tokens` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs tokens` (all locally available historical conversations; Indonesian summary, `--json` optional)
 
 ## Always-On decision policy
 1. **Skip** A2A for trivial, docs, styles, isolated edits, analysis-only or when native tools already answer the question.
