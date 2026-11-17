@@ -8,6 +8,7 @@ import {contextQuery,analyzeImpact,shortGraphSummary,validateChangedPaths} from 
 import {planVerification,assessVerification,listEvidence,freshness,verifyHandoff} from './verification.mjs';
 import {estimateTokens,getSessionTokenUsage,analyzeWorkspaceTokens,skeletonizeCode} from './tokens.mjs';
 import {scanConversationHistory,attachReportSize} from './conversations.mjs';
+import {adviseOrchestration} from './orchestration-advisor.mjs';
 
 export class Engine {
   constructor({store}={}) {this.store=store||new Store();this.owned=!store;}
@@ -35,8 +36,9 @@ export class Engine {
     if(!current) return this.sync(workspace);
     return {root,wsId,revision:current.id,git:current.git_head};
   }
-  context({workspace,action='inspect',query='',limit=12,conversation_id=null,transcript_path=null,history_scope='current',history_limit=10,file=null,files=[],path:targetPath=null}={}){
+  context({workspace,action='inspect',query='',limit=12,conversation_id=null,transcript_path=null,history_scope='current',history_limit=10,file=null,files=[],task={},path:targetPath=null}={}){
     const compact=getCompactMode();
+    if(action==='orchestration'){requireAuthorizedWorkspace(workspace);return adviseOrchestration(task)}
     if(action==='tokens'&&history_scope==='all'){
       // This must be an explicit tokens action. Do not walk private transcripts
       // as a side effect of ordinary inspect/impact calls.
