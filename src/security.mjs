@@ -559,7 +559,10 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
   }
   if (!authorizedBoundary && conversationId && /^[a-zA-Z0-9_\-.]{4,64}$/.test(conversationId)) {
     const brainDir = path.resolve(getHomeDir(), '.gemini', 'antigravity', 'brain', conversationId);
-    if (isSameOrDescendantPath(brainDir, resolved)) {
+    // Only top-level Markdown artifacts can be read from a conversation brain.
+    // Never allow .system_generated or nested internal conversation content.
+    if (path.dirname(resolved) === brainDir && path.extname(resolved).toLowerCase()==='.md'
+        && !path.basename(resolved).startsWith('.')) {
       authorizedBoundary = brainDir;
     }
   }
