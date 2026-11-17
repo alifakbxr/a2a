@@ -198,7 +198,7 @@ function recordCommandRun(payload, baseDir) {
   for(const p of candidates){try{root=requireAuthorizedWorkspace(p);break}catch{}}
   if(!root)return;
   const sourceHashes={};
-  const changed=gitChanges(root).filter(p=>/\\.(?:js|ts|jsx|tsx|mjs|cjs|php|py|go|rs|kt|java|dart|gd|swift|cs|rb|vue|svelte|sql)$/i.test(p));
+  const changed=gitChanges(root).filter(p=>/\.(?:js|ts|jsx|tsx|mjs|cjs|php|py|go|rs|kt|java|dart|gd|swift|cs|rb|vue|svelte|sql)$/i.test(p));
   for(const rel of changed.slice(0,200)){
     try{sourceHashes[rel]=sha256(fs.readFileSync(safeFile(root,rel)))}catch{}
   }
