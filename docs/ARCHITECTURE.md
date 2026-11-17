@@ -5,7 +5,7 @@
 1. **Native ownership:** all planning, reasoning, coding, browser, terminal, permissions, and orchestration remain Antigravity's responsibility.
 2. **No claim without evidence:** compilation is not functional verification; evidence is bound to a source snapshot and a machine-readable completed test report with a named case.
 3. **No knowledge without provenance:** extracted relationships distinguish observed source facts from filename or test-name heuristics.
-4. **Configurable operating modes:** `always-on` (default) engages A2A proactively via `rules/AGENTS.md` and `hooks.json`; `on-demand` restricts A2A to explicit invocation.
+4. **Configurable operating modes:** `on-demand` (default) limits proactive A2A calls; `always-on` is an explicit opt-in for adaptive engineering checks. Existing saved settings retain their selected mode.
 5. **Local safety:** no external network access, arbitrary shell tool, or automatic dependency installer.
 
 ## Module boundaries
@@ -16,7 +16,7 @@
 | `scanner` | authorized workspace files, cached `(mtime, size)` | file hashes, language, symbols/imports | run project scripts, send source contents to remote API |
 | `storage` | validated structured records | incremental SQLite state (`a2a.sqlite`) & telemetry | store raw source code, execute repo commands |
 | `graph` | revision-specific nodes and edges | batched scoped queries and bounded impact | promote derived edges to verified facts |
-| `tokens` | source text/bytes, `transcript.jsonl`, telemetry | lexer-safe skeletons, measured savings, session metrics | fabricate efficiency percentages |
+| `tokens` | source text/bytes, `transcript.jsonl`, telemetry | lexer-safe comment-stripped previews, estimated scoped output reductions, session diagnostics | fabricate efficiency percentages |
 | `verification` | named criteria and test report | status, evidence hash, revision-bound result | claim an untested behavior passed |
 | `engine` | authorized MCP/CLI request | aggregated structured outputs | override Antigravity policy |
 | `mcp` | JSON-RPC 2.0 stdio messages | 4 `a2a_*` tools (+ opt-in legacy aliases) & 4 resources | expose generic shell or credentials |
@@ -35,7 +35,7 @@ sequenceDiagram
     AG->>A2A: a2a_context / a2a_impact
     A2A->>FS: Read authorized source metadata
     A2A->>DB: Store incremental revision-scoped relationships & telemetry
-    A2A-->>AG: Related files, tests, risks and measured tokens
+    A2A-->>AG: Related files, tests and risks (token estimates only on request)
   end
   AG->>AG: Edit with native tools
   AG->>A2A: a2a_verify plan
