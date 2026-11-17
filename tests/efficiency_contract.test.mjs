@@ -15,6 +15,7 @@ test('MCP verify_handoff is available in the published contract',()=>{
   assert.ok(tool.inputSchema.properties.worker_name);
   assert.ok(tool.inputSchema.properties.artifact);
   assert.ok(tool.inputSchema.properties.allow_stale);
+  assert.ok(TOOLS.find(t=>t.name==='a2a_impact').inputSchema.properties.summary);
   assert.doesNotThrow(()=>validateArgs('a2a_verify',{
     workspace:process.cwd(),operation:'verify_handoff',
     worker_name:'worker-1',artifact:'report.xml',
@@ -23,6 +24,8 @@ test('MCP verify_handoff is available in the published contract',()=>{
   assert.throws(()=>validateArgs('a2a_verify',{
     workspace:process.cwd(),operation:'verify_handoff',unknown:true
   }),/Unknown argument/);
+  assert.doesNotThrow(()=>validateArgs('a2a_impact',{workspace:process.cwd(),changed:['src/test.js'],summary:true}));
+  assert.throws(()=>validateArgs('a2a_impact',{workspace:process.cwd(),summary:'yes'}),/Invalid boolean/);
 });
 
 test('file URL conversion preserves OS-native paths including encoded spaces',()=>{
