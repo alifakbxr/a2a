@@ -209,6 +209,8 @@ export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   }
 
   if (event === 'SessionStart') {
+    // In on-demand mode do not inject instructions into every Antigravity session.
+    if (getA2AMode() !== 'always-on') return {};
     const compact = getCompactMode();
     return {
       injectSteps: [
