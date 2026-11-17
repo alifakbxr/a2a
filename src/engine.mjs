@@ -7,6 +7,7 @@ import {discover,createGraph,snapshotOf,gitHead,discoverTestCommands} from './sc
 import {contextQuery,analyzeImpact,shortGraphSummary,validateChangedPaths} from './graph.mjs';
 import {planVerification,assessVerification,listEvidence,freshness,verifyHandoff} from './verification.mjs';
 import {estimateTokens,getSessionTokenUsage,analyzeWorkspaceTokens,skeletonizeCode} from './tokens.mjs';
+import {scanConversationHistory,attachReportSize} from './conversations.mjs';
 
 export class Engine {
   constructor({store}={}) {this.store=store||new Store();this.owned=!store;}
@@ -34,8 +35,19 @@ export class Engine {
     if(!current) return this.sync(workspace);
     return {root,wsId,revision:current.id,git:current.git_head};
   }
-  context({workspace,action='inspect',query='',limit=12,conversation_id=null,transcript_path=null,file=null,files=[],path:targetPath=null}={}){
+  context({workspace,action='inspect',query='',limit=12,conversation_id=null,transcript_path=null,history_scope='current',history_limit=10,file=null,files=[],path:targetPath=null}={}){
     const compact=getCompactMode();
+    if(action==='tokens'&&history_scope==='all'){
+      // This must be an explicit tokens action. Do not walk private transcripts
+      // as a side effect of ordinary inspect/impact calls.
+      requireAuthorizedWorkspace(workspace);
+      const output=scanConversationHistory({
+        dataDirPath:this.store.base,
+        limit:Math.min(10,history_limit||10),
+      });
+      attachReportSize(output,{format:'json'});
+      return {action:'tokens',history:output,note:'Historical token counters are not equivalent to provider-reported usage.'};
+    }
     if(action==='skeleton'){
       const s=this.resolveMeta(workspace);
       const singleTarget=file||targetPath;
@@ -137,11 +149,20 @@ export class Engine {
       base.coverage.estimated_workspace_source_tokens=wsTokens.total_estimated_tokens;
       base.coverage.source_token_estimate_only=true;
       const trimmedWsTokens=compact?{...wsTokens,top_consumers:wsTokens.top_consumers.slice(0,5)}:wsTokens;
+      // Current conversation is selected from A2A's SessionStart hook when
+      // present. This still works for conversations created before installing A2A.
+      const all=scanConversationHistory({dataDirPath:this.store.base,limit:1});
+      const currentId=all.latest_conversation?.active?all.latest_conversation.conversation_id:null;
+      const latest=currentId
+        ? scanConversationHistory({dataDirPath:this.store.base,conversationId:currentId,limit:1})
+        : all;
+      attachReportSize(latest,{format:'json'});
       // The workspace index cannot measure Gemini usage; never auto-read private
       // Antigravity transcripts or report fabricated percentages.
       return {
         ...base,
         workspace_tokens:trimmedWsTokens,
+        conversation_history:latest,
         session_usage:{
           status:'not_available',
           source:null,
