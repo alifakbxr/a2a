@@ -507,10 +507,6 @@ export function getSessionTokenUsage(conversationId = null, opts = {}) {
       } catch {}
     }
 
-    // Antigravity CLI's documented usage counts cache_read_tokens inside input_tokens.
-    // Internal PLANNER_RESPONSE fields are undocumented; report an estimate and warn on
-    // inconsistent examples instead of silently double-counting cached reads.
-    const cacheFieldsConsistent = cacheReadTokens <= uncachedInputTokens;
     // PLANNER_RESPONSE is an undocumented internal format. Its input/cache
     // accounting is not guaranteed to match the CLI's official usage object.
     // Expose diagnostics only, not invented billable tokens or fake totals.
@@ -623,7 +619,7 @@ export function readOfficialAgyUsageFile(file) {
   try{return parseOfficialAgyUsage(JSON.parse(raw))}catch(e){
     // Stream JSON ends with event=result. Ignore earlier step_update totals:
     // summing them would double-count a run already summarized by result. 
-    const lines=raw.trimEnd().split(/\\r?\\n/);
+    const lines=raw.trimEnd().split(/\r?\n/);
     for(let i=lines.length-1;i>=0;i--){
       try{
         const event=JSON.parse(lines[i]);
