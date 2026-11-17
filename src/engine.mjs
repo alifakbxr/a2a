@@ -62,29 +62,27 @@ export class Engine {
         remainingOutputChars-=skeleton.length;
         const rawTokens=estimateTokens(raw);
         const skelTokens=estimateTokens(skeleton);
-        const saved=Math.max(0,rawTokens-skelTokens);
         totalRaw+=rawTokens;totalSkel+=skelTokens;
         items.push({
           file:rel,
-          ...(compact?{}:{raw_tokens:rawTokens,skeleton_tokens:skelTokens,tokens_saved:saved,saved_pct:rawTokens>0?((saved/rawTokens)*100).toFixed(1)+'%':'0%'}),
+          ...(compact?{}:{estimated_source_tokens:rawTokens,estimated_preview_tokens:skelTokens}),
           skeleton,
           truncated,
           ...(truncated?{warning:'Preview truncated. Do not infer complete code behavior from this excerpt.'}:{}),
         });
       }
-      const totalSaved=Math.max(0,totalRaw-totalSkel);
       const payload={
         workspace_id:s.wsId,
         revision:s.revision,
         action:'skeleton',
         files:items,
         summary:{
-          raw_tokens:totalRaw,
-          skeleton_tokens:totalSkel,
+          estimated_source_tokens:totalRaw,
+          estimated_preview_tokens:totalSkel,
           estimated_preview_only:true,
           omitted_files:omittedFiles,
           truncated_files:items.filter(x=>x.truncated).length,
-          ...(compact?{}:{tokens_saved:totalSaved,saved_pct:totalRaw>0?((totalSaved/totalRaw)*100).toFixed(1)+'%':'0%'}),
+          note:'These are relative payload-size estimates; no model usage or net savings were measured.',
         },
         ...(compact?{compact:true}:{}),
       };
