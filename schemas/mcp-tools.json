@@ -3,7 +3,7 @@
   "tools": [
     {
       "name": "a2a_context",
-      "description": "A2A project context and transparent conversation token history. Internal log counters are not provider-verified.",
+      "description": "A2A project context and transparent conversation token history. History totals from internal logs are not provider-verified.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
