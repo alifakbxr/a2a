@@ -402,10 +402,10 @@ test('engine: skeleton action, measured telemetry, and compact mode output strip
   setCompactMode(true);
   const compactInspect=e.context({workspace:root,action:'inspect'});
   assert.equal(compactInspect.compact,true);
-  assert.equal(compactInspect.limitations,undefined);
+  assert.ok(Array.isArray(compactInspect.limitations));
   const compactImpact=e.impact({workspace:root,changed:['src/auth.js']});
   assert.equal(compactImpact.compact,true);
-  assert.equal(compactImpact.uncertainty,undefined);
+  assert.ok(Array.isArray(compactImpact.uncertainty));
 }));
 
 test('storage & scanner: revert updates latest(), gitChanges handles rename, extractSymbols supports Go/Swift/Kotlin, impact normalizes paths',()=>withEngine((e,root,write)=>{
@@ -511,23 +511,32 @@ test('teamwork & subagent verification: verify_handoff enforces machine evidence
   const futureTime=(srcStat.mtimeMs+5000)/1000;
   fs.utimesSync(path.join(root,'report.xml'),futureTime,futureTime);
 
-  const passingRes=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',artifact:'report.xml',changed:['feature.mjs']});
+  const passingRes=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',artifact:'report.xml',changed:['feature.mjs'],criteria:['testAdd']});
   assert.equal(passingRes.verified,true);
+  assert.equal(passingRes.tests_passed,true);
+  assert.equal(passingRes.deliverable_verified,true);
   assert.equal(passingRes.status,'passed');
   assert.equal(passingRes.assertions,2);
   assert.equal(passingRes.failed,0);
   assert.equal(passingRes.fresh,true);
 
+  // False-PASS prevention: passing test suite without mapped criteria cannot verify deliverable
+  const unmappedRes=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',artifact:'report.xml',changed:['feature.mjs']});
+  assert.equal(unmappedRes.tests_passed,true);
+  assert.equal(unmappedRes.deliverable_verified,false);
+  assert.equal(unmappedRes.verified,false);
+  assert.equal(unmappedRes.status,'unverified_deliverable');
+
   // 3. Stale report: modify source file AFTER artifact timestamp
   const srcFuture=(futureTime*1000+5000)/1000;
   fs.utimesSync(path.join(root,'feature.mjs'),srcFuture,srcFuture);
-  const staleRes=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',artifact:'report.xml',changed:['feature.mjs']});
+  const staleRes=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',artifact:'report.xml',changed:['feature.mjs'],criteria:['testAdd']});
   assert.equal(staleRes.verified,false);
   assert.equal(staleRes.status,'stale');
   assert.equal(staleRes.fresh,false);
 
   // allow_stale flag bypasses freshness rejection if explicitly requested
-  const allowedStale=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',artifact:'report.xml',changed:['feature.mjs'],allow_stale:true});
+  const allowedStale=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-1',artifact:'report.xml',changed:['feature.mjs'],criteria:['testAdd'],allow_stale:true});
   assert.equal(allowedStale.verified,true);
 
   // 4. Failing test report
@@ -535,7 +544,7 @@ test('teamwork & subagent verification: verify_handoff enforces machine evidence
   fs.writeFileSync(path.join(root,'report.xml'),failXml);
   const newerTime=(srcFuture*1000+5000)/1000;
   fs.utimesSync(path.join(root,'report.xml'),newerTime,newerTime);
-  const failingRes=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-2',artifact:'report.xml',changed:['feature.mjs']});
+  const failingRes=e.verify({workspace:root,operation:'verify_handoff',worker_name:'worker-2',artifact:'report.xml',changed:['feature.mjs'],criteria:['testAdd']});
   assert.equal(failingRes.verified,false);
   assert.equal(failingRes.status,'failed');
   assert.equal(failingRes.failed,1);

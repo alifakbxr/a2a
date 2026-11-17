@@ -481,4 +481,90 @@ export function safeFile(root,rel,{mustExist=true}={}) {
   }
   return full;
 }
+
+export const MAX_ARTIFACT_BYTES = 500 * 1024;
+
+export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mustExist = true } = {}) {
+  if (!targetPath || typeof targetPath !== 'string' || targetPath.includes('\0')) {
+    throw new Error('Invalid artifact path');
+  }
+  const resolved = path.resolve(targetPath);
+
+  let authorizedBoundary = null;
+  if (workspaceRoot) {
+    try {
+      const authWs = requireAuthorizedWorkspace(workspaceRoot);
+      if (resolved === authWs || resolved.startsWith(authWs + path.sep)) {
+        authorizedBoundary = authWs;
+      }
+    } catch {}
+  }
+  if (!authorizedBoundary && conversationId && /^[a-zA-Z0-9_\-.]{4,64}$/.test(conversationId)) {
+    const brainDir = path.resolve(os.homedir(), '.gemini', 'antigravity', 'brain', conversationId);
+    if (resolved === brainDir || resolved.startsWith(brainDir + path.sep)) {
+      authorizedBoundary = brainDir;
+    }
+  }
+  if (!authorizedBoundary) {
+    const allowed = loadAllowlist();
+    for (const a of allowed) {
+      if (isProtectedRoot(a)) continue;
+      const canonical = realpathIfExists(a);
+      if (resolved === canonical || resolved.startsWith(canonical + path.sep)) {
+        authorizedBoundary = canonical;
+        break;
+      }
+    }
+  }
+  if (!authorizedBoundary) {
+    const agWorkspaces = loadAntigravityWorkspaces();
+    for (const a of agWorkspaces) {
+      if (isProtectedRoot(a)) continue;
+      const canonical = realpathIfExists(a);
+      if (resolved === canonical || resolved.startsWith(canonical + path.sep)) {
+        authorizedBoundary = canonical;
+        break;
+      }
+    }
+  }
+
+  if (!authorizedBoundary) {
+    throw new Error('Path escapes authorized workspace or brain boundary');
+  }
+
+  if (isProtectedRoot(resolved)) {
+    throw new Error('Access to protected root denied');
+  }
+
+  const base = path.basename(resolved);
+  if (shouldIgnore(base) || /(?:^\.env|\.pem$|\.key$|\.sqlite|\.git$)/i.test(base)) {
+    throw new Error('Access to sensitive file denied');
+  }
+
+  if (mustExist) {
+    if (!fs.existsSync(resolved)) {
+      throw new Error('Artifact file does not exist');
+    }
+    const relFromBoundary = path.relative(authorizedBoundary, resolved);
+    const segments = relFromBoundary.split(path.sep);
+    let cursor = authorizedBoundary;
+    for (const seg of segments) {
+      if (!seg) continue;
+      cursor = path.join(cursor, seg);
+      const st = fs.lstatSync(cursor);
+      if (st.isSymbolicLink()) {
+        throw new Error('Symlink access denied');
+      }
+    }
+    const stat = fs.statSync(resolved);
+    if (!stat.isFile()) {
+      throw new Error('Not a regular file');
+    }
+    if (stat.size > MAX_ARTIFACT_BYTES) {
+      throw new Error(`Artifact file exceeds maximum allowed size (${MAX_ARTIFACT_BYTES / 1024} KB)`);
+    }
+  }
+
+  return resolved;
+}
 export function cleanError(error) {return String(error?.message||error).replace(/[\r\n\t]/g,' ').slice(0,400)}

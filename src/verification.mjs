@@ -132,6 +132,18 @@ const CANDIDATE_ARTIFACTS = [
   'build/test-results/test/TESTS-TestSuites.xml'
 ];
 
+export function computeSourceFingerprint(root, changedFiles = []) {
+  const fileHashes = [];
+  for (const rel of changedFiles) {
+    try {
+      const full = safeFile(root, rel);
+      fileHashes.push(`${rel}:${sha256(fs.readFileSync(full))}`);
+    } catch {}
+  }
+  fileHashes.sort();
+  return sha256(fileHashes.join('\n'));
+}
+
 export function verifyHandoff(store,wsId,root,rev,{
   worker_name=null,
   changed=[],
@@ -221,7 +233,8 @@ export function verifyHandoff(store,wsId,root,rev,{
   }
 
   let criteriaResults=[];
-  if(Array.isArray(criteria)&&criteria.length>0){
+  const hasExplicitCriteria = Array.isArray(criteria) && criteria.length > 0;
+  if(hasExplicitCriteria){
     for(const c of criteria){
       const cid=typeof c==='string'?c:c.id;
       const testName=typeof c==='object'&&c.test_name?c.test_name.trim():(typeof c==='string'?c.trim():'*');
@@ -254,7 +267,23 @@ export function verifyHandoff(store,wsId,root,rev,{
     }
   }
 
-  const verified=derivedStatus==='passed'&&isFresh&&(parsed.assertions||0)>0;
+  const sourceFingerprint=computeSourceFingerprint(root,detectedChanged);
+
+  const testsPassed=parsed.status==='passed'&&parsed.failed===0&&(parsed.assertions||0)>0;
+  let deliverableVerified=false;
+  if(!hasExplicitCriteria){
+    deliverableVerified=false;
+    if(testsPassed){
+      derivedStatus='unverified_deliverable';
+      reason='Test suite passed, but no acceptance criteria were mapped to test cases proving the deliverable.';
+    }
+  }else{
+    deliverableVerified=testsPassed&&isFresh&&derivedStatus==='passed';
+  }
+
+  const verified=deliverableVerified;
+
+  const dbStatus=(derivedStatus==='passed')?'passed':(derivedStatus==='failed')?'failed':(derivedStatus==='blocked')?'blocked':'inconclusive';
 
   const evidenceId=uniqueId('ev');
   store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',
@@ -262,17 +291,20 @@ export function verifyHandoff(store,wsId,root,rev,{
     wsId,
     rev,
     worker_name?`teamwork:${worker_name}`:'teamwork_handoff',
-    derivedStatus,
+    dbStatus,
     parsed.format||'unknown',
     relArtifact,
     hash,
     JSON.stringify({
       worker_name:worker_name||'worker',
       changed_files:detectedChanged,
+      source_fingerprint:sourceFingerprint,
       assertions:parsed.assertions||0,
       failed:parsed.failed||0,
       skipped:parsed.skipped||0,
       fresh:isFresh,
+      tests_passed:testsPassed,
+      deliverable_verified:deliverableVerified,
       verified,
       trust:'local-machine-report'
     }),
@@ -284,13 +316,16 @@ export function verifyHandoff(store,wsId,root,rev,{
     runId,
     wsId,
     rev,
-    derivedStatus,
+    dbStatus,
     JSON.stringify([{
       operation:'verify_handoff',
       worker:worker_name,
       artifact:relArtifact,
+      source_fingerprint:sourceFingerprint,
       assertions:parsed.assertions||0,
       failed:parsed.failed||0,
+      tests_passed:testsPassed,
+      deliverable_verified:deliverableVerified,
       verified,
       criteria:criteriaResults
     }]),
@@ -300,9 +335,12 @@ export function verifyHandoff(store,wsId,root,rev,{
   return {
     operation:'verify_handoff',
     verified,
+    tests_passed:testsPassed,
+    deliverable_verified:deliverableVerified,
     status:derivedStatus,
     worker:worker_name||null,
     revision:rev,
+    source_fingerprint:sourceFingerprint,
     artifact:relArtifact,
     artifact_sha:hash,
     assertions:parsed.assertions||0,
@@ -313,12 +351,14 @@ export function verifyHandoff(store,wsId,root,rev,{
     changed_files:detectedChanged,
     run_id:runId,
     evidence_id:evidenceId,
-    summary:verified
-      ?`Worker ${worker_name||'task'} handoff verified: ${parsed.assertions} assertions passed (${parsed.skipped||0} skipped) across ${detectedChanged.length} changed files.`
-      :`Worker ${worker_name||'task'} handoff unverified (${derivedStatus}): ${reason||'Test requirements not satisfied.'}`,
+    summary:deliverableVerified
+      ?`Worker ${worker_name||'task'} deliverable verified: ${parsed.assertions} assertions passed (${parsed.skipped||0} skipped) with mapped acceptance criteria across ${detectedChanged.length} changed files.`
+      :testsPassed
+        ?`Worker ${worker_name||'task'} tests passed (${parsed.assertions} assertions), but deliverable is unverified: acceptance criteria must be mapped to test cases.`
+        :`Worker ${worker_name||'task'} handoff unverified (${derivedStatus}): ${reason||'Test requirements not satisfied.'}`,
     ...(reason?{reason}:{}),
     ...(failedCases.length?{failed_cases:failedCases}:{}),
     ...(criteriaResults.length?{criteria:criteriaResults}:{}),
-    ...(!verified?{actionable_fix:'Ensure all tests pass and re-run with machine reporter (TAP/JUnit/JSON) after final edits.'}:{})
+    ...(!deliverableVerified?{actionable_fix:hasExplicitCriteria?'Ensure all criteria map to passing test cases and tests are rerun after final edits.':'Specify acceptance criteria to verify that test cases prove the intended deliverable.'}:{})
   };
 }

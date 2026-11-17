@@ -90,7 +90,9 @@ export class Engine {
 
     if(action==='query'){
       const qRes=contextQuery(this.store,s.wsId,{query,limit});
-      if(compact) delete qRes.uncertainty;
+      if(compact&&qRes.uncertainty){
+        qRes.uncertainty=qRes.uncertainty.map(u=>u.length>60?u.slice(0,57)+'...':u);
+      }
       const payload={...base,...qRes,...(compact?{compact:true}:{})};
       const fileBytes=new Map(s.index.files.map(f=>[f.path,f.bytes]));
       const matchedFiles=new Set(qRes.nodes.map(n=>n.file).filter(Boolean));
@@ -119,7 +121,8 @@ export class Engine {
           compact_index_tokens:wsTokens.compact_index_tokens,
           efficiency:wsTokens.efficiency,
         },
-        ...(compact?{compact:true}:{limitations:['Language analysis is heuristic and static; relationships may be incomplete.']}),
+        limitations:compact?['Static heuristic analysis']:['Language analysis is heuristic and static; relationships may be incomplete.'],
+        ...(compact?{compact:true}:{}),
       };
       this.store.recordTelemetry(s.wsId,{toolName:'a2a_context',action:'inspect',rawScopeTokens:wsTokens.total_estimated_tokens,responseTokens:estimateTokens(JSON.stringify(payload))});
       return payload;
@@ -146,7 +149,9 @@ export class Engine {
     let rawScopeBytes=0;
     for(const p of affectedPaths) rawScopeBytes+=fileBytes.get(p)||0;
     if(compact){
-      delete res.uncertainty;
+      if(res.uncertainty){
+        res.uncertainty=res.uncertainty.map(u=>u.length>60?u.slice(0,57)+'...':u);
+      }
       if(res.coverage){
         delete res.coverage.graph_nodes_visited;
         delete res.coverage.traversal_depth;
@@ -180,7 +185,9 @@ export class Engine {
       validateChangedPaths(changed);
       const plan=planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria});
       if(compact){
-        if(plan.impact) delete plan.impact.unknowns;
+        if(plan.impact&&plan.impact.unknowns){
+          plan.impact.unknowns=plan.impact.unknowns.map(u=>u.length>60?u.slice(0,57)+'...':u);
+        }
         if(plan.checks) delete plan.checks.note;
       }
       return {revision:s.revision,...plan,...(compact?{compact:true}:{})};
@@ -188,7 +195,9 @@ export class Engine {
     if(operation==='assess'){
       const res=assessVerification(this.store,s.wsId,s.root,s.revision,criteria);
       if(compact){
-        delete res.limits;
+        if(res.limits){
+          res.limits=['Report origin unverified','Untested behaviors out of scope'];
+        }
         res.compact=true;
       }
       return res;
@@ -255,23 +264,22 @@ export class Engine {
     }
     if(operation==='artifact_versions'||operation==='artifact-versions'){
       const convId=conversation_id||id||this.#resolveActiveConversationId();
-      const items=this.store.listArtifactVersions({conversationId:convId,artifactName:artifact_name,limit});
+      const items=this.store.listArtifactVersions({workspaceId:wsId,conversationId:convId,artifactName:artifact_name,limit});
       return {conversation_id:convId,artifact_name:artifact_name||null,count:items.length,versions:items,...(compact?{compact:true}:{})};
     }
     if(operation==='artifact_diff'||operation==='artifact-diff'){
       const convId=conversation_id||id||this.#resolveActiveConversationId();
       if(!artifact_name)throw new Error('artifact_name is required for artifact_diff');
-      const diffRes=this.store.getArtifactDiff({conversationId:convId,artifactName:artifact_name,v1,v2});
+      const diffRes=this.store.getArtifactDiff({workspaceId:wsId,conversationId:convId,artifactName:artifact_name,v1,v2});
       return {conversation_id:convId,...(diffRes||{artifact_name,v1,v2,diff:''}),...(compact?{compact:true}:{})};
     }
     if(operation==='snapshot_artifact'||operation==='snapshot-artifact'){
       const convId=conversation_id||id||this.#resolveActiveConversationId();
       if(!artifact_path&&!artifact_name)throw new Error('artifact_path or artifact_name is required');
       const targetPath=artifact_path||path.join(process.env.HOME||'','.gemini/antigravity/brain',convId,artifact_name);
-      const snap=this.store.snapshotArtifact({conversationId:convId,artifactPath:targetPath});
+      const snap=this.store.snapshotArtifact({workspaceId:wsId,conversationId:convId,artifactPath:targetPath,workspaceRoot:s.root});
       return {status:'snapshotted',snapshot:snap,...(compact?{compact:true}:{})};
     }
-    throw new Error('Unknown evidence operation');
     throw new Error('Unknown evidence operation');
   }
 }

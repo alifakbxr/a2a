@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
-import {dataDir,sha256} from './security.mjs';
+import {dataDir,sha256,safeArtifactPath,MAX_ARTIFACT_BYTES} from './security.mjs';
 
 const DDL=fs.readFileSync(new URL('../schemas/database.sql',import.meta.url),'utf8');
 export class Store {
@@ -24,6 +24,7 @@ export class Store {
     try{fs.chmodSync(this.file,0o600)}catch{}
     this.#ensureColumn('workspaces','current_revision_id','TEXT');
     this.#ensureColumn('files','mtime_ms','REAL');
+    this.#ensureColumn('artifact_versions','workspace_id','TEXT');
     this.db.prepare("INSERT OR IGNORE INTO meta(key,value) VALUES('schema_version','1')").run();
     const actual=this.db.prepare("SELECT value FROM meta WHERE key='schema_version'").get()?.value;
     if(actual!=='1') throw new Error('Incompatible A2A database schema '+actual);
@@ -108,6 +109,9 @@ export class Store {
     const resp=Math.max(0,Math.round(responseTokens));
     const saved=Math.max(0,raw-resp);
     this.run('INSERT INTO telemetry(workspace_id,tool_name,action,raw_scope_tokens,response_tokens,tokens_saved,created_at) VALUES(?,?,?,?,?,?,?)',wsId,String(toolName||'a2a'),String(action||''),raw,resp,saved,new Date().toISOString());
+    try {
+      this.run('DELETE FROM telemetry WHERE workspace_id=? AND id NOT IN (SELECT id FROM telemetry WHERE workspace_id=? ORDER BY created_at DESC LIMIT 500)', wsId, wsId);
+    } catch {}
   }
   getTelemetrySummary(wsId){
     const row=this.get('SELECT COUNT(*) AS calls, COALESCE(SUM(raw_scope_tokens),0) AS raw_scope_tokens, COALESCE(SUM(response_tokens),0) AS response_tokens, COALESCE(SUM(tokens_saved),0) AS tokens_saved FROM telemetry WHERE workspace_id=?',wsId);
@@ -126,6 +130,9 @@ export class Store {
     metadata={}
   }){
     if(!conversationId||!question)throw new Error('conversationId and question are required');
+    const sanitizedTitle=title?String(title).slice(0,240):null;
+    const sanitizedQuestion=String(question).slice(0,2000);
+    const sanitizedSummary=summary?String(summary).slice(0,2000):null;
     const existing=this.get('SELECT * FROM side_questions WHERE conversation_id=?',conversationId);
     const sid=id||existing?.id||sha256(conversationId+':'+(parentConversationId||'')).slice(0,32);
     const now=new Date().toISOString();
@@ -144,8 +151,13 @@ export class Store {
          transcript_path=COALESCE(excluded.transcript_path,side_questions.transcript_path),
          metadata_json=excluded.metadata_json,
          updated_at=excluded.updated_at`,
-      sid,workspaceId,conversationId,parentConversationId,title,question,summary,status,transcriptPath,metaJson,createdAt,now
+      sid,workspaceId,conversationId,parentConversationId,sanitizedTitle,sanitizedQuestion,sanitizedSummary,status,transcriptPath,metaJson,createdAt,now
     );
+    if(workspaceId){
+      try{
+        this.run('DELETE FROM side_questions WHERE workspace_id=? AND id NOT IN (SELECT id FROM side_questions WHERE workspace_id=? ORDER BY updated_at DESC LIMIT 100)', workspaceId, workspaceId);
+      }catch{}
+    }
     const saved=this.get('SELECT * FROM side_questions WHERE id=?',sid);
     return {...saved,metadata:JSON.parse(saved.metadata_json||'{}'),metadata_json:undefined};
   }
@@ -164,13 +176,18 @@ export class Store {
     if(!row)return null;
     return {...row,metadata:JSON.parse(row.metadata_json||'{}'),metadata_json:undefined};
   }
-  snapshotArtifact({conversationId,artifactPath,content=null}){
-    if(!conversationId)throw new Error('conversationId is required for artifact snapshot');
-    const artifactName=path.basename(artifactPath);
+  snapshotArtifact({workspaceId=null,conversationId,artifactPath,content=null,workspaceRoot=null}){
+    if(!conversationId||typeof conversationId!=='string'||!/^[a-zA-Z0-9_\-.]{4,64}$/.test(conversationId)){
+      throw new Error('Valid conversationId is required for artifact snapshot');
+    }
+    const validPath=safeArtifactPath(workspaceRoot,conversationId,artifactPath,{mustExist:content===null});
+    const artifactName=path.basename(validPath);
     let rawContent=content;
     if(rawContent===null){
-      if(!fs.existsSync(artifactPath))return null;
-      rawContent=fs.readFileSync(artifactPath,'utf8');
+      rawContent=fs.readFileSync(validPath,'utf8');
+    }
+    if(typeof rawContent!=='string'||Buffer.byteLength(rawContent)>MAX_ARTIFACT_BYTES){
+      throw new Error(`Artifact content exceeds maximum allowed size (${MAX_ARTIFACT_BYTES/1024} KB)`);
     }
     const contentSha=sha256(rawContent);
     const latest=this.get(
@@ -185,17 +202,29 @@ export class Store {
     const id=sha256(`${conversationId}:${artifactName}:${versionNumber}:${contentSha}`).slice(0,32);
     const now=new Date().toISOString();
     this.run(
-      'INSERT INTO artifact_versions(id,conversation_id,artifact_name,version_number,content_sha,content,diff_from_previous,created_at) VALUES(?,?,?,?,?,?,?,?)',
-      id,conversationId,artifactName,versionNumber,contentSha,rawContent,diff,now
+      'INSERT INTO artifact_versions(id,workspace_id,conversation_id,artifact_name,version_number,content_sha,content,diff_from_previous,created_at) VALUES(?,?,?,?,?,?,?,?,?)',
+      id,workspaceId||null,conversationId,artifactName,versionNumber,contentSha,rawContent,diff,now
     );
     try{
       const histDir=path.join(this.base,'artifact_history',conversationId);
       fs.mkdirSync(histDir,{recursive:true,mode:0o700});
       const shadowPath=path.join(histDir,`${artifactName}.v${versionNumber}.md`);
       fs.writeFileSync(shadowPath,rawContent,'utf8');
+
+      // Retention policy: Keep at most 10 versions per artifact
+      const excess=this.all(
+        'SELECT id, version_number FROM artifact_versions WHERE conversation_id=? AND artifact_name=? ORDER BY version_number DESC LIMIT -1 OFFSET 10',
+        conversationId,artifactName
+      );
+      for(const oldRow of excess){
+        this.run('DELETE FROM artifact_versions WHERE id=?',oldRow.id);
+        const oldShadow=path.join(histDir,`${artifactName}.v${oldRow.version_number}.md`);
+        if(fs.existsSync(oldShadow)) try{fs.unlinkSync(oldShadow)}catch{}
+      }
     }catch{}
     return {
       id,
+      workspace_id:workspaceId||null,
       conversation_id:conversationId,
       artifact_name:artifactName,
       version_number:versionNumber,
@@ -206,18 +235,20 @@ export class Store {
       bytes:Buffer.byteLength(rawContent)
     };
   }
-  listArtifactVersions({conversationId,artifactName=null,limit=50}={}){
-    let sql="SELECT id,conversation_id,artifact_name,version_number,content_sha,created_at,LENGTH(content) AS bytes,(diff_from_previous IS NOT NULL AND diff_from_previous!='') AS has_diff FROM artifact_versions WHERE 1=1";
+  listArtifactVersions({workspaceId=null,conversationId,artifactName=null,limit=50}={}){
+    let sql="SELECT id,workspace_id,conversation_id,artifact_name,version_number,content_sha,created_at,LENGTH(content) AS bytes,(diff_from_previous IS NOT NULL AND diff_from_previous!='') AS has_diff FROM artifact_versions WHERE 1=1";
     const params=[];
     if(conversationId){sql+=' AND conversation_id=?';params.push(conversationId);}
+    if(workspaceId){sql+=' AND (workspace_id=? OR workspace_id IS NULL)';params.push(workspaceId);}
     if(artifactName){sql+=' AND artifact_name=?';params.push(artifactName);}
     sql+=' ORDER BY version_number DESC LIMIT ?';
     params.push(Math.max(1,Math.min(200,Number(limit)||50)));
     return this.all(sql,...params);
   }
-  getArtifactVersion({conversationId,artifactName,versionNumber=null}={}){
+  getArtifactVersion({workspaceId=null,conversationId,artifactName,versionNumber=null}={}){
     let sql='SELECT * FROM artifact_versions WHERE conversation_id=? AND artifact_name=?';
     const params=[conversationId,artifactName];
+    if(workspaceId){sql+=' AND (workspace_id=? OR workspace_id IS NULL)';params.push(workspaceId);}
     if(versionNumber!==null&&versionNumber!==undefined){
       sql+=' AND version_number=?';
       params.push(Number(versionNumber));
@@ -226,12 +257,13 @@ export class Store {
     }
     return this.get(sql,...params)||null;
   }
-  getArtifactDiff({conversationId,artifactName,v1=null,v2=null}={}){
+  getArtifactDiff({workspaceId=null,conversationId,artifactName,v1=null,v2=null}={}){
     if(!v1&&!v2){
-      const latest=this.get(
-        'SELECT * FROM artifact_versions WHERE conversation_id=? AND artifact_name=? ORDER BY version_number DESC LIMIT 1',
-        conversationId,artifactName
-      );
+      let sql='SELECT * FROM artifact_versions WHERE conversation_id=? AND artifact_name=?';
+      const params=[conversationId,artifactName];
+      if(workspaceId){sql+=' AND (workspace_id=? OR workspace_id IS NULL)';params.push(workspaceId);}
+      sql+=' ORDER BY version_number DESC LIMIT 1';
+      const latest=this.get(sql,...params);
       if(!latest)return null;
       return {
         artifact_name:artifactName,
@@ -240,8 +272,8 @@ export class Store {
         diff:latest.diff_from_previous||''
       };
     }
-    const row1=v1?this.getArtifactVersion({conversationId,artifactName,versionNumber:v1}):null;
-    const row2=v2?this.getArtifactVersion({conversationId,artifactName,versionNumber:v2}):null;
+    const row1=v1?this.getArtifactVersion({workspaceId,conversationId,artifactName,versionNumber:v1}):null;
+    const row2=v2?this.getArtifactVersion({workspaceId,conversationId,artifactName,versionNumber:v2}):null;
     const content1=row1?.content||'';
     const content2=row2?.content||'';
     return {

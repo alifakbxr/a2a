@@ -1,7 +1,7 @@
 # A2A (Agent to Alif)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/alifakbxr/a2a/main/.github/assets/a2a_logo.svg" alt="A2A Logo" width="90" />
+  <img src="https://raw.githubusercontent.com/alifakbxr/a2a/main/assets/logo.svg" alt="A2A Logo" width="90" />
 </p>
 
 <p align="center">
@@ -34,17 +34,14 @@
 
 ## 🚀 Quickstart
 
-Install with a single command:
+Install with npm:
 
 ```bash
-# Option 1: Universal Installer (Recommended)
-curl -fsSL https://raw.githubusercontent.com/alifakbxr/a2a/main/install.sh | bash
+# Option 1: npm (Recommended)
+npm install -g @aliip/a2a && a2a doctor
 
 # Option 2: Antigravity Chat Slash Command
 /plugin install alifakbxr/a2a
-
-# Option 3: npm / npx
-npm install -g @aliip/a2a && a2a doctor
 ```
 
 ---

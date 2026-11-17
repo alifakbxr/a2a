@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS side_questions (id TEXT PRIMARY KEY, workspace_id TEX
 CREATE INDEX IF NOT EXISTS side_q_conv ON side_questions(conversation_id);
 CREATE INDEX IF NOT EXISTS side_q_parent ON side_questions(parent_conversation_id);
 CREATE INDEX IF NOT EXISTS side_q_ws ON side_questions(workspace_id);
-CREATE TABLE IF NOT EXISTS artifact_versions (id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, artifact_name TEXT NOT NULL, version_number INTEGER NOT NULL, content_sha TEXT NOT NULL, content TEXT NOT NULL, diff_from_previous TEXT, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS artifact_versions (id TEXT PRIMARY KEY, workspace_id TEXT, conversation_id TEXT NOT NULL, artifact_name TEXT NOT NULL, version_number INTEGER NOT NULL, content_sha TEXT NOT NULL, content TEXT NOT NULL, diff_from_previous TEXT, created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS artifact_v_lookup ON artifact_versions(conversation_id, artifact_name, version_number DESC);
 CREATE INDEX IF NOT EXISTS artifact_v_conv ON artifact_versions(conversation_id);
+CREATE INDEX IF NOT EXISTS artifact_v_ws ON artifact_versions(workspace_id);
 

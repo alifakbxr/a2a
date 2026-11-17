@@ -22,6 +22,18 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@alifakbxr'
 
+      - name: Run Quality Gate & Test Suite
+        run: |
+          node --check src/engine.mjs
+          node --check src/mcp.mjs
+          node --check src/verification.mjs
+          node --check src/storage.mjs
+          node --check src/security.mjs
+          node --check src/tokens.mjs
+          node --check src/scanner.mjs
+          npm test
+          node scripts/check-release.mjs
+
       - name: Configure package name for GitHub Packages
         run: |
           node -e "
