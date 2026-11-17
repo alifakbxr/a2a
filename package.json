@@ -1,8 +1,24 @@
 {
-  "name": "a2a",
+  "name": "@alifakbxr/a2a",
   "version": "2.0.0",
   "description": "A2A (Agent to Alif): Smart local-first engineering intelligence, impact analysis, token telemetry & verification for Antigravity.",
   "type": "module",
+  "main": "src/engine.mjs",
+  "bin": {
+    "a2a": "scripts/a2a.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alifakbxr/a2a.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alifakbxr/a2a/issues"
+  },
+  "homepage": "https://github.com/alifakbxr/a2a#readme",
+  "license": "MIT",
   "engines": { "node": ">=22.13.0" },
   "scripts": {
     "test": "node --test tests/*.test.mjs",
