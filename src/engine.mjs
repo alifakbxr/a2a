@@ -198,7 +198,8 @@ export class Engine {
     const payload={
       revision:s.revision,
       ...res,
-      tokens_affected:impactTokens.changed_files_tokens,
+      estimated_source_tokens_affected:impactTokens.changed_files_tokens,
+      source_token_estimate_only:true,
       incomplete_index:s.skipped.some(x=>x==='index_limit_exceeded'||x==='index_byte_budget_exceeded'),
       ...(isLargeScope?{
         teamwork_advisory:{
