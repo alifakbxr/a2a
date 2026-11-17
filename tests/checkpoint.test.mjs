@@ -20,3 +20,10 @@ test('unknown or malicious conversation ids are never embedded in commands',()=>
  assert.equal(out.conversation_id,null);assert.equal(out.resume_suggestion.auto_executed,false);
 });
 test('duplicate scenario IDs are rejected',()=>assert.throws(()=>checkpointFromStream([],{scenarios:[{id:'a',status:'passed'},{id:'a',status:'passed'}]}),/duplicate/));
+
+
+test('untrusted evidence paths or error strings are excluded from checkpoint',()=>{
+ const report=checkpointFromStream([],{scenarios:[{id:'secret-location',status:'blocked',evidence_ref:'/home/private/.env',reason_code:'token=abc'}]});
+ assert.equal(report.scenarios[0].evidence_ref,undefined);
+ assert.equal(report.scenarios[0].reason_code,undefined);
+});
