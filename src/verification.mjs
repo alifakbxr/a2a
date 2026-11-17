@@ -153,6 +153,12 @@ export function nativeRunProvenance(store,root,changedFiles,relReport,reportHash
     const st=fs.statSync(file);
     if(!st.isFile() || st.size>128*1024)return {matched:false,reason:'Native run metadata is unavailable'};
     const record=JSON.parse(fs.readFileSync(file,'utf8'));
+    const active=JSON.parse(fs.readFileSync(path.join(store.base,'active-session.json'),'utf8'))?.latest;
+    if(!active?.conversationId || active.conversationId!==record.conversationId
+       || !Array.isArray(active.workspacePaths)
+       || !active.workspacePaths.some(w=>path.resolve(w)===path.resolve(root))){
+      return {matched:false,reason:'Native-run record is not bound to the active workspace session'};
+    }
     if(record.kind!=='native-test-tool-completed'||record.succeeded!==true||path.resolve(record.workspace||'')!==path.resolve(root)){
       return {matched:false,reason:'No successful native test run recorded for this workspace'};
     }
