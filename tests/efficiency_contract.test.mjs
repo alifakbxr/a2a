@@ -5,7 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {pathToFileURL, fileURLToPath} from 'node:url';
 import {TOOLS,validateArgs} from '../src/tools.mjs';
-import {getA2AMode} from '../src/security.mjs';
+import {getA2AMode,authorizeWorkspace} from '../src/security.mjs';
+import {Engine} from '../src/engine.mjs';
 import {handleHookEvent} from '../scripts/hook.mjs';
 
 test('MCP verify_handoff is available in the published contract',()=>{
@@ -55,4 +56,52 @@ test('fresh installations default to on-demand with no SessionStart instruction 
     for(const [k,v] of Object.entries(saved))if(v===undefined)delete process.env[k];else process.env[k]=v;
     fs.rmSync(base,{recursive:true,force:true});
   }
+});
+
+test('Always-On bounded impact summary preserves risk, uncertainty and full counts',()=>{
+  const base=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-impact-summary-'));
+  const keys=['HOME','USERPROFILE','A2A_DATA_DIR','PLUGIN_DATA','VERIFYKIT_DATA_DIR'];
+  const saved=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
+  let engine;
+  try{
+    process.env.HOME=path.join(base,'home');
+    process.env.USERPROFILE=process.env.HOME;
+    process.env.A2A_DATA_DIR=path.join(base,'data');
+    delete process.env.PLUGIN_DATA;
+    delete process.env.VERIFYKIT_DATA_DIR;
+    fs.mkdirSync(process.env.HOME);
+    const root=path.join(base,'work');
+    fs.mkdirSync(path.join(root,'src'),{recursive:true});
+    fs.writeFileSync(path.join(root,'package.json'),JSON.stringify({name:'test-project'}));
+    fs.writeFileSync(path.join(root,'src','auth.js'),'export const auth = true;');
+    for(let i=0;i<15;i++){
+      fs.writeFileSync(path.join(root,'src',`page${i}.js`),`import {auth} from './auth.js'; export const value=${i};`);
+    }
+    authorizeWorkspace(root);
+    engine=new Engine();
+    const full=engine.impact({workspace:root,changed:['src/auth.js']});
+    const quick=engine.impact({workspace:root,changed:['src/auth.js'],summary:true});
+    assert.equal(quick.summary,true);
+    assert.equal(quick.risk,full.risk);
+    assert.equal(quick.coverage.static_only,true);
+    assert.equal(quick.coverage.output_bounded,true);
+    assert.deepEqual(quick.uncertainty,full.uncertainty);
+    assert.equal(quick.affected_total,full.affected.length);
+    assert.ok(quick.affected.length<=8);
+    assert.ok(quick.affected.length<=full.affected.length);
+    assert.ok(quick.related_tests.length<=5);
+    assert.ok(JSON.stringify(quick).length<JSON.stringify(full).length);
+    assert.equal(quick.tokens_affected,undefined);
+  }finally{
+    try{engine?.close()}catch{}
+    for(const [k,v] of Object.entries(saved))if(v===undefined)delete process.env[k];else process.env[k]=v;
+    fs.rmSync(base,{recursive:true,force:true});
+  }
+});
+
+test('permanent plugin rule stays tiny and PreInvocation hook is absent',()=>{
+  const rule=fs.readFileSync(new URL('../rules/AGENTS.md',import.meta.url),'utf8');
+  const hooks=JSON.parse(fs.readFileSync(new URL('../hooks.json',import.meta.url),'utf8'));
+  assert.ok(rule.length<400,'Persistent rule must not carry full always-on policy on each turn');
+  for(const group of Object.values(hooks)) assert.equal(group.PreInvocation,undefined);
 });
