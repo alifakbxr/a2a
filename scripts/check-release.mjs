@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import assert from 'node:assert/strict';
 import {TOOLS} from '../src/tools.mjs';
 
-const root=path.resolve(new URL('..',import.meta.url).pathname);
+const root=fileURLToPath(new URL('../',import.meta.url));
 const read=file=>JSON.parse(fs.readFileSync(path.join(root,file),'utf8'));
 
 const manifest=read('plugin.json');
