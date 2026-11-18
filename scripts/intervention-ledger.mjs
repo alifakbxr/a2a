@@ -31,6 +31,14 @@ export function buildInterventionLedger(records){
  const newestPlanner=new Map();
  for(const e of records)if(e?.type==='PLANNER_RESPONSE'&&Number.isSafeInteger(e.step_index))newestPlanner.set(e.step_index,e);
  const events=records.filter(e=>e&&typeof e==='object'&&Number.isSafeInteger(e.step_index)&&(e.type!=='PLANNER_RESPONSE'||newestPlanner.get(e.step_index)===e)).sort((a,b)=>a.step_index-b.step_index);
+ // Precompute the next event of each type once rather than searching the tail for every call.
+ const nextPlannerIndex=new Array(events.length),nextGenericIndex=new Array(events.length);
+ let nextPlanner=-1,nextGeneric=-1;
+ for(let i=events.length-1;i>=0;i--){
+  nextPlannerIndex[i]=nextPlanner;nextGenericIndex[i]=nextGeneric;
+  if(events[i].type==='PLANNER_RESPONSE')nextPlanner=i;
+  if(events[i].type==='GENERIC')nextGeneric=i;
+ }
  const ledger=[],counts={succeeded:0,'invalid-arguments':0,'authorization-denied':0,'tool-error':0,'no-result':0,incomplete:0};
  for(let i=0;i<events.length;i++){
   const e=events[i];if(e.type!=='PLANNER_RESPONSE')continue;
@@ -38,10 +46,11 @@ export function buildInterventionLedger(records){
   for(const call of calls){
    const name=isA2AInvocation(call);if(!name)continue;
    // A single planner turn can call multiple tools. Without a call ID, matching is ambiguous.
-   const generic=events.slice(i+1,i+6).find(x=>x.type==='GENERIC');
+   const resultIndex=nextGenericIndex[i],plannerIndex=nextPlannerIndex[i];
+   const generic=resultIndex!==-1&&resultIndex<=i+5&&(plannerIndex===-1||resultIndex<plannerIndex)?events[resultIndex]:null;
    const outcome=calls.length===1?resultOf(generic):'incomplete';
    counts[outcome]++;
-   const nextPlanner=events.slice(i+1).find(x=>x.type==='PLANNER_RESPONSE');
+   const nextPlanner=plannerIndex===-1?null:events[plannerIndex];
    const ts=Date.parse(e.created_at||'');
    ledger.push({step_index:e.step_index,tool:name,outcome,result_step_index:generic?.step_index??null,next_model_step_index:nextPlanner?.step_index??null,timestamp:Number.isFinite(ts)?new Date(ts).toISOString():null,observable_result_bytes:generic?.content?Buffer.byteLength(String(generic.content),'utf8'):null,attributed_model_tokens:null,attributed_token_savings:null,caused_quality_improvement:null});
   }
