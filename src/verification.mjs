@@ -104,7 +104,7 @@ export function assessVerification(store,wsId,root,rev,criteria){
     results.push(result);
   }
   const verdict=aggregate(results),runId=uniqueId('run');store.run('INSERT INTO runs VALUES(?,?,?,?,?,?)',runId,wsId,rev,verdict,JSON.stringify(results),new Date().toISOString());
-  return {run_id:runId,revision:rev,verdict,criteria:results,limits:['Report parsing does not cryptographically attest the origin of artifacts.','PASSED means supplied machine-readable assertions passed in this revision; untested behaviors remain out of scope.']};
+  return {run_id:runId,revision:rev,verdict,criteria:results,proof_scope:'named-machine-test-assertions-only',release_ready:false,semantic_requirements_proven:false,limits:['A passing JUnit/TAP/JSON suite is NOT a release-readiness or semantic concurrency/offline/security verdict.','Only independently signed acceptance evidence via assess_release can report release eligibility.','Report parsing does not attest origin or test execution authenticity.']};
 }
 export function listEvidence(store,wsId,root,currentRevision,{limit=20,id}={}){
   const check=x=>{let artifact_intact=false;try{const p=safeFile(root,x.artifact_path);artifact_intact=sha256(fs.readFileSync(p))===x.artifact_sha}catch{};return {fresh:x.revision_id===currentRevision&&artifact_intact,artifact_intact}};
