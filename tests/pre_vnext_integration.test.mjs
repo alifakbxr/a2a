@@ -9,8 +9,9 @@ import {TOOLS,validateArgs} from '../src/tools.mjs';
 
 test('combined release, semantic, browser, risk and native orchestration work without privilege escalation',t=>{
  const base=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-vnext-integration-'));
+ let engine=null;
  const env=['HOME','USERPROFILE','APPDATA','A2A_DATA_DIR','VERIFYKIT_DATA_DIR','PLUGIN_DATA'].map(k=>[k,process.env[k]]);
- t.after(()=>{for(const [k,v] of env)if(v===undefined)delete process.env[k];else process.env[k]=v;invalidateWorkspaceCache();fs.rmSync(base,{recursive:true,force:true})});
+ t.after(()=>{if(engine)engine.close();for(const [k,v] of env)if(v===undefined)delete process.env[k];else process.env[k]=v;invalidateWorkspaceCache();fs.rmSync(base,{recursive:true,force:true})});
  const home=path.join(base,'home'),work=path.join(base,'project');
  fs.mkdirSync(path.join(work,'routes'),{recursive:true});fs.mkdirSync(home);
  fs.mkdirSync(path.join(work,'reports'));
@@ -19,7 +20,7 @@ test('combined release, semantic, browser, risk and native orchestration work wi
  process.env.HOME=home;process.env.USERPROFILE=home;process.env.APPDATA=path.join(home,'AppData','Roaming');process.env.A2A_DATA_DIR=path.join(base,'plugin-data');
  delete process.env.PLUGIN_DATA;delete process.env.VERIFYKIT_DATA_DIR;
  invalidateWorkspaceCache();authorizeWorkspace(work);
- const e=new Engine();t.after(()=>e.close());
+ const e=new Engine();engine=e;
  const plan=e.verify({workspace:work,operation:'plan',changed:['routes/web.php'],criteria:['Unauthorized cashier cannot mutate inventory']});
  assert.equal(plan.state,'not_run');
  assert.ok(plan.risk_guidance.required_test_ids.includes('auth-route-role'));
