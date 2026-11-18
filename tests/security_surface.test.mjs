@@ -6,7 +6,7 @@ import path from 'node:path';
 import {spawnSync,spawn} from 'node:child_process';
 import {validateArgs} from '../src/tools.mjs';
 import {getSessionTokenUsage} from '../src/tokens.mjs';
-import {localAntigravityRpcUrl,authorizeWorkspace,revokeWorkspace,isWorkspaceAuthorized,loadRevokedWorkspaces,invalidateWorkspaceCache,safeArtifactPath,setAutoTrustMode,loadAntigravityWorkspaces} from '../src/security.mjs';
+import {localAntigravityRpcUrl,authorizeWorkspace,revokeWorkspace,isWorkspaceAuthorized,loadRevokedWorkspaces,invalidateWorkspaceCache,safeArtifactPath,setAutoTrustMode,loadAntigravityWorkspaces,setCompactMode,getCompactMode} from '../src/security.mjs';
 import {Store} from '../src/storage.mjs';
 
 test('strict MCP parameter schemas reject inherited Object prototype keys at every depth',()=>{
@@ -286,5 +286,34 @@ test('active-only auto-trust is restricted to current hook workspace AND existin
     }
     invalidateWorkspaceCache();
     fs.rmSync(base,{recursive:true,force:true});
+  }
+});
+
+
+test('settings writes atomically replace files and never follow an existing settings symlink',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-config-atomic-'));
+  const home=path.join(root,'home');fs.mkdirSync(home);
+  const oldHome=process.env.HOME,oldProfile=process.env.USERPROFILE;
+  try{
+    process.env.HOME=home;process.env.USERPROFILE=home;
+    const cfg=path.join(home,'.config','a2a','settings.json');
+    setCompactMode(true);
+    setAutoTrustMode('off');
+    assert.equal(getCompactMode(),true);
+    assert.deepEqual(fs.readdirSync(path.dirname(cfg)).filter(x=>x.endsWith('.tmp')),[]);
+    const outside=path.join(root,'external-settings.json');
+    fs.writeFileSync(outside,'{"compact":false}');
+    fs.unlinkSync(cfg);
+    try{fs.symlinkSync(outside,cfg)}catch(e){if(['EPERM','EACCES','ENOTSUP'].includes(e.code))return;throw e}
+    assert.equal(getCompactMode(),false); // The symlink is not trusted.
+    setCompactMode(true);
+    assert.equal(fs.readFileSync(outside,'utf8'),'{"compact":false}');
+    assert.equal(fs.lstatSync(cfg).isSymbolicLink(),false);
+    assert.equal(getCompactMode(),true);
+  }finally{
+    if(oldHome===undefined)delete process.env.HOME;else process.env.HOME=oldHome;
+    if(oldProfile===undefined)delete process.env.USERPROFILE;else process.env.USERPROFILE=oldProfile;
+    invalidateWorkspaceCache();
+    fs.rmSync(root,{recursive:true,force:true});
   }
 });
