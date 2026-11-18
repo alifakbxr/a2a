@@ -54,3 +54,15 @@ No unit-test name, human prose or custom JSON witness list may be accepted as pr
 - All 12 original feature PRs #16–#27 and integration PR #29 are **Merged to `v2.0.1`**. Git tree was preserved; implementation issues #3–#14 are closed with outstanding external acceptance tracked in issue #15.
 - Keep `main` unchanged. The `v2.0.1` branch contains the combined implementation; do not publish an npm/GitHub release or promote the version branch to `main` until real external acceptance and Antigravity install/browser smoke checks have passed.
 - The reviewed features are integrated in `v2.0.1` via #29 **and** individually recorded as merged PRs #16–#27; do not merge them again. After independent acceptance and benchmarks pass, open a **single** PR `v2.0.1 → main` and merge it only with explicit user authorization. See [v2.0.1 traceability](./V2_0_1_TRACEABILITY.md).
+
+## Current v2.0.1 behavior-specific gates (merged PR #36)
+
+The `v2.0.1` candidate includes [PR #36](https://github.com/alifakbxr/a2a/pull/36) at `67ea5888caf61751952c8a7daa1eb222d738d4b6`. Before live release testing, verify the local plan/assessment contract:
+
+1. `a2a_verify(operation="plan")` accepts unique typed `id`, `given`, `when`, `then` and `evidence_type`. For browser/visual paths it additionally requires `viewport`, `ui_state` and `reference`. It must start at **not_tested**.
+2. A passing local build/JUnit/TAP/JSON report can only prove its **named test assertion**. `completion.fully_verified` remains false; browser, visual, hardware, security or independent claims must not receive a local report PASS without real external evidence.
+3. `a2a_evidence(operation="save_checkpoint")` records only explicit bounded `decisions` and `pending_tests`; `model_recovery` detects an old source revision as **stale**. No raw secrets or resume automation.
+4. `a2a_evidence(operation="tool_recovery")` offers **nonexecuting** repair guidance for bad arguments, browser context loss, timeouts, denial, missing files or edit conflicts. It must never echo a private raw error body or bypass authorization.
+5. `a2a_context(action="orchestration")` never launches workers; parallel native modes require low dependency and **independent file ownership**, and explicit user consent.
+
+Automated [post-merge CI](https://github.com/alifakbxr/a2a/actions/runs/44325007116) has **213/213 Node assertions passing** on Ubuntu Node 22 and **4/4 OS/runtime jobs**. Its local MCP stdio/SQLite E2E is **not** a replacement for the external test harness described above. The frozen STOCKROOM baseline applications are known-defective **negative controls**, so record their observed failures honestly rather than treating those apps as passing release criteria. The independent evaluator must define exactly what successful A2A detection/refusal means.
