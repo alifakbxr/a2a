@@ -21,3 +21,7 @@ A2A does not control Chrome, install dependencies, run arbitrary project command
 Place generated A2A JSON reports under a `reports/`, `report/`, or `test-results/` directory in the authorized workspace. Only recognized A2A evidence structures in those directories are excluded from the application-source fingerprint; ordinary JSON source/config files remain indexed and revision-bound. This avoids a circular report: a generated report may contain the revision it is attesting without changing that revision by its own presence.
 
 The report bytes remain separately hashed and any later edits invalidate recorded artifact integrity. Application source changes still invalidate report revision matching. This exclusion is only bookkeeping; report content remains **unattested** and never becomes independent release proof.
+
+## Behavioral acceptance contract (merged PR #36)
+
+Use `a2a_verify(operation="plan")` with typed Given/When/Then criteria *before* native execution. For browser and visual work, specify the exact viewport, interactive state and design/reference target; every scenario begins **not_tested**. A screenshot or passing local test named after the scenario does not authenticate that the native browser ran the specified interaction. `a2a_verify(operation="assess")` explicitly returns `completion.fully_verified:false` for ordinary reports. These structural inspectors remain separate from independently signed release assessment and the full STOCKROOM external acceptance tracked in [issue #15](https://github.com/alifakbxr/a2a/issues/15).
