@@ -45,6 +45,12 @@ The second signature must cover precisely the UTF-8 bytes returned by `releaseAp
 
 **Important:** The acceptance registry digest is over `JSON.stringify(registry)`, not pretty-printed file bytes. Read the actual registry JSON and sign the exact payload without modifying the fields afterwards. Test and reviewer public keys may be shared for verification; **never place private signing keys or raw Antigravity archives in the repository, workflows, or logs**.
 
+## Negative controls versus positive acceptance
+
+The two **frozen, known-defective** STOCKROOM benchmark applications are negative-control baselines. Do **not** edit them to manufacture green test results and do **not** mark a baseline app as passing F01–F18 when it demonstrably fails a requirement. The independent assessor must first report their actual observed failures and A2A's classification quality without false passes.
+
+A release-eligible `assessRelease` manifest must instead contain **genuinely passed, independently pinned acceptance criteria for the releasable A2A candidate**, including all F01–F18 semantic failure-mode checks. Criteria may verify that A2A correctly detects or refuses unsupported claims from negative-control applications; they must not pretend the known-defective applications satisfy financial, concurrency or security invariants. If the assessor requires a separate new generated application to pass the functional scenarios, that application must be executed and evaluated independently. The external registry's requirement text, signed report semantics and testing target must agree. An arbitrary rewording of a known failure as a success is not acceptable evidence.
+
 ## Independent review procedure
 
 - Preserve and hash the four benchmark source ZIPs, keeping them private. Run F01–F18 with actual isolated HTTP/browser/database operations; verify overlapping independent DB transactions and full browser-process restart as required.
