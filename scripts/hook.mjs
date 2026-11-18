@@ -265,7 +265,16 @@ const isEntry = process.argv[1] && import.meta.url === pathToFileURL(path.resolv
 if (isEntry) {
   let raw = '';
   try {
-    raw = fs.readFileSync(0, 'utf8');
+    // Hooks are best-effort metadata handlers, never unbounded stdin consumers.
+    const chunks=[],buffer=Buffer.alloc(32768);let bytes=0;
+    for(;;){
+      const count=fs.readSync(0,buffer,0,buffer.length,null);
+      if(!count)break;
+      bytes+=count;
+      if(bytes>256*1024)throw Error('Hook payload exceeds safe limit');
+      chunks.push(Buffer.from(buffer.subarray(0,count)));
+    }
+    raw = Buffer.concat(chunks).toString('utf8');
     const payload = raw.trim() ? JSON.parse(raw) : {};
     const out = handleHookEvent(payload);
     process.stdout.write(JSON.stringify(out) + '\n');
