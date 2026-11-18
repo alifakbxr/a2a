@@ -8,6 +8,7 @@ import {contextQuery,analyzeImpact,shortGraphSummary,validateChangedPaths} from 
 import {planVerification,assessVerification,listEvidence,freshness,verifyHandoff} from './verification.mjs';
 import {estimateTokens,getSessionTokenUsage,analyzeWorkspaceTokens,skeletonizeCode} from './tokens.mjs';
 import {scanConversationHistory,attachReportSize} from './conversations.mjs';
+import {assessRelease} from '../scripts/evaluate-acceptance.mjs';
 
 export class Engine {
   constructor({store}={}) {this.store=store||new Store();this.owned=!store;}
@@ -256,6 +257,32 @@ export class Engine {
         res.compact=true;
       }
       return res;
+    }
+    if(operation==='assess_release'){
+      if(typeof artifact!=='string'||!artifact)throw Error('Required relative release manifest');
+      const source=safeFile(s.root,artifact),stat=fs.statSync(source);
+      if(!stat.isFile()||stat.size>1024*1024)throw Error('Release manifest must be <=1 MiB');
+      let document;
+      try{document=JSON.parse(fs.readFileSync(source,'utf8'))}catch{throw Error('Invalid release manifest JSON')}
+      const trustFile=path.join(os.homedir(),'.config','a2a','trusted-evaluators.json');
+      let trustKeys={};
+      try{
+        const configStat=fs.lstatSync(trustFile);
+        if(configStat.isFile()&&configStat.size<=65536&&(process.platform==='win32'||(configStat.mode&0o022)===0)){
+          trustKeys=JSON.parse(fs.readFileSync(trustFile,'utf8'));
+        }
+      }catch{}
+      const evaluation=assessRelease(document,{trustKeys});
+      if(document.revision!==s.revision){
+        evaluation.verdict='blocked';evaluation.release_ready=false;
+        evaluation.blockers.push({reason:'Current workspace snapshot differs from submitted release manifest'});
+      }
+      const evidenceId=uniqueId('ev'),bytes=fs.readFileSync(source);
+      this.store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',evidenceId,s.wsId,s.revision,'release-readiness',
+        evaluation.release_ready?'passed':'inconclusive','signed-release-evaluation',artifact,sha256(bytes),
+        JSON.stringify({trust:'public-key-verified-issuer-claim',release_ready:evaluation.release_ready,signature_evidence:evaluation.scenarios.results.reduce((n,x)=>n+x.signature_verified_evidence,0)}),new Date().toISOString());
+      return {revision:s.revision,evidence_id:evidenceId,...evaluation,
+        limitations:[...evaluation.limits,'User-pinned public key is read only from local A2A config; the plugin does not create or trust keys from project source']};
     }
     if(operation==='verify_handoff'||operation==='handoff'){
       validateChangedPaths(changed);
