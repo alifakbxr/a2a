@@ -669,3 +669,21 @@ test('impact, query, preview and verification use new source even when size and 
   const plan=e.verify({workspace:root,operation:'plan',criteria:['Import target must exist']});
   assert.equal(plan.revision,after.revision);
 }));
+
+
+test('multi-criterion assessment rolls back previously inserted evidence when later artifact is invalid',()=>withEngine((e,root,write)=>{
+  write('reports/valid.tap','TAP version 13\n1..1\nok 1 - works\n');
+  assert.throws(()=>e.verify({workspace:root,operation:'assess',criteria:[
+    {id:'first-valid',artifact:'reports/valid.tap',test_name:'works'},
+    {id:'second-missing',artifact:'reports/missing.tap',test_name:'works'}
+  ]}),/ENOENT|no such file|not found/);
+  const after=e.evidence({workspace:root,operation:'list'});
+  assert.equal(after.items.length,0);
+  const runs=e.evidence({workspace:root,operation:'runs'});
+  assert.equal(runs.runs.length,0);
+  const valid=e.verify({workspace:root,operation:'assess',criteria:[
+    {id:'first-valid',artifact:'reports/valid.tap',test_name:'works'}
+  ]});
+  assert.equal(valid.verdict,'passed');
+  assert.equal(e.evidence({workspace:root,operation:'list'}).items.length,1);
+}));
