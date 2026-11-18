@@ -10,12 +10,12 @@
 - Combined source integration: [PR #29](https://github.com/alifakbxr/a2a/pull/29), **merged to `v2.0.1` only**.
 - Integration merge commit: `049a5297fbd4c542918f4a23e9676d5e2b0530ce`.
 - Both `package.json` and `plugin.json` declare `2.0.1`. No npm publication, GitHub release, or release tag is implied.
-- Latest cross-platform CI successful at `89e6f2ca579edf6a46f1e63c697e461ae9146b65`: [GitHub Actions run #44240903023](https://github.com/alifakbxr/a2a/actions/runs/44240903023). GitHub Actions tested Ubuntu Node 22/24, Windows Node 22, macOS Node 22.
-- All feature PRs #16–#27 remain **Draft/Open**, originally targeting `main`; their **changes were integrated via PR #29, not by individually merging each feature PR**. Do not attempt to merge them again into `v2.0.1` or `main` without reconciliation.
+- Latest cross-platform CI successful after the 12 individual merges at `1da0c8ff5ecec83a1000e8e57cbeb941fcdc870e`: [GitHub Actions run #44248690103](https://github.com/alifakbxr/a2a/actions/runs/44248690103). GitHub Actions tested Ubuntu Node 22/24, Windows Node 22, macOS Node 22.
+- All feature PRs #16–#27 are now **individually Merged into `v2.0.1`**, after their implementation was reconciled and integrated by PR #29. Conflicting feature branches were recorded using Git two-parent merge commits retaining the reviewed combined tree (`83dfa3a653056595b31032584079f613a0b8ec6e`), so there were **no duplicate code changes**. Implementation issues #3–#14 are closed; independent validation remains open in #15.
 
 ## Original PR → integration traceability
 
-| Issue | Original PR (Draft/Open) | Scope incorporated into PR #29 |
+| Issue | Original PR (Merged to v2.0.1) | Scope incorporated into PR #29 |
 | --- | --- | --- |
 | [#3](https://github.com/alifakbxr/a2a/issues/3) | [#16](https://github.com/alifakbxr/a2a/pull/16) | Reproducible A/B evaluator, conservative official usage and repeated-run checks |
 | [#4](https://github.com/alifakbxr/a2a/issues/4) | [#17](https://github.com/alifakbxr/a2a/pull/17) | Signed independent acceptance gate, user-pinned frozen acceptance registry |
@@ -44,10 +44,10 @@ All conditions below must be independently verified before preparing the final p
 - [ ] Final `v2.0.1` commit passes combined CI and release contract checks.
 - [ ] **Explicit human approval** to promote the version branch to `main`.
 
-Only after those gates pass, **create one PR with base `main` and head `v2.0.1`**. Do not merge, tag, publish to npm, or create a GitHub Release automatically. Following that merge, separately reconcile/close the twelve original Draft PRs with clear notes that their changes were incorporated through #29 and the final version PR, rather than marking them individually merged.
+Only after those gates pass, **create one PR with base `main` and head `v2.0.1`**. Do not merge, tag, publish to npm, or create a GitHub Release automatically. The twelve original feature PRs have already been individually merged to `v2.0.1`; implementation issues #3–#14 are closed with unverified external acceptance consolidated into open tracking issue #15. Do not merge these features again.
 
 See [Release Engineering](./RELEASE.md) and [Independent Acceptance Runbook](./INDEPENDENT_ACCEPTANCE_RUNBOOK.md).
 
 ## Current decision
 
-**Feature implementation integration: completed.** **Cross-platform CI: passed at the cited commit.** **Independent live acceptance/benchmark: not completed.** **Promotion to main: blocked until approval and evidence.**
+**Feature implementation integration: all 12 feature PRs individually merged into `v2.0.1`.** **Cross-platform CI: passed at the cited commit.** **Independent live acceptance/benchmark: not completed.** **Promotion to main: blocked until approval and evidence.**
