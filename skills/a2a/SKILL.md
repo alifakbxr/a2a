@@ -1,32 +1,44 @@
 ---
 name: a2a
-description: A2A optional scoped project intelligence, native-first verification and token diagnostics; use for explicit /a2a requests or user-enabled risk-based assistance.
+description: Optional A2A local-first engineering context, impact, acceptance planning, source-aware recovery and token diagnostics for Antigravity.
 ---
 
-# A2A · Native-first, evidence-first
+# A2A — native-first engineering support (v2.0.1 candidate)
 
-**Antigravity owns** coding, planning, terminal, browser, permissions, and supported agents. A2A provides *local, bounded* context, risk plans and evidence review. **A2A-only: do not introduce external plugins, MCP servers, skills, agents, packages, or browser engines.** Never auto-install anything, spawn workers, run a browser or project command, auto-trust a workspace, or claim independent verification based on self-reported JSON.
+**Antigravity owns** coding, terminal, browser, model selection, native teamwork, permissions and test execution. A2A has **four public MCP tools** and no third-party runtime packages, agent proxy, browser replacement or automatic project command runner. Repository CI success is not an independently observed application PASS.
 
-## Commands
-- `/a2a on-demand` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs mode on-demand` (default)
-- `/a2a always-on` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs mode always-on` (adaptive opt-in)
-- `/a2a toggle` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs toggle`
-- `/a2a compact [on|off|toggle|status]` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs compact <value>`
-- `/a2a status` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs doctor`
-- `/a2a tokens` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs tokens` (only on request; historical local counts are not provider billing)
+## Decide whether A2A helps
 
-## Decision path (including Always-On)
+1. **No A2A calls** for trivial copy/styles, single isolated edits or direct explanations.
+2. For unfamiliar code, prefer one targeted `a2a_context(action="query")`. For risky cross-module work, one `a2a_impact(summary=true)` provides bounded risk/uncertainty; expand only when evidence requires it.
+3. For user-visible/stateful defects, plan with `a2a_verify(operation="plan")`: Give each required behavior its own **Given/When/Then**, negative control, evidence type and source revision. For UI/browser cases add viewport, UI state and a reference. Initial state is `not_tested`.
+4. Implement and test with **native Antigravity** and existing project tools. When possible reproduce the bug before fixing it, preserve working behavior, and run real negative-path tests.
+5. Assess completed machine reports with `a2a_verify(operation="assess")`, mapping each criterion to a **named testcase** (`artifact` and `test_name`). `completion.fully_verified=false` for local reports. A passing build cannot prove visual/browser/hardware/security/independent acceptance. `assess_browser` and `assess_semantic` are **unattested** reviews of supplied JSON.
+6. For paused tasks, use `a2a_evidence(operation="save_checkpoint")` only on request, with explicit `task_summary`, `completed`, `next_steps`, `decisions` and `pending_tests`; retrieve via `model_recovery`, checking `source_revision_matches` and `source_freshness`. Saved notes are **not** verified work; never store credentials.
+7. For native tool failures optionally use `a2a_evidence(operation="tool_recovery")`. Inspect current browser/page IDs, file versions or tool schema before retrying; never bypass a permission rejection or repeatedly retry identical inputs. This returns guidance only; it cannot observe/intercept native calls.
+8. For teamwork, `a2a_context(action="orchestration")` recommends native modes **only when the user/IDE declares them available**, dependencies are low and file ownership is **independent**. Ask for user approval; A2A launches no worker.
+9. Final handoff: state what was implemented, the exact assertions that passed, failed, blocked, stale and **not tested**; avoid claiming full completion, release readiness or token savings without corresponding independent evidence.
 
-1. **Early exit: zero A2A calls** for trivial edits, styling, docs, ordinary explanations or tasks already solved by native tools.
-2. For unfamiliar symbols, request `a2a_context(action="query")` **only if needed**. For multi-file/risky changes, prefer **one** `a2a_impact(summary=true)`; ask for graph details only to resolve a named uncertainty. Static zero matches never proves safety.
-3. For stateful/security/finance/offline changes, run **one** `a2a_verify(operation="plan")` if it materially improves the test plan. Specify negative controls for authorization, payment/ledger, true concurrency, full browser restart and retry **when applicable**, before implementation.
-4. **Engineering standard (built into A2A):** match the repository's existing conventions, make the smallest behavior-preserving change, reproduce bugs with a failing regression first, verify observable user/API behavior, and explain compatibility or maintenance cost. On high-risk plans, inspect `maintainer_review` as a **not-reviewed** checklist. These principles draw on Laravel, Vue, SQLite and other open-source maintainers but do **not** import their tooling or enforce their language-specific style. 
-5. **Implement and execute with native Antigravity**, respecting all permissions. Native browser and any already-available DevTools checks may produce evidence; never add a second browser runtime. Native Teamwork/Swarm/subagent is **optional**, only when supported, and requires user consent before additional workers.
-6. Assess a **named completed machine report** once via `a2a_verify(operation="assess")`, or use `verify_handoff` for workers. Use `assess_semantic` / `assess_browser` only for specific existing artifacts: their results are **unattested**, not an independent pass. Passing test names, screenshots, sequential checkout, or tab reopen alone do not prove full requirements.
-7. Keep the final response brief: tested scope, passed/failed/partial/not-tested/stale, known gaps and next action. Use `a2a_evidence` for incidents/history only when needed. Token accounting and A2A summaries are **opt-in**; never fabricate token savings or claim provider usage from local cache estimates.
+## CLI controls — actual subcommands
 
-## Release block on current v2.0.1
+From a checkout, use `node scripts/a2a.mjs` (or the `a2a` executable when installed). Supported examples:
 
-The five documented post-merge defects (AUD-01 through AUD-05) are **not fixed by this workflow**. In particular, do not claim release eligibility from potentially self-referential JSON evidence or caller-reduced semantic requirements. Real Antigravity/browser execution and independently run STOCKROOM F01–F18 remain mandatory before promotion to `main`.
+```bash
+node scripts/a2a.mjs doctor
+node scripts/a2a.mjs mode on-demand
+node scripts/a2a.mjs mode always-on
+node scripts/a2a.mjs toggle
+node scripts/a2a.mjs compact on
+node scripts/a2a.mjs autotrust active-only
+node scripts/a2a.mjs allow /absolute/project
+node scripts/a2a.mjs revoke /absolute/project
+node scripts/a2a.mjs tokens --limit 5 --json
+```
 
-See [full native-first workflow](../../docs/NATIVE_FIRST_WORKFLOW.md), [open-source maintainer standards](../../docs/OPEN_SOURCE_ENGINEERING_STANDARDS.md), [independent runbook](../../docs/INDEPENDENT_ACCEPTANCE_RUNBOOK.md) and [token evaluation protocol](../../docs/TOKEN_EFFICIENCY.md). All design, maintenance, and verification guidance runs within A2A and native Antigravity only; external resources are research citations, not runtime integrations.
+Do **not** invent or promise plugin chat slash commands not actually exposed by the installed Antigravity runtime. Always-On is **opt-in**, injected via `SessionStart` only; `rules/AGENTS.md` stays small. `PostToolUse` is scoped; there is no `PreInvocation` hook.
+
+## Acceptance, privacy and release
+
+No raw Antigravity brain logs or credentials in public fixtures. An internal transcript token estimate is not provider billing. The behavioral hardening is merged to `v2.0.1` via [PR #36](https://github.com/alifakbxr/a2a/pull/36), with real **local MCP stdio/SQLite E2E in CI**. That is not installed IDE, Figma, printer or STOCKROOM F01–F18 external E2E.
+
+Release remains **NO-GO** until [issue #15](https://github.com/alifakbxr/a2a/issues/15) is independently resolved. `main` remains separate; external signed approval is mandatory before publication. See [documentation index](../../docs/README.md), [behavioral Five Whys](../../docs/BEHAVIORAL_5_WHYS_V2_0_1.md), [contracts](../../docs/CONTRACTS.md), [native workflow](../../docs/NATIVE_FIRST_WORKFLOW.md), and [release authorization](../../docs/RELEASE_AUTHORIZATION.md).
