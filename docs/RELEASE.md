@@ -42,3 +42,9 @@ The repository includes a **working local MCP runtime and Antigravity plugin bun
 ## v2.0.1 branch and promotion
 
 The audited changes from [PR #29](https://github.com/alifakbxr/a2a/pull/29) and all 12 original PRs #16–#27 are individually recorded as Merged into the dedicated `v2.0.1` branch, with unchanged combined source tree. See [source PR traceability and the frozen benchmark/release gate](./V2_0_1_TRACEABILITY.md). Implementation issues #3–#14 were closed, but live acceptance/benchmark remains open in #15. Do not re-merge the same feature heads; retain the unmodified main baseline until the external validation gates pass. Only then open one `v2.0.1` → `main` PR with explicit human approval. A green repository CI does not imply a public npm/GitHub release.
+
+## Fail-closed package release authorization
+
+The npm and GitHub Packages publishing workflows now run [release authorization](./RELEASE_AUTHORIZATION.md) before any `npm publish`. A tag/dispatch/release event and a green CI are insufficient: publication needs the identical approved `main` commit, pinned external registry and evaluator keys, signed F01–F18 evidence and detached release approval. Missing external GitHub secrets/approval variable block publication. The release gate is a control, **not evidence that the pending independent acceptance was performed**.
+
+On 18 November 2026, the original frozen STOCKROOM app archives were independently checked for PHP syntax and frontend production builds. They passed those checks, but PHPUnit could not start in the local environment because required PHP extensions were unavailable. Full F01–F18 dynamic acceptance is still not complete. Details: [Frozen STOCKROOM benchmark local rerun](./STOCKROOM_BENCHMARK_RECHECK_2026_11_18.md).
