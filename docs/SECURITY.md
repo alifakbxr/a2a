@@ -30,7 +30,7 @@ Unit/integration tests include path traversal, hidden secrets, lockfiles, symlin
 
 ## Privacy
 
-Default outbound network = **none** (`refresh` CLI command talks only to `localhost` `ANTIGRAVITY_LS_ADDRESS` when explicitly invoked by the user). No source code is uploaded. The allowlist and settings reside under `~/.config/a2a/`; the SQLite database (`a2a.sqlite`) resides in `PLUGIN_DATA` / `~/.gemini/antigravity/plugin_data/a2a` or `~/.config/a2a/data`. Transcript reading is local-only and read-only, skipping subagent transcripts on fallback.
+Core MCP, hooks and local analysis make **no automatic outbound network requests**. The explicitly invoked `refresh` CLI command talks only to loopback `ANTIGRAVITY_LS_ADDRESS`; the separate optional `a2a stats` CLI command invokes an authenticated local `gh api` client to fetch GitHub repository traffic metrics over the network. Those repository clone/view counts **do not prove distinct installations**. No source code is uploaded. The allowlist and settings reside under `~/.config/a2a/`; the SQLite database (`a2a.sqlite`) resides in `PLUGIN_DATA` / `~/.gemini/antigravity/plugin_data/a2a` or `~/.config/a2a/data`. Transcript reading is local-only and read-only, skipping subagent transcripts on fallback.
 
 ## Publication security
 
