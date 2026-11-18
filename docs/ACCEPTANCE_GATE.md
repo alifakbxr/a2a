@@ -20,3 +20,18 @@ The signature covers the canonical UTF-8 JSON serialization produced by `attesta
 Critical scenarios without an independently verified signature are downgraded to `not-tested`. Stale revision, mismatched evidence types and open critical defects block readiness. Successful evaluation means **eligible for independent review**, not production security certification. A valid signature proves possession of a trusted issuer key, not semantic correctness of the tests.
 
 No A2A tool launches a CI runner, changes filesystem permission, or approves a PR automatically.
+
+
+## Mandatory frozen acceptance scope
+
+A signed test result is not proof that the agent submitted every required scenario. Release eligibility now fails closed unless an independent user-pinned registry matches all scenario IDs, requirement SHA-256 hashes, critical flags and required evidence types. The agent must not be able to edit the registry or signing keys.
+
+Place the registry at `~/.config/a2a/acceptance-registry.json` outside the generated application workspace:
+
+```json
+{"schema":"a2a-acceptance-registry-v1","scenarios":[{"id":"offline-restart","requirement_sha256":"64-character-sha256-of-the-exact-requirement","critical":true,"required_evidence_types":["browser","integration"]}]}
+```
+
+The registry is read by `a2a_verify(operation="assess_release")`. The CLI `scripts/evaluate-acceptance.mjs` also accepts an optional pinned-registry path after the trust-keys path.
+
+Without a matching registry, `release_ready` stays false even if all submitted assertions have valid signatures. A true result means eligible for independent review of signed evidence, not proof of test execution or production certification. File permissions and reviewer keys must be protected by the user's OS.
