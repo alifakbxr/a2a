@@ -50,3 +50,7 @@ Values are medians with min/max, but interpretation depends on independent evide
 **Limitations:** Comparison readiness means repeated captures exist; it does not automatically prove randomization, identical external conditions, causal improvements or quota equivalence.
 
 **Pre-vNext correction (18 Nov 2026):** This evaluator now refuses identical capture bytes reused as independent runs (SHA-256 collision of the entire captured result) and rejects per-run setup overrides that contradict the frozen manifest. `comparability.capture_repetitions_ready` only indicates sufficient **distinct captures**; `comparability.ready` remains **false** until independence, acceptance evidence and provider usage are established out of band. Distinct files alone still do not prove statistical or causal equivalence. No winner can be declared from self-reported weekly Free Tier percentages.
+
+## Distribution scope
+
+The evaluator at `benchmarks/ab-evaluate.mjs` is intentionally **source-checkout-only**. It is excluded from the installable npm tarball to avoid distributing optional research code in the runtime plugin. Clone or download the source repository at a pinned revision to run the command above; this does not require a new dependency. The packaged A2A MCP and CLI remain independent of the benchmark runner.
