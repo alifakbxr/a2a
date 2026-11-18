@@ -278,7 +278,7 @@ test('active-only auto-trust is restricted to current hook workspace AND existin
     assert.equal(isWorkspaceAuthorized(active),true);
     assert.equal(isWorkspaceAuthorized(sibling),false);
     fs.writeFileSync(path.join(data,'active-session.json'),JSON.stringify({latest:{workspacePaths:[untrusted],cwd:untrusted}}));
-    assert.deepEqual(loadAntigravityWorkspaces({bypassCache:true}),[]);
+    assert.deepEqual(loadAntigravityWorkspaces(),[]); // session file change invalidates cached trust
     assert.equal(isWorkspaceAuthorized(untrusted),false);
   }finally{
     for(const [k,v] of Object.entries(saved)){
