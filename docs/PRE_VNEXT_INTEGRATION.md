@@ -19,3 +19,7 @@ The original pre-vNext audit from `main` at `b622110d0feabf469390a41f3c93338053b
 5. Obtain separate authorization before publishing packages, creating a public release, or promoting to `main`.
 
 See [Independent Acceptance Runbook](./INDEPENDENT_ACCEPTANCE_RUNBOOK.md).
+
+## Historical boundary (current as of 18 November 2026)
+
+This document records the **earlier #16–#29 integration**, not the latest feature changes. Subsequently [PR #36](https://github.com/alifakbxr/a2a/pull/36) merged six behavioral implementation issues #30–#35 into `v2.0.1` at `67ea5888caf61751952c8a7daa1eb222d738d4b6`. [Post-merge CI](https://github.com/alifakbxr/a2a/actions/runs/44325007116) passed 4/4 jobs with 213/213 Node tests on Ubuntu Node 22. `main` was not modified; external release acceptance is still open in [#15](https://github.com/alifakbxr/a2a/issues/15). See [current traceability](V2_0_1_TRACEABILITY.md).
