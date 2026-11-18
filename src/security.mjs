@@ -193,6 +193,12 @@ export function isProtectedRoot(ws) {
   } else {
     if (canonical === home || home.startsWith(canonical.endsWith(path.sep) ? canonical : canonical + path.sep)) return true;
   }
+  // Deny descendants of credential/application state directories, not just
+  // the directory itself. Ordinary projects in Documents remain permitted.
+  for (const sensitive of ['.ssh','.aws','.gnupg','.config','.gemini']) {
+    const target=realpathIfExists(path.join(home,sensitive));
+    if (isSameOrDescendantPath(target,canonical)) return true;
+  }
   const protRoots = getProtectedRoots();
   if (protRoots.has(canonical)) return true;
   if (process.platform === 'win32' || process.platform === 'darwin') {
@@ -577,7 +583,8 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
   }
 
   const base = path.basename(resolved);
-  if (shouldIgnore(base) || /(?:^\.env|\.pem$|\.key$|\.sqlite|\.git$)/i.test(base)) {
+  const relativeInsideBoundary=path.relative(authorizedBoundary,resolved);
+  if (shouldIgnore(relativeInsideBoundary) || /(?:^\.env|\.pem$|\.key$|\.sqlite|\.git$)/i.test(base)) {
     throw new Error('Access to sensitive file denied');
   }
 
