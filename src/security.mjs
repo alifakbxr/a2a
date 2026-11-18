@@ -428,6 +428,29 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
     } catch {}
   }
 
+  if(autoTrust==='active-only'){
+    // Active-only is an intersection of two independent local records:
+    // (1) an explicitly trusted Antigravity workspace and
+    // (2) the last bounded SessionStart workspace. A hook record by itself
+    // can NEVER authorize a new workspace.
+    const active=[];
+    try{
+      const sessionFile=path.join(dataDir(),'active-session.json');
+      const stat=fs.lstatSync(sessionFile);
+      if(stat.isFile()&&!stat.isSymbolicLink()&&stat.size<=128*1024){
+        const latest=JSON.parse(fs.readFileSync(sessionFile,'utf8'))?.latest;
+        const candidates=[...(Array.isArray(latest?.workspacePaths)?latest.workspacePaths.slice(0,32):[]),latest?.cwd];
+        for(const candidate of candidates){
+          if(typeof candidate!=='string'||!path.isAbsolute(candidate))continue;
+          const real=realpathIfExists(candidate);
+          if(!fs.existsSync(real)||!fs.statSync(real).isDirectory()||isProtectedRoot(real))continue;
+          if([...dirs].some(trusted=>isSameOrDescendantPath(trusted,real)))active.push(real);
+        }
+      }
+    }catch{}
+    dirs.clear();
+    for(const activeRoot of active)dirs.add(activeRoot);
+  }
   const sorted = [...dirs].sort();
   workspaceCache = { key: cacheKey, ts: now, dirs: sorted };
   return sorted;
