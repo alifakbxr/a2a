@@ -171,3 +171,21 @@ test('brain Markdown snapshot cannot traverse a symlinked trusted brain director
     fs.rmSync(base,{recursive:true,force:true});
   }
 });
+
+
+test('storage refuses shared temp root without modifying its permissions',()=>{
+  const temp=os.tmpdir();
+  const before=fs.statSync(temp).mode&0o7777;
+  assert.throws(()=>new Store(temp),/dedicated private directory/);
+  const after=fs.statSync(temp).mode&0o7777;
+  assert.equal(after,before);
+});
+test('storage denies an existing world-writable data directory',()=>{
+  if(process.platform==='win32')return;
+  const base=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-shared-state-'));
+  try{
+    fs.chmodSync(base,0o777);
+    assert.throws(()=>new Store(base),/world-writable/);
+    assert.equal(fs.statSync(base).mode&0o777,0o777);
+  }finally{fs.rmSync(base,{recursive:true,force:true})}
+});
