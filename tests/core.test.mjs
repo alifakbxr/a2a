@@ -643,3 +643,29 @@ test('read-only evidence and run views invalidate freshness after same-size sour
   const runs=e.evidence({workspace:root,operation:'runs'});
   assert.ok(runs.runs.some(x=>x.fresh===false));
 }));
+
+
+test('impact, query, preview and verification use new source even when size and mtime are unchanged',()=>withEngine((e,root,write)=>{
+  write('src/misc.js','export function login() { return false }\n');
+  const before=e.impact({workspace:root,changed:['src/auth.js']});
+  assert.ok(before.affected.some(x=>x.path==='src/page.js'));
+  const filename=path.join(root,'src/page.js');
+  const stat=fs.statSync(filename);
+  const original=fs.readFileSync(filename,'utf8');
+  const modified=original.replace("from './auth.js'","from './misc.js'");
+  assert.notEqual(modified,original);
+  assert.equal(Buffer.byteLength(modified),Buffer.byteLength(original));
+  fs.writeFileSync(filename,modified);
+  fs.utimesSync(filename,stat.atime,stat.mtime);
+  const after=e.impact({workspace:root,changed:['src/auth.js']});
+  assert.notEqual(after.revision,before.revision);
+  assert.ok(!after.affected.some(x=>x.path==='src/page.js'));
+  const query=e.context({workspace:root,action:'query',query:'page'});
+  assert.equal(query.revision,after.revision);
+  assert.ok(query.relations.some(x=>x.source==='file:src/page.js'&&x.target==='file:src/misc.js'));
+  const skeleton=e.context({workspace:root,action:'skeleton',file:'src/page.js'});
+  assert.equal(skeleton.revision,after.revision);
+  assert.ok(skeleton.files[0].skeleton.includes('misc.js'));
+  const plan=e.verify({workspace:root,operation:'plan',criteria:['Import target must exist']});
+  assert.equal(plan.revision,after.revision);
+}));
