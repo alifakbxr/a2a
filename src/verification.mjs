@@ -6,6 +6,7 @@ import {uniqueId} from './storage.mjs';
 import {discoverTestCommands,gitChanges} from './scanner.mjs';
 
 import {proposeRiskTests} from './risk-guidance.mjs';
+import {normalizeAcceptanceCriterion,acceptanceCompletion} from './acceptance-matrix.mjs';
 
 export function parseArtifact(text, filename){
   const ext=filename.toLowerCase().split('.').at(-1), sample=text.slice(0,1200000);
@@ -70,12 +71,13 @@ export function parseArtifact(text, filename){
 export function planVerification({index,impact,criteria=[]}){
   if(!Array.isArray(criteria)||criteria.length>40)throw new Error('criteria must be an array of at most 40 items');
   const seen=new Set();const plan=criteria.map(c=>{
-    if(typeof c!=='string' || c.length>160||!c.trim())throw new Error('Invalid criterion');
-    const id=sha256(c.trim().toLowerCase()).slice(0,20);if(seen.has(id))throw new Error('Duplicate criterion');seen.add(id);
-    return {id,description:c,status:'not_run',evidence_required:true};
+    const item=normalizeAcceptanceCriterion(c);
+    if(seen.has(item.id))throw new Error('Duplicate criterion');
+    seen.add(item.id);
+    return item;
   });
   const checks=discoverTestCommands(index);
-  const riskGuidance=proposeRiskTests({paths:impact?.changed??[],criteria});
+  const riskGuidance=proposeRiskTests({paths:impact?.changed??[],criteria:plan.map(x=>[x.description,x.given,x.when,x.then].filter(Boolean).join(' '))});
   const highRisk=impact?.risk==='high'||riskGuidance.findings.some(x=>x.priority==='critical');
   // Maintainer discipline is a bounded NOT-REVIEWED checklist, never a quality verdict.
   // It costs no extra tool call and is omitted for unrelated/trivial tasks.
@@ -89,7 +91,7 @@ export function planVerification({index,impact,criteria=[]}){
     ],
     proof:'native-test-and-human-review-required'
   }:null;
-  return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,risk_guidance:riskGuidance,...(maintainerReview?{maintainer_review:maintainerReview}:{}),checks,execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
+  return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,risk_guidance:riskGuidance,...(maintainerReview?{maintainer_review:maintainerReview}:{}),checks,completion:acceptanceCompletion(plan,[],{planning:true}),execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
 }
 function aggregate(results){if(results.some(r=>r.status==='failed'))return 'failed';if(results.some(r=>r.status==='blocked'))return 'blocked';if(results.length&&results.every(r=>r.status==='passed'))return 'passed';return 'inconclusive'}
 export function assessVerification(store,wsId,root,rev,criteria){
@@ -97,32 +99,44 @@ export function assessVerification(store,wsId,root,rev,criteria){
   // or none are. Invalid later criteria must never leave orphaned passed evidence.
   return store.transaction(()=>{
   if(!Array.isArray(criteria)||criteria.length===0||criteria.length>40)throw new Error('Provide 1–40 criteria including artifact paths');
-  const ids=new Set();const results=[];
-  for(const c of criteria){if(!c || typeof c.id!=='string'||c.id.length>160||!c.id.trim()||ids.has(c.id))throw new Error('Invalid or duplicate criterion ID');ids.add(c.id);
-    let result={id:c.id,status:'inconclusive',reason:'No evidence artifact'};
+  const ids=new Set(),results=[],plan=[];
+  for(const c of criteria){
+    if(typeof c==='string')throw new Error('Assessment criteria require an explicit id and named test evidence');
+    const criterion=normalizeAcceptanceCriterion(c);
+    if(ids.has(criterion.id))throw new Error('Invalid or duplicate criterion ID');
+    ids.add(criterion.id);plan.push(criterion);
+    let result={id:criterion.id,status:criterion.contract==='acceptance-v1'?'not_tested':'inconclusive',reason:'No evidence artifact'};
     if(typeof c.artifact==='string'){
       const full=safeFile(root,c.artifact);const stat=fs.statSync(full);if(stat.size>1200000)throw new Error('Evidence report exceeds 1.2 MB');
       const bytes=fs.readFileSync(full),hash=sha256(bytes), parsed=parseArtifact(bytes.toString('utf8'),c.artifact);
       // An explicit test name prevents an arbitrary passing suite from proving an unrelated criterion.
       const matchName=typeof c.test_name==='string'?c.test_name.trim():'';
       let derivedStatus=parsed.status, reason=parsed.reason||null;
-      if(!matchName){derivedStatus='inconclusive';reason='test_name is required to bind the criterion to actual test cases; use * for the entire suite';}
+      if(!matchName){derivedStatus='inconclusive';reason='test_name is required to bind the criterion to actual test cases; use * only for legacy whole-suite checks';}
+      else if(criterion.contract==='acceptance-v1'&&matchName==='*'){derivedStatus='inconclusive';reason='Structured acceptance requires an exact named test case';}
       else if(matchName!=='*'){
         const selected=parsed.cases.filter(t=>t.name===matchName);
         if(!selected.length){derivedStatus='inconclusive';reason='Named test case was not found in report';}
         else if(selected.some(t=>t.state==='failed')){derivedStatus='failed';reason='Named test case failed';}
         else if(selected.some(t=>t.state==='skipped')){derivedStatus='inconclusive';reason='Named test case was skipped';}
         else if(parsed.status==='inconclusive'){derivedStatus='inconclusive';reason=parsed.reason||'Report incomplete';}
+        else if(parsed.status==='failed'){derivedStatus='failed';reason='The same test suite contains failures';}
         else {derivedStatus='passed';reason=null;}
       }
+      if(criterion.source_revision&&criterion.source_revision!==rev){
+        derivedStatus='stale';reason='Explicit source revision differs from current workspace revision';
+      }
+      if(derivedStatus==='passed'&&['browser','visual','hardware','security','independent'].includes(criterion.evidence_type)){
+        derivedStatus='inconclusive';reason='Local named test cannot independently attest this execution type, screen state or external acceptance';
+      }
       const evidenceId=uniqueId('ev');
-      store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',evidenceId,wsId,rev,c.id,derivedStatus,parsed.format||'unknown',c.artifact,hash,JSON.stringify({assertions:parsed.assertions||0,failed:parsed.failed||0,skipped:parsed.skipped||0,reason,test_name:matchName,trust:'local-report-not-cryptographically-attested'}),new Date().toISOString());
-      result={id:c.id,status:derivedStatus,evidence_id:evidenceId,assertions:parsed.assertions||0,...(reason?{reason}:{})};
-    }else if(c.blocked===true){result={id:c.id,status:'blocked',reason:String(c.reason||'Required environment is unavailable').slice(0,240)}}
+      store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',evidenceId,wsId,rev,criterion.id,derivedStatus==='stale'?'inconclusive':derivedStatus,parsed.format||'unknown',c.artifact,hash,JSON.stringify({assertions:parsed.assertions||0,failed:parsed.failed||0,skipped:parsed.skipped||0,reason,test_name:matchName,requested_evidence_type:criterion.evidence_type||'unspecified',trust:'local-report-not-cryptographically-attested'}),new Date().toISOString());
+      result={id:criterion.id,status:derivedStatus,evidence_id:evidenceId,assertions:parsed.assertions||0,...(reason?{reason}:{})};
+    }else if(c.blocked===true){result={id:criterion.id,status:'blocked',reason:'Required environment unavailable; no runnable evidence supplied'}}
     results.push(result);
   }
   const verdict=aggregate(results),runId=uniqueId('run');store.run('INSERT INTO runs VALUES(?,?,?,?,?,?)',runId,wsId,rev,verdict,JSON.stringify(results),new Date().toISOString());
-  return {run_id:runId,revision:rev,verdict,criteria:results,proof_scope:'named-machine-test-assertions-only',release_ready:false,semantic_requirements_proven:false,limits:['A passing JUnit/TAP/JSON suite is NOT a release-readiness or semantic concurrency/offline/security verdict.','Only independently signed acceptance evidence via assess_release can report release eligibility.','Report parsing does not attest origin or test execution authenticity.']};
+  return {run_id:runId,revision:rev,verdict,criteria:results,completion:acceptanceCompletion(plan,results),proof_scope:'named-machine-test-assertions-only',release_ready:false,semantic_requirements_proven:false,limits:['A passing JUnit/TAP/JSON suite is NOT a release-readiness or semantic concurrency/offline/security verdict.','Only independently signed acceptance evidence via assess_release can report release eligibility.','Report parsing does not attest origin or test execution authenticity.']};
   });
 }
 export function listEvidence(store,wsId,root,currentRevision,{limit=20,id}={}){

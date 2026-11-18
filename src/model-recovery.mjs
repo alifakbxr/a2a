@@ -31,15 +31,21 @@ export function modelRecoveryAdvice(category){
     default:return {...base,action:'inspect_native_error',message:'Cause is unconfirmed. Inspect Antigravity errors and /usage before deciding how to recover.'};
   }
 }
-export function saveRecoveryCheckpoint(store,wsId,{conversationId,revision,taskSummary,completed=[],nextSteps=[]}){
+export function saveRecoveryCheckpoint(store,wsId,{conversationId,revision,taskSummary,completed=[],nextSteps=[],decisions=[],pendingTests=[]}){
   if(!validConversationId(conversationId))throw Error('Valid conversation_id required');
   if(typeof taskSummary!=='string'||!taskSummary.trim()||taskSummary.length>500)throw Error('task_summary must be 1-500 characters');
-  for(const [name,items] of [['completed',completed],['next_steps',nextSteps]]){
+  for(const [name,items] of [['completed',completed],['next_steps',nextSteps],['decisions',decisions],['pending_tests',pendingTests]]){
     if(!Array.isArray(items)||items.length>8||items.some(x=>typeof x!=='string'||!x.trim()||x.length>200))throw Error(name+' must have up to 8 short statements');
   }
+  // Never persist common credential or bearer-token assignments in plaintext
+  // as part of a model-recovery handoff, even when supplied explicitly.
+  const notes=[taskSummary,...completed,...nextSteps,...decisions,...pendingTests];
+  if(notes.some(x=>/(?:password|passwd|api[ _-]?key|(?:access[_-]?|refresh[_-]?)?token|cookie|authorization|private[_-]?key|secret)\s*[:=]|\bBearer\s+[A-Za-z0-9._~-]{8,}/i.test(x))){
+    throw new Error('Checkpoint contains a possible credential; remove secrets before saving');
+  }
   const now=new Date().toISOString();
-  store.run('INSERT INTO recovery_checkpoints(workspace_id,conversation_id,revision_id,task_summary,completed_json,next_steps_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(workspace_id,conversation_id) DO UPDATE SET revision_id=excluded.revision_id,task_summary=excluded.task_summary,completed_json=excluded.completed_json,next_steps_json=excluded.next_steps_json,updated_at=excluded.updated_at',
-    wsId,conversationId,revision||null,taskSummary.trim(),JSON.stringify(completed),JSON.stringify(nextSteps),now,now);
+  store.run('INSERT INTO recovery_checkpoints(workspace_id,conversation_id,revision_id,task_summary,completed_json,next_steps_json,decisions_json,pending_tests_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(workspace_id,conversation_id) DO UPDATE SET revision_id=excluded.revision_id,task_summary=excluded.task_summary,completed_json=excluded.completed_json,next_steps_json=excluded.next_steps_json,decisions_json=excluded.decisions_json,pending_tests_json=excluded.pending_tests_json,updated_at=excluded.updated_at',
+    wsId,conversationId,revision||null,taskSummary.trim(),JSON.stringify(completed),JSON.stringify(nextSteps),JSON.stringify(decisions),JSON.stringify(pendingTests),now,now);
   store.run('DELETE FROM recovery_checkpoints WHERE workspace_id=? AND conversation_id NOT IN (SELECT conversation_id FROM recovery_checkpoints WHERE workspace_id=? ORDER BY updated_at DESC LIMIT 30)',wsId,wsId);
   return {status:'saved',conversation_id:conversationId,revision:revision||null,verified:false,content_origin:'explicit_notes',updated_at:now};
 }
@@ -87,7 +93,9 @@ export function recoveryStatus(store,wsId,{conversationId=null,currentRevision=n
   const checkpoint=age>=0&&age<=7*24*60*60*1000?{
     conversation_id:row.conversation_id,task_summary:row.task_summary,
     completed:JSON.parse(row.completed_json),next_steps:JSON.parse(row.next_steps_json),
+    decisions:JSON.parse(row.decisions_json||'[]'),pending_tests:JSON.parse(row.pending_tests_json||'[]'),
     source_revision:row.revision_id,source_revision_matches:typeof currentRevision==='string'?row.revision_id===currentRevision:null,
+    source_freshness:typeof currentRevision!=='string'?'unknown':row.revision_id===currentRevision?'current':'stale',
     updated_at:row.updated_at,verified:false,
     warning:'Explicit notes are not proof of completion. Recheck code, permissions and tests.'}:null;
   return {status:'assisted_only',automatic_switch:false,

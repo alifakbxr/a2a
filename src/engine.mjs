@@ -15,6 +15,7 @@ import {assessRelease} from '../scripts/evaluate-acceptance.mjs';
 
 import {adviseOrchestration} from './orchestration-advisor.mjs';
 import {saveRecoveryCheckpoint,recoveryStatus} from './model-recovery.mjs';
+import {classifyNativeToolFailure} from './native-tool-recovery.mjs';
 
 export class Engine {
   constructor({store}={}) {this.store=store||new Store();this.owned=!store;}
@@ -355,20 +356,21 @@ export class Engine {
     }catch{}
     return process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
   }
-  evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id,conversation_id,parent_conversation_id,question,summary,status,artifact_name,artifact_path,v1,v2,task_summary,completed=[],next_steps=[]}={}){
+  evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id,conversation_id,parent_conversation_id,question,summary,status,artifact_name,artifact_path,v1,v2,task_summary,completed=[],next_steps=[],decisions=[],pending_tests=[],tool_family='other',error_hint='',error_class,retry_count=0}={}){
     const compact=getCompactMode();
-    const isReadOnly=operation==='model_recovery'||operation==='list'||operation==='runs'||operation==='incidents'||operation==='hypotheses'||operation==='side_questions'||operation==='side-questions'||operation==='artifact_versions'||operation==='artifact-versions'||operation==='artifact_diff'||operation==='artifact-diff';
+    const isReadOnly=operation==='tool_recovery'||operation==='model_recovery'||operation==='list'||operation==='runs'||operation==='incidents'||operation==='hypotheses'||operation==='side_questions'||operation==='side-questions'||operation==='artifact_versions'||operation==='artifact-versions'||operation==='artifact_diff'||operation==='artifact-diff';
     // Freshness is a security-relevant claim: never reuse cached revision metadata
     // when presenting test evidence or historical run freshness.
     const needsLiveRevision=['list','runs','model_recovery','save_checkpoint'].includes(operation);
     const s=needsLiveRevision?this.sync(workspace,{verifyIntegrity:true}):(isReadOnly?this.resolveMeta(workspace):this.sync(workspace));
     const wsId=s.wsId;
+    if(operation==='tool_recovery')return classifyNativeToolFailure({error_class,error_hint,tool_family,retry_count});
     if(operation==='save_checkpoint'){
       const conv=conversation_id||this.#resolveActiveConversationId();
       if(conv==='default')throw new Error('An active conversation or explicit conversation_id is required');
       const saved=saveRecoveryCheckpoint(this.store,wsId,{
         conversationId:conv,revision:s.revision,taskSummary:task_summary,
-        completed,nextSteps:next_steps
+        completed,nextSteps:next_steps,decisions,pendingTests:pending_tests
       });
       return {...saved,warning:'Notes are locally stored, not verified task completion; do not put secrets in checkpoints.'};
     }
