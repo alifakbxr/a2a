@@ -625,3 +625,15 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
   return resolved;
 }
 export function cleanError(error) {return String(error?.message||error).replace(/[\r\n\t]/g,' ').slice(0,400)}
+
+/**
+ * The refresh RPC carries an Antigravity CSRF token. Never send it to a
+ * non-loopback endpoint supplied through process environment variables.
+ */
+export function localAntigravityRpcUrl(address){
+  if(typeof address!=='string'||address.length>100)throw new Error('Invalid local language server address');
+  const match=/^(127\.0\.0\.1|localhost|\[::1\]):([0-9]{1,5})$/i.exec(address);
+  const port=match?Number(match[2]):0;
+  if(!match||port<1||port>65535)throw new Error('Language server must use a loopback host and valid port');
+  return 'http://'+match[1]+':'+port+'/exa.language_server_pb.LanguageServerService/RefreshMcpServers';
+}
