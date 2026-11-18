@@ -93,7 +93,7 @@ export function evaluateSemanticClaims(data){
   ids.add(c.id);
   const required=c.required_capabilities??BUILTIN[c.scenario];
   if(!Array.isArray(required)||required.length<1||required.length>20||required.some(x=>!valid(x)))throw Error('Required capabilities must be explicit');
-  const validReports=c.evidence.filter(e=>object(e)&&e.revision===data.revision&&e.verdict==='passed'&&e.origin==='external-test-harness'&&typeof e.reference==='string'&&e.reference.length<200&&typeof e.checked_at==='string'&&!Number.isNaN(Date.parse(e.checked_at)));
+  const validReports=c.evidence.filter(e=>object(e)&&e.revision===data.revision&&e.verdict==='passed'&&e.origin==='external-test-harness'&&typeof e.reference==='string'&&/^(?:ci|test|trace|run|evidence)[:/-][A-Za-z0-9._-]{1,100}$/.test(e.reference)&&!e.reference.includes('..')&&typeof e.checked_at==='string'&&!Number.isNaN(Date.parse(e.checked_at)));
   const proven=new Set(),sources=[];
   for(const e of validReports){
    // Only evaluator-computed structured facts can cover a capability; raw witnessed_capabilities is ignored.
@@ -103,7 +103,7 @@ export function evaluateSemanticClaims(data){
   }
   const missing=required.filter(x=>!proven.has(x));
   const status=missing.length?'insufficient-evidence':'evidence-present-unattested';
-  out.push({id:c.id,scenario:c.scenario||'custom',status,trust:'unattested-local-report',witnessed:required.filter(x=>proven.has(x)),missing,external_evidence_references:uniq(sources).slice(0,20),limitations:['External runner identity and observations are caller-supplied, not cryptographically verified','Capability labels alone are ignored; independently executed artifacts must corroborate facts']});
+  out.push({id:c.id,scenario:BUILTIN[c.scenario]?c.scenario:'custom',status,trust:'unattested-local-report',witnessed:required.filter(x=>proven.has(x)),missing,external_evidence_references:uniq(sources).slice(0,20),limitations:['External runner identity and observations are caller-supplied, not cryptographically verified','Capability labels alone are ignored; independently executed artifacts must corroborate facts']});
  }
  return {schema:'a2a-semantic-evidence-v2',revision:data.revision,accepted:0,structurally_supported:out.filter(x=>x.status==='evidence-present-unattested').length,total:out.length,claims:out,report_status:out.every(x=>x.status==='evidence-present-unattested')?'evidence-present-unattested':'insufficient-evidence',release_verified:false,limitations:['Unattested JSON never receives an independently verified release verdict','Reviewer must inspect actual test execution provenance, runtime and database effects']};
 }
