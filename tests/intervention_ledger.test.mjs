@@ -21,3 +21,16 @@ test('replayed planner events count once and unknown tool names never leak',()=>
  assert.equal(output.interventions[0].tool,'unknown-a2a-tool');
  assert.equal(JSON.stringify(output).includes('secret'),false);
 });
+
+test('a later planner turn cannot steal a different invocation result',()=>{
+ const r=buildInterventionLedger([p(1),p(2),{type:'GENERIC',step_index:3,status:'DONE',content:'ok'}]);
+ assert.equal(r.interventions[0].outcome,'no-result');
+ assert.equal(r.interventions[1].outcome,'succeeded');
+});
+test('long transcript uses bounded next-event lookups',()=>{
+ const records=[];
+ for(let i=0;i<1500;i++){records.push(p(i*2+1),{type:'GENERIC',step_index:i*2+2,status:'DONE',content:'ok'});}
+ const r=buildInterventionLedger(records);
+ assert.equal(r.total_invocations,1500);
+ assert.equal(r.counts.succeeded,1500);
+});
