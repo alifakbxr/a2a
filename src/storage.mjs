@@ -299,6 +299,10 @@ export class Store {
     }
     const row1=v1?this.getArtifactVersion({workspaceId,conversationId,artifactName,versionNumber:v1}):null;
     const row2=v2?this.getArtifactVersion({workspaceId,conversationId,artifactName,versionNumber:v2}):null;
+    // A nonexistent explicitly requested version is not an empty artifact:
+    // returning a diff against empty content could falsely imply a real history.
+    const missing_versions=[...(v1&&!row1?[v1]:[]),...(v2&&!row2?[v2]:[])];
+    if(missing_versions.length)return {artifact_name:artifactName,v1:v1||0,v2:v2||0,status:'version_not_found',missing_versions,diff:null};
     const content1=row1?.content||'';
     const content2=row2?.content||'';
     return {
