@@ -11,7 +11,8 @@ test('offline checkout surfaces tenant, financial and queue adversarial scenario
 });
 test('unrelated source returns unknown rather than secure verdict',()=>{
  const r=proposeRiskTests({paths:['src/components/Navbar.vue']});
- assert.equal(r.status,'no-domain-signals-detected');
+ assert.equal(r.status,'suggestions-only');
+ assert.deepEqual(r.findings.map(x=>x.domain),['web-usability-and-operations']);
  assert.ok(r.limitations.some(x=>x.includes('does not mean')));
 });
 test('risk output is bounded for large untrusted request',()=>{
