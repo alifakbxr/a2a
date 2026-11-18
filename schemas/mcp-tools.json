@@ -128,6 +128,14 @@
               },
               "hard_reasoning": {
                 "type": "boolean"
+              },
+              "file_ownership": {
+                "type": "string",
+                "enum": [
+                  "independent",
+                  "shared",
+                  "unknown"
+                ]
               }
             }
           }
@@ -228,7 +236,7 @@
                     "test_name": {
                       "type": "string",
                       "maxLength": 160,
-                      "description": "Exact testcase name to bind to criterion, or * for entire report."
+                      "description": "Exact testcase name to bind criterion; * only scopes legacy suite results."
                     },
                     "blocked": {
                       "type": "boolean"
@@ -236,6 +244,54 @@
                     "reason": {
                       "type": "string",
                       "maxLength": 240
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 160
+                    },
+                    "given": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "when": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "then": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "evidence_type": {
+                      "type": "string",
+                      "enum": [
+                        "build",
+                        "unit",
+                        "integration",
+                        "browser",
+                        "visual",
+                        "hardware",
+                        "security",
+                        "independent"
+                      ]
+                    },
+                    "viewport": {
+                      "type": "string",
+                      "maxLength": 160
+                    },
+                    "ui_state": {
+                      "type": "string",
+                      "maxLength": 160
+                    },
+                    "reference": {
+                      "type": "string",
+                      "maxLength": 160
+                    },
+                    "negative": {
+                      "type": "boolean"
+                    },
+                    "source_revision": {
+                      "type": "string",
+                      "maxLength": 160
                     }
                   }
                 }
@@ -289,7 +345,8 @@
               "artifact_diff",
               "snapshot_artifact",
               "save_checkpoint",
-              "model_recovery"
+              "model_recovery",
+              "tool_recovery"
             ]
           },
           "id": {
@@ -403,6 +460,56 @@
           "v2": {
             "type": "integer",
             "minimum": 1
+          },
+          "decisions": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "For save_checkpoint: concise user-reviewed decisions, not secrets."
+          },
+          "pending_tests": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "For save_checkpoint: specific untested acceptance scenarios."
+          },
+          "tool_family": {
+            "type": "string",
+            "enum": [
+              "mcp",
+              "browser",
+              "filesystem",
+              "terminal",
+              "other"
+            ]
+          },
+          "error_hint": {
+            "type": "string",
+            "maxLength": 400,
+            "description": "Optional brief native error code/message. Never stored or echoed. Omit credentials."
+          },
+          "error_class": {
+            "type": "string",
+            "enum": [
+              "invalid_arguments",
+              "context_lost",
+              "timeout",
+              "permission_denied",
+              "missing_file",
+              "edit_conflict",
+              "unknown"
+            ]
+          },
+          "retry_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20
           }
         }
       }
