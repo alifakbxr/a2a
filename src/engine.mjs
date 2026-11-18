@@ -293,7 +293,7 @@ export class Engine {
         evidenceId,s.wsId,s.revision,report?.scenario_id||'semantic-review',recordStatus,operation,artifact,sha256(bytes),
         JSON.stringify({trust:'unattested-local-report',release_verified:false,summary:result.report_status||result.status,artifact_sha256:sha256(bytes)}),
         new Date().toISOString());
-      return {revision:s.revision,evidence_id:evidenceId,...result,verification_verdict:'inconclusive',
+      return {revision:s.revision,evidence_id:evidenceId,...result,current_revision:s.revision,verification_verdict:'inconclusive',
         note:'The evidence artifact is parsed and hashed locally; reported execution is not independently authenticated.'};
     }
     if(operation==='assess_release'){
