@@ -6,7 +6,7 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {validateArgs} from '../src/tools.mjs';
 import {getSessionTokenUsage} from '../src/tokens.mjs';
-import {localAntigravityRpcUrl} from '../src/security.mjs';
+import {localAntigravityRpcUrl,authorizeWorkspace,invalidateWorkspaceCache} from '../src/security.mjs';
 import {Store} from '../src/storage.mjs';
 
 test('strict MCP parameter schemas reject inherited Object prototype keys at every depth',()=>{
@@ -98,4 +98,39 @@ test('SQLite state rejects symlinked database and WAL files',()=>{
     assert.equal(fs.readFileSync(outside,'utf8'),'do not touch');
     const store=new Store(base);store.close();
   }finally{fs.rmSync(dir,{recursive:true,force:true})}
+});
+
+test('artifact history version allocation and retention remain correct if shadow directory is unsafe',()=>{
+  const base=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-history-retention-'));
+  const home=path.join(base,'home'),root=path.join(base,'work'),data=path.join(base,'state'),outside=path.join(base,'outside');
+  const oldHome=process.env.HOME,oldUser=process.env.USERPROFILE;
+  let store=null;
+  try{
+    for(const dir of [home,root,data,outside])fs.mkdirSync(dir);
+    process.env.HOME=home;process.env.USERPROFILE=home;invalidateWorkspaceCache();
+    const artifact=path.join(root,'notes.md');fs.writeFileSync(artifact,'original');
+    authorizeWorkspace(root);
+    store=new Store(data);const wsId=store.register(root);
+    let hasSymlink=false;
+    try{fs.symlinkSync(outside,path.join(data,'artifact_history'),'dir');hasSymlink=true}
+    catch(e){if(e.code!=='EPERM'&&e.code!=='EACCES')throw e}
+    for(let i=0;i<12;i++){
+      const saved=store.snapshotArtifact({workspaceId:wsId,workspaceRoot:root,conversationId:'conv-test-retention',artifactPath:artifact,content:'version-'+i});
+      assert.equal(saved.version_number,i+1);
+      assert.equal(saved.changed,true);
+    }
+    const versions=store.listArtifactVersions({workspaceId:wsId,conversationId:'conv-test-retention',artifactName:'notes.md'});
+    assert.equal(versions.length,10);
+    assert.equal(versions[0].version_number,12);
+    assert.equal(versions.at(-1).version_number,3);
+    const repeated=store.snapshotArtifact({workspaceId:wsId,workspaceRoot:root,conversationId:'conv-test-retention',artifactPath:artifact,content:'version-11'});
+    assert.equal(repeated.changed,false);
+    if(hasSymlink)assert.deepEqual(fs.readdirSync(outside),[]);
+  }finally{
+    try{store?.close()}catch{}
+    if(oldHome===undefined)delete process.env.HOME;else process.env.HOME=oldHome;
+    if(oldUser===undefined)delete process.env.USERPROFILE;else process.env.USERPROFILE=oldUser;
+    invalidateWorkspaceCache();
+    fs.rmSync(base,{recursive:true,force:true});
+  }
 });
