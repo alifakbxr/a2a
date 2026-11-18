@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import {Engine} from '../src/engine.mjs';
+import pkg from '../package.json' with {type:'json'};
 import {
   allowlistPath,settingsPath,getA2AMode,setA2AMode,getCompactMode,setCompactMode,
   getAutoTrustMode,setAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces,
@@ -39,7 +40,7 @@ try{
     print({
       name:'a2a',
       title:'A2A',
-      version:'2.0.0',
+      version:pkg.version,
       node:process.versions.node,
       node_requirement:'>=22.13.0',
       sqlite:'node:sqlite',
