@@ -17,3 +17,18 @@ test('F13 merely navigating to cashier dashboard with no observed forbidden resp
  const r=base();r.assertions=[{id:'rbac',status:'passed',executed:false,expected:403,observed:undefined}];
  assert.equal(assessBrowserEvidence(r,{expectedRevision:'sha-a',artifactChecks:[{reference:'screen1',sha256:sha,intact:true}]}).status,'inconclusive');
 });
+
+test('duplicate browser assertion identifiers cannot turn a report green',()=>{
+ const report=base();
+ report.assertions.push({...report.assertions[0]});
+ const result=assessBrowserEvidence(report,{expectedRevision:'sha-a',artifactChecks:[{reference:'screen1',sha256:sha,intact:true}]});
+ assert.equal(result.status,'inconclusive');
+ assert.ok(result.problem_codes.includes('duplicate-assertion'));
+});
+test('browser JSON object key ordering does not produce false negative evidence',()=>{
+ const report=base();
+ report.assertions=[{id:'json-result',status:'passed',executed:true,expected:{ok:true,count:2},observed:{count:2,ok:true}}];
+ const result=assessBrowserEvidence(report,{expectedRevision:'sha-a',artifactChecks:[{reference:'screen1',sha256:sha,intact:true}]});
+ assert.equal(result.status,'evidence-present-unattested');
+ assert.equal(result.independently_verified,false);
+});
