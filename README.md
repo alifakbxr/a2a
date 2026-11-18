@@ -27,7 +27,7 @@ A2A does **not** turn a successful build, a screenshot, an arbitrary test name o
 
 - **Node.js >= 22.13.0** (the MCP engine uses built-in `node:sqlite`).
 - Google Antigravity with plugin/MCP support for IDE integration.
-- No third-party **runtime** npm dependencies, no remote A2A telemetry service.
+- No third-party **runtime** npm dependencies and no automatic remote A2A telemetry service. The optional explicit `a2a stats` CLI command invokes an installed/authenticated `gh` client to read GitHub repository traffic; clone counts are **not verified plugin installations**.
 
 **To evaluate the current unpublished `v2.0.1` branch from source:**
 
