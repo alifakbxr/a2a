@@ -8,12 +8,24 @@ test('uses final cumulative result without adding step or cached usage',()=>{con
 test('rejects inconsistent official usage',()=>assert.throws(()=>parseCapture(JSON.stringify({...final,usage:{input_tokens:70,output_tokens:30,total_tokens:500}})),/Inconsistent/));
 test('requires independent acceptance evidence and matched repetitions',()=>{
  const m={setup,scenarios:['stock','offline'],runs:[{variant:'native',repeat:1,capture:'n.json',acceptance:{stock:'passed',offline:'not-tested'}},{variant:'a2a-on-demand',repeat:1,capture:'a.json',acceptance:{stock:'partial',offline:'failed'}}]};
- const r=evaluateManifest(m,()=>JSON.stringify(final));
+ const r=evaluateManifest(m,n=>n==='n.json'?JSON.stringify({...final,num_turns:1}):JSON.stringify({...final,num_turns:2}));
  assert.equal(r.comparability.ready,false);assert.equal(r.variants.native.acceptance_passed.median,1);
  assert.equal(r.variants['a2a-on-demand'].acceptance_passed.median,0);
  assert.equal(r.variants.native.official_tokens.median,100);
- assert.equal(evaluateManifest(m,()=>JSON.stringify(final),{minRepetitions:1}).comparability.ready,true);
+ const captures={ 'n.json':JSON.stringify({...final,num_turns:1}), 'a.json':JSON.stringify({...final,num_turns:2}) };
+ assert.equal(evaluateManifest(m,n=>captures[n],{minRepetitions:1}).comparability.capture_repetitions_ready,true);
+ assert.equal(evaluateManifest(m,n=>captures[n],{minRepetitions:1}).comparability.ready,false);
+ assert.throws(()=>evaluateManifest(m,()=>JSON.stringify(final)),/Duplicated capture/);
  assert.throws(()=>evaluateManifest({...m,runs:[m.runs[0],m.runs[0]]},()=>JSON.stringify(final)),/Duplicate/);
  assert.throws(()=>evaluateManifest({...m,runs:[{...m.runs[0],acceptance:{stock:'passed'}}]},()=>JSON.stringify(final)),/every independent/);
 });
 test('incomplete stream cannot be scored as success',()=>assert.throws(()=>parseCapture('{"event":"init"}\n'),/no terminal result/));
+
+test('repeated capture aliases cannot masquerade as independent trials',()=>{
+ const m={setup,scenarios:['stock'],runs:[{variant:'native',repeat:1,capture:'a',acceptance:{stock:'passed'}},{variant:'a2a-on-demand',repeat:1,capture:'b',acceptance:{stock:'passed'}}]};
+ assert.throws(()=>evaluateManifest(m,()=>JSON.stringify(final)),/Duplicated capture/);
+});
+test('explicit mismatch against pinned benchmark environment is rejected',()=>{
+ const m={setup,scenarios:['stock'],runs:[{variant:'native',repeat:1,capture:'a',setup:{model:'different-model'},acceptance:{stock:'passed'}}]};
+ assert.throws(()=>evaluateManifest(m,()=>JSON.stringify(final)),/environment differs/);
+});
