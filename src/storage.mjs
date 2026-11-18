@@ -241,12 +241,14 @@ export class Store {
     if(!outcome.changed)return outcome;
     try{
       const histDir=path.join(this.base,'artifact_history',workspaceId||'unassigned',conversationId);
-      fs.mkdirSync(histDir,{recursive:true,mode:0o700});
-      // A symlink in the history path must never redirect private snapshots.
+      // Create one component at a time; recursive mkdir would follow a
+      // pre-existing malicious symlink before we could inspect it.
       let cursor=this.base;
       for(const part of path.relative(this.base,histDir).split(path.sep)){
         cursor=path.join(cursor,part);
-        if(fs.lstatSync(cursor).isSymbolicLink())throw Error('Unsafe artifact shadow path');
+        try{fs.mkdirSync(cursor,{mode:0o700})}catch(e){if(e.code!=='EEXIST')throw e}
+        const stat=fs.lstatSync(cursor);
+        if(stat.isSymbolicLink()||!stat.isDirectory())throw Error('Unsafe artifact shadow path');
       }
       try{fs.chmodSync(histDir,0o700)}catch{}
       const shadowPath=path.join(histDir,artifactName+'.v'+outcome.version_number+'.md');
