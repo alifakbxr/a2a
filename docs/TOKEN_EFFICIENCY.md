@@ -44,3 +44,7 @@ Source inventory is estimated from UTF-8 file sizes, not from the live Gemini to
 For matched runs, define `net_difference_pct = 100 * (total_tokens_A2A - total_tokens_native)/total_tokens_native`. Positive values mean more reported tokens; negative values mean fewer. A2A cannot calculate this without **both** runs.
 
 Do not publish token-savings percentages, cache savings, or 0% false-positive completion until independently verified end-to-end.
+
+## Behavioral-audit interpretation (18 November 2026)
+
+The private Antigravity history showed repeated reads of the same path in a session, but these reads may be justified after edits. The value **does not measure wasted tokens** or establish net A2A savings. Checkpoint/acceptance changes from [PR #36](https://github.com/alifakbxr/a2a/pull/36) are intended to reduce repeated, ungrounded exploration and overclaims, but the effect requires actual matched A/B experiments, not documentation or microbenchmarks. The release blocker remains [#15](https://github.com/alifakbxr/a2a/issues/15).
