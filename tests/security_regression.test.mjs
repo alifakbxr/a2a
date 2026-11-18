@@ -314,3 +314,30 @@ test('Cross-platform: macOS /private and Windows case-insensitive path boundarie
     safeArtifactPath(canonicalWs, 'conv-cross-plat', hugeFile);
   }, /maximum allowed size/i);
 });
+
+test('Security: protected credential-store descendants cannot become workspaces',t=>{
+  const {home,cleanup}=createSecurityFixture();
+  t.after(cleanup);
+  for(const suffix of ['.ssh/private-project','.aws/credentials-project','.gemini/internal-project','.config/hidden-work']){
+    const location=path.join(home,suffix);
+    fs.mkdirSync(location,{recursive:true});
+    fs.writeFileSync(path.join(location,'package.json'),'{"name":"unsafe"}');
+    assert.throws(()=>authorizeWorkspace(location),/protected root|system directory/i);
+  }
+});
+
+test('Security: artifact snapshot refuses hidden and generated-state subtrees',t=>{
+  const {ws1,cleanup}=createSecurityFixture();
+  t.after(cleanup);
+  const cases=['.git/config','node_modules/pkg/index.js','.a2a/session.json','.gemini/brain/private.md'];
+  for(const rel of cases){
+    const full=path.join(ws1,rel);
+    fs.mkdirSync(path.dirname(full),{recursive:true});
+    fs.writeFileSync(full,'Sensitive local metadata that must not be snapshotted');
+    assert.throws(()=>safeArtifactPath(ws1,'conv-sec-snap-9876',full),/sensitive file denied/i,rel);
+  }
+  const publicFile=path.join(ws1,'docs','notes.md');
+  fs.mkdirSync(path.dirname(publicFile),{recursive:true});
+  fs.writeFileSync(publicFile,'Public working note');
+  assert.equal(safeArtifactPath(ws1,'conv-sec-snap-9876',publicFile),publicFile);
+});
