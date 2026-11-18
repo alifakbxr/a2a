@@ -65,3 +65,12 @@ test('duplicate claim identifiers rejected',()=>{
  const c={id:'same',scenario:'true-concurrency',evidence:[]};
  assert.throws(()=>evaluateSemanticClaims({revision:'r',claims:[c,c]}),/duplicate/);
 });
+
+test('untrusted evidence references and unexpected scenario names are not echoed',()=>{
+ const c={revision:'snapshot-1',claims:[{id:'custom-case',scenario:'API_KEY=secret-value',required_capabilities:['custom'],evidence:[{origin:'external-test-harness',verdict:'passed',revision:'snapshot-1',checked_at:'2026-11-18T09:00:00Z',reference:'/home/alif/private.env',witnessed_capabilities:['custom']}]}]};
+ const r=evaluateSemanticClaims(c);
+ assert.equal(r.claims[0].scenario,'custom');
+ assert.equal(r.claims[0].external_evidence_references.length,0);
+ assert.equal(JSON.stringify(r).includes('secret-value'),false);
+ assert.equal(JSON.stringify(r).includes('/home/alif'),false);
+});
