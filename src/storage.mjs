@@ -1,13 +1,23 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import {dataDir,sha256,safeArtifactPath,MAX_ARTIFACT_BYTES,realpathIfExists} from './security.mjs';
 
 const DDL=fs.readFileSync(new URL('../schemas/database.sql',import.meta.url),'utf8');
 export class Store {
   constructor(base=dataDir()) {
-    this.base=path.resolve(base);fs.mkdirSync(this.base,{recursive:true,mode:0o700});
-    if(fs.lstatSync(this.base).isSymbolicLink())throw new Error('A2A data directory cannot be a symlink');
+    this.base=path.resolve(base);
+    // Never chmod a broad/shared directory if a mistaken environment override
+    // points storage at HOME, /tmp, filesystem root or an app configuration root.
+    const home=os.homedir();
+    const unsafe=[path.parse(this.base).root,home,os.tmpdir(),path.join(home,'.config'),path.join(home,'.gemini'),path.join(home,'.gemini','antigravity')];
+    const compare=p=>process.platform==='win32'?p.toLowerCase():p;
+    if(unsafe.some(p=>compare(path.resolve(p))===compare(this.base)))throw new Error('A2A data directory must be a dedicated private directory');
+    fs.mkdirSync(this.base,{recursive:true,mode:0o700});
+    const dataStat=fs.lstatSync(this.base);
+    if(dataStat.isSymbolicLink()||!dataStat.isDirectory())throw new Error('A2A data directory must be a real directory');
+    if(process.platform!=='win32'&&(dataStat.mode&0o002)!==0)throw new Error('A2A data directory cannot be world-writable');
     try{fs.chmodSync(this.base,0o700)}catch{}
     const a2aFile=path.join(this.base,'a2a.sqlite');
     const legacyFile=path.join(this.base,'verifykit.sqlite');
