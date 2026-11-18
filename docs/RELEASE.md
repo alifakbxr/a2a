@@ -37,14 +37,20 @@
 
 ## Honest status
 
-The repository includes a **working local MCP runtime and Antigravity plugin bundle** validated with `agy plugin validate --strict .`, unit/integration tests, and stdio MCP probes. The repository CI matrix tests Node 22 on Ubuntu, macOS and Windows and Node 24 on Ubuntu. This does not replace live Antigravity plugin installation and browser/HTTP/database verification.
+The repository includes a **working local MCP runtime and Antigravity plugin bundle** checked by Node automated tests, including a real local JSON-RPC/stdio MCP subprocess and SQLite E2E. The current candidate still needs a **fresh, installed Antigravity `agy plugin validate --strict .`** run before release; past validation reports do not substitute for that live check. The repository CI matrix tests Node 22 on Ubuntu, macOS and Windows and Node 24 on Ubuntu. This does not replace live Antigravity plugin installation and browser/HTTP/database verification.
 
 ## v2.0.1 branch and promotion
 
-The audited changes from [PR #29](https://github.com/alifakbxr/a2a/pull/29) and all 12 original PRs #16–#27 are individually recorded as Merged into the dedicated `v2.0.1` branch, with unchanged combined source tree. See [source PR traceability and the frozen benchmark/release gate](./V2_0_1_TRACEABILITY.md). Implementation issues #3–#14 were closed, but live acceptance/benchmark remains open in #15. Do not re-merge the same feature heads; retain the unmodified main baseline until the external validation gates pass. Only then open one `v2.0.1` → `main` PR with explicit human approval. A green repository CI does not imply a public npm/GitHub release.
+The audited changes from [PR #29](https://github.com/alifakbxr/a2a/pull/29) and all 12 original PRs #16–#27 are individually recorded as Merged into the dedicated `v2.0.1` branch, with unchanged combined source tree. See [source PR traceability and the frozen benchmark/release gate](./V2_0_1_TRACEABILITY.md). Implementation issues #3–#14 and behavioral implementation issues #30–#35 are closed; the behavioral [PR #36](https://github.com/alifakbxr/a2a/pull/36) was merged into `v2.0.1` at `67ea5888caf61751952c8a7daa1eb222d738d4b6`. Live acceptance/benchmark remains open in #15. Do not re-merge the same feature heads; retain the unmodified main baseline until the external validation gates pass. Only then open one `v2.0.1` → `main` PR with explicit human approval. A green repository CI does not imply a public npm/GitHub release.
 
 ## Fail-closed package release authorization
 
 The npm and GitHub Packages publishing workflows now run [release authorization](./RELEASE_AUTHORIZATION.md) before any `npm publish`. A tag/dispatch/release event and a green CI are insufficient: publication needs the identical approved `main` commit, pinned external registry and evaluator keys, signed F01–F18 evidence and detached release approval. Missing external GitHub secrets/approval variable block publication. The release gate is a control, **not evidence that the pending independent acceptance was performed**.
 
 On 18 November 2026, the original frozen STOCKROOM app archives were independently checked for PHP syntax and frontend production builds. They passed those checks, but PHPUnit could not start in the local environment because required PHP extensions were unavailable. Full F01–F18 dynamic acceptance is still not complete. Details: [Frozen STOCKROOM benchmark local rerun](./STOCKROOM_BENCHMARK_RECHECK_2026_11_18.md).
+
+## Current behavioral hardening CI (18 November 2026)
+
+**Source:** [PR #36](https://github.com/alifakbxr/a2a/pull/36) merged to `v2.0.1` at `67ea5888caf61751952c8a7daa1eb222d738d4b6`. [Post-merge CI run #44325007116](https://github.com/alifakbxr/a2a/actions/runs/44325007116) completed **4/4 successful jobs**, with **213/213 Node tests** on Ubuntu Node 22. This includes local real MCP stdio/SQLite E2E for authorized/denied workspaces, typed criteria, negative false-PASS controls, checkpoint recovery and privacy. It **does not** prove Antigravity installed-plugin behavior, Figma/browser visual states, printer hardware, Laravel HTTP/database transactions, or any independent F01–F18 PASS.
+
+The behavioral [Five Whys](BEHAVIORAL_5_WHYS_V2_0_1.md) is recorded with root-cause hypotheses, mitigations, and falsifiable local tests. The complete current status is in [Build Status](../BUILD_STATUS.md) and [traceability](V2_0_1_TRACEABILITY.md). **Issue #15 is open: NO-GO until independent acceptance, privacy review, repeated benchmark and explicit human approval.**

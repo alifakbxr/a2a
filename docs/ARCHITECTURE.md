@@ -1,80 +1,84 @@
-# A2A Technical Architecture
+# A2A Architecture — v2.0.1 development candidate
 
-## Mission and invariants
+A2A is a local-first, native-first **engineering intelligence support layer** for Antigravity. It is neither a model nor a proxy for native terminal/browser/agents. The plugin owns static context, guidance, metadata, evidence accounting and controlled local recovery; **Antigravity** owns project edits, terminal/browser actions, workspace permissions, and any native model/teamwork execution.
 
-1. **Native ownership:** all planning, reasoning, coding, browser, terminal, permissions, and orchestration remain Antigravity's responsibility.
-2. **No claim without evidence:** compilation is not functional verification; evidence is bound to a source snapshot and a machine-readable completed test report with a named case.
-3. **No knowledge without provenance:** extracted relationships distinguish observed source facts from filename or test-name heuristics.
-4. **Configurable operating modes:** `on-demand` (default) limits proactive A2A calls; `always-on` is an explicit opt-in for adaptive engineering checks. Existing saved settings retain their selected mode.
-5. **Local safety:** no external network access, arbitrary shell tool, or automatic dependency installer.
+## Architectural invariants
 
-## Module boundaries
+1. **Four public MCP tools, no added runtime dependencies.** `a2a_context`, `a2a_impact`, `a2a_verify`, `a2a_evidence` communicate via JSON-RPC 2.0 stdio on Node >=22.13.0. Legacy aliases remain optional.
+2. **Workspace security:** all source reads and evidence storage originate from an authorized, canonical project root. Protected roots, unsafe symlinks, cross-workspace reads and revoked workspaces are denied.
+3. **Source freshness:** SHA-256 source revision including uncommitted edits and separately hashed evidence artifacts. Cached static metadata is never a license to present stale proof.
+4. **Evidence scope:** local JUnit/TAP/JSON assertions are NOT independent confirmation of browser UI, hardware, security, or production readiness. `completion.fully_verified` is deliberately false for local reports.
+5. **Adaptive, bounded workflow:** On-Demand is the default; Always-On is opt-in and injects one small policy at `SessionStart`. Native trivial work needs no A2A call.
+6. **No automatic network service or arbitrary project execution:** the explicit `refresh` command only uses loopback Antigravity RPC; separately, the **opt-in** `stats` CLI uses the external `gh api` command to fetch GitHub traffic metrics. Core MCP, hooks, graph and verification do not make outbound network calls. A2A does not run project scripts, browsers, model calls or subagents.
 
-| Module | Inputs | Outputs | Must not do |
-| --- | --- | --- | --- |
-| `security` | canonical path, relative path, allowlist, settings | authorization, protected-root filtering, path safety | upward-authorize ancestors, follow symlinks |
-| `scanner` | authorized workspace files, cached `(mtime, size)` | file hashes, language, symbols/imports | run project scripts, send source contents to remote API |
-| `storage` | validated structured records | incremental SQLite state (`a2a.sqlite`) & telemetry | store raw source code, execute repo commands |
-| `graph` | revision-specific nodes and edges | batched scoped queries and bounded impact | promote derived edges to verified facts |
-| `tokens` | source text/bytes, `transcript.jsonl`, telemetry | lexer-safe comment-stripped previews, estimated scoped output reductions, session diagnostics | fabricate efficiency percentages |
-| `verification` | named criteria and test report | status, evidence hash, revision-bound result | claim an untested behavior passed |
-| `engine` | authorized MCP/CLI request | aggregated structured outputs | override Antigravity policy |
-| `mcp` | JSON-RPC 2.0 stdio messages | 4 `a2a_*` tools (+ opt-in legacy aliases) & 4 resources | expose generic shell or credentials |
+## Modules and responsibilities
 
-## Sequence diagrams
+| Component | Responsibility | Explicit limitation |
+| --- | --- | --- |
+| [`src/security.mjs`](../src/security.mjs) | Workspace trust/revocation, protected paths, settings, safe artifact access | Same-OS-user processes can modify local state |
+| [`src/scanner.mjs`](../src/scanner.mjs) | Multi-stack source scanning, hashes and symbol/import heuristics | Not a full compiler/LSP for every language |
+| [`src/graph.mjs`](../src/graph.mjs) | Batched static graph queries, reverse-impact traversal | Derived relationships are candidates |
+| [`src/storage.mjs`](../src/storage.mjs) | Private SQLite, source index, revisions, test evidence, snapshots, notes | Opt-in artifacts/notes may contain user-supplied text |
+| [`src/tokens.mjs`](../src/tokens.mjs), [`src/conversations.mjs`](../src/conversations.mjs) | Lexer-safe previews, local conversation provenance, source-response size estimates | Local counters are not provider-billed token usage |
+| [`src/verification.mjs`](../src/verification.mjs), [`src/acceptance-matrix.mjs`](../src/acceptance-matrix.mjs) | Given/When/Then plans, exact-test checks, scoped completion | Local PASS never becomes independent E2E approval |
+| [`src/semantic-evidence.mjs`](../src/semantic-evidence.mjs), [`src/browser-evidence.mjs`](../src/browser-evidence.mjs) | Structural evaluation of supplied evidence | Caller-supplied execution remains unattested |
+| [`src/model-recovery.mjs`](../src/model-recovery.mjs) | Categorized model errors and explicit source-fresh checkpoints | No model switch, quota query, or automatic resume |
+| [`src/native-tool-recovery.mjs`](../src/native-tool-recovery.mjs) | Deterministic, bounded remediation classes | No native interception, automatic retry, or permission bypass |
+| [`src/orchestration-advisor.mjs`](../src/orchestration-advisor.mjs) | Opt-in native worker-mode recommendation | Needs declared capabilities, low coupling and independent file ownership |
+| [`src/mcp.mjs`](../src/mcp.mjs), [`src/engine.mjs`](../src/engine.mjs) | Stdio protocol, public API orchestration, output bounds and state | No project-code mutation tool |
+
+## Execution flow
 
 ```mermaid
 sequenceDiagram
-  actor User
-  participant AG as Antigravity Agent
-  participant A2A as A2A MCP
-  participant FS as Workspace
-  participant DB as Local SQLite
-  User->>AG: Fix bug and verify it
-  opt When source relationships are needed
-    AG->>A2A: a2a_context / a2a_impact
-    A2A->>FS: Read authorized source metadata
-    A2A->>DB: Store incremental revision-scoped relationships & telemetry
-    A2A-->>AG: Related files, tests and risks (token estimates only on request)
-  end
-  AG->>AG: Edit with native tools
-  AG->>A2A: a2a_verify plan
-  A2A-->>AG: Existing candidate checks + acceptance criteria
-  AG->>AG: Run existing tests with native permissions
-  AG->>A2A: a2a_verify assess (report path and test_name)
-  A2A->>FS: Validate report, testcase and source snapshot
-  A2A->>DB: Save evidence hash and verdict
-  A2A-->>AG: Pass / fail / blocked / inconclusive
-  AG-->>User: Verified scope and remaining gaps
+    actor U as User
+    participant A as Antigravity
+    participant M as A2A MCP
+    participant F as Authorized workspace
+    participant D as Local SQLite
+    U->>A: Fix and verify behavior
+    opt Risk/unknown code makes A2A useful
+        A->>M: context query / impact summary
+        M->>F: Read permitted source paths
+        M->>D: Index static graph, source revision
+        M-->>A: Candidate files, risk, coverage uncertainty
+    end
+    A->>M: verify plan (Given/When/Then; evidence_type)
+    M-->>A: NOT_TESTED criteria + risk guidance
+    A->>A: Native edits, testing, browser/device (if available)
+    opt Completed local machine report exists
+        A->>M: verify assess (exact testcase, report)
+        M->>F: Verify local report hash/revision
+        M->>D: Record scoped result + evidence
+        M-->>A: Local assertion verdict; fully_verified=false
+    end
+    opt Explicit pause or tool failure
+        A->>M: evidence checkpoint or tool_recovery
+        M-->>A: Unverified notes / nonexecuting recovery advice
+    end
+    A-->>U: Implemented vs. tested vs. untested + blockers
 ```
 
-## Graph construction
+For a release eligibility decision, a separate independent runner freezes F01–F18, signs machine evidence and obtains an additional reviewer signature on the exact candidate. The fail-closed publication gate also checks the approved `main` SHA. Neither an internal A2A plan nor green CI substitutes for that process.
 
-The index is created by walking readable source/configuration files (non-recursive symlinks are skipped), using `(mtimeMs, size)` fast-path caching with a racy-stat guard to avoid re-reading unchanged files. Binary, generated, lockfile, sensitive, and oversized files are excluded. Each indexed file receives a `file:<relative-path>` node and SHA-256. Comment-aware syntax patterns add symbol definitions and local imports; feature relationships derived from filenames are marked `derived`. A filename-matched test edge is a **candidate**, not guaranteed coverage.
+## Revisions, graph and data handling
 
-Queries search node labels or paths, then retrieve batched adjacent edges. Impact analysis performs bounded breadth-first traversal prioritizing `IMPORTS` and `MAY_TEST` edges without expanding across unrelated `CONTRIBUTES_TO` feature siblings.
+- Source fingerprints are computed from tracked relevant workspace paths and content SHA-256, not just Git commits. Recognized A2A generated report JSON is excluded from **source** fingerprint to avoid self-referential loops; evidence bytes are independently hashed.
+- Path/mtime/size caching accelerates ordinary indexing; `verifyIntegrity` paths rehash content before making freshness/verification claims.
+- Local SQLite holds indexed source metadata and graph, evidence/run history, incident records, bounded telemetry, optional Markdown artifact contents/diffs, and explicit checkpoint notes. **Do not promise source content is never stored:** explicitly snapshotted Markdown is retained locally.
+- Case-specific browser/semantic structural checks are conservative and never cryptographically prove a user's live browser or database.
+- Actual file edits, model retries and hardware operations happen **outside A2A** using permitted native Antigravity facilities.
 
-## Revision & evidence design
+## Plugin lifecycle
 
-`revision_id = SHA256(workspace_id + SHA256(GitHEAD + sorted(path:fileHash)))` truncated. Unlike a Git commit alone, this includes uncommitted modifications. `workspaces.current_revision_id` tracks the active snapshot so reverting via `git checkout` or undo immediately restores cache hits. Historical runs are preserved, with `fresh=false` when evidence is no longer applicable.
+- `plugin.json`: plugin metadata and version.
+- `mcp_config.json`: Node stdio server.
+- `hooks.json`: `SessionStart` and **targeted `PostToolUse`**, never `PreInvocation`; bounded local metadata, best-effort behavior.
+- `rules/AGENTS.md`: tiny permanent guidance (<400 chars); Always-On adaptive policy at session start only when explicitly enabled.
+- `skills/a2a/SKILL.md`: native-first operational guidance; actual tools are in the generated MCP schema.
 
-## Verdict rules
+## Validation boundaries
 
-- `failed` if any required mapped case fails.
-- `blocked` if a required check cannot run and no required check has failed.
-- `passed` only if all requested criteria match completed positive machine-readable assertions.
-- `inconclusive` for absence of evidence, incomplete/invalid report, skipped assertions or missing named test case.
-- `stale` is a **read-time freshness flag**, not a historical run verdict.
+The repository CI executed **213/213 Node tests on Ubuntu Node 22** and succeeded on four OS/runtime jobs after behavioral PR #36 merged to `v2.0.1`. The E2E component starts a **real local MCP subprocess and SQLite** to exercise authorization, planning, false-PASS cases, checkpoint freshness and recovery. It does **not** test live Antigravity UI/Figma, printer hardware, Laravel HTTP/database invariants or the 18-case external STOCKROOM run.
 
-## Operational model
-
-A `node` subprocess handles one JSON-RPC request per stdin line, responds on stdout, and stores the graph in `a2a.sqlite` inside `PLUGIN_DATA`. A lightweight `hooks.json` (`SessionStart`, `PreInvocation`, `PostToolUse`) records `active-session.json` so `a2a_context(action="tokens")` resolves the active conversation transcript accurately. No HTTP listener is started.
-
-## Deliberate exclusions
-
-- No extra coding agent, multi-agent orchestration, model proxy or undocumented Antigravity interface.
-- No database server, embeddings API or vector store.
-- No browser automation replacement.
-- No automatic test command execution (test scripts can have side effects).
-- No code modifications in scanned repositories.
-- No claim of comprehensive symbol resolution for every language.
+See [contracts](CONTRACTS.md), [security](SECURITY.md), [behavioral Five Whys](BEHAVIORAL_5_WHYS_V2_0_1.md), [acceptance runbook](INDEPENDENT_ACCEPTANCE_RUNBOOK.md) and [release engineering](RELEASE.md).

@@ -9,3 +9,7 @@ Official CLI `usage.total_tokens` already equals `input_tokens + output_tokens`;
 Official source: https://antigravity.google/docs/cli/headless/ ; quota limitations: https://antigravity.google/docs/plans . See also `docs/CONVERSATION_USAGE.md`.
 
 The future benchmark must validate worker inclusion and exact plugin overhead against independent provider instrumentation where available; a zero or invented savings percentage is not acceptable.
+
+## Current developer status
+
+The [PR #36](https://github.com/alifakbxr/a2a/pull/36) behavioral work added recovery and evidence scopes but **did not** add a provider usage API or promise token savings. Local MCP/SQLite E2E is not a controlled Native/A2A model-token benchmark. See [evaluation](AB_EVALUATION.md) and [open acceptance](https://github.com/alifakbxr/a2a/issues/15).

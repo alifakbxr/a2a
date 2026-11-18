@@ -54,3 +54,7 @@ Values are medians with min/max, but interpretation depends on independent evide
 ## Distribution scope
 
 The evaluator at `benchmarks/ab-evaluate.mjs` is intentionally **source-checkout-only**. It is excluded from the installable npm tarball to avoid distributing optional research code in the runtime plugin. Clone or download the source repository at a pinned revision to run the command above; this does not require a new dependency. The packaged A2A MCP and CLI remain independent of the benchmark runner.
+
+## Behavioral reliability comparison — current candidate
+
+The [v2.0.1 behavioral changes](https://github.com/alifakbxr/a2a/pull/36) include a truthful completion summary, explicit checkpoints, native error guidance and parallel-ownership gating. To evaluate their effect, hold the prompt, source, model, effort, tool permissions and acceptance registry fixed across **Native, prior A2A baseline and v2.0.1**. Run at least **five independent trials per variant**; randomize order and measure user-visible acceptance outcomes as well as official usage when exposed. Reused transcripts, simulated F01–F18 proofs or browser-tab reloads cannot substitute for independent execution. **No matched repeated benchmark proving an improvement has been completed as of 18 November 2026**; [issue #15](https://github.com/alifakbxr/a2a/issues/15) remains open.

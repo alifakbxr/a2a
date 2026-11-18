@@ -21,9 +21,15 @@ A2A is language-agnostic in its **file, evidence, and MCP contracts**. Static sy
 
 ## Antigravity surface support
 
-- **IDE:** MCP tools & resources, `hooks.json` (`SessionStart`, `PreInvocation`, `PostToolUse`), skills, and `rules/AGENTS.md`; native browser testing remains under `/browser`.
+- **IDE:** MCP tools & resources, `hooks.json` (`SessionStart`, targeted `PostToolUse`; no `PreInvocation`), skills, and `rules/AGENTS.md`; native browser testing remains under `/browser`.
 - **App:** MCP/plugin contract; browser and orchestration remain native.
 - **CLI:** MCP/plugin contract and headless operation remain native (`antigravity-cli/settings.json` `trustedWorkspaces` supported, filtered by protected roots).
 - **SDK:** not used to proxy models or run third-party agents. A separately written SDK client could call this standard MCP server if supported.
 
 Availability and model permissions depend on the actual Antigravity version and account; A2A never assumes universal `/swarm` or `/teamwork` in IDE.
+
+## Runtime and evidence compatibility (v2.0.1)
+
+Node.js **>=22.13.0** is required for built-in `node:sqlite`. The following is tested in cross-platform **Node/MCP CI**, not confirmed for every installed Antigravity IDE version: Ubuntu Node 22/24, Windows Node 22, macOS Node 22. The actual tool contract includes typed acceptance with UI viewport/state/reference, opt-in `model_recovery`/`tool_recovery`, and opt-in native orchestration with `file_ownership="independent"` for parallel recommendations. See [current MCP contract](CONTRACTS.md).
+
+**Do not claim universal slash-command availability, browser access, native teamwork entitlements or running application compatibility without testing the installed environment.** A2A never adds language runtimes or test drivers. Real PHP/Laravel STOCKROOM external acceptance remains blocked, even though its frozen sources passed syntax and Vite build preflight.

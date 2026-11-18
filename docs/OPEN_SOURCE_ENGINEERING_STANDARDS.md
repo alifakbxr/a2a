@@ -56,3 +56,7 @@ A2A must not advertise this checklist as automatically verifying coding quality.
 - At most **one** scoped `a2a_impact` pass plus **one** `a2a_verify plan` when they meaningfully improve a high-risk task (manual exceptions justified by specific new evidence).
 - Keep maintainer guidance bounded, do not inject the whole research document into model context, and never append automatic token reports.
 - Avoid treating module count, test count, lines of code or tool calls as quality. Value comes from correct user-visible behavior and independently verified constraints.
+
+## Behavioral acceptance refinement (merged PR #36)
+
+The actual v2.0.1 verifier now supports **Given/When/Then** per-criterion acceptance, explicit required evidence type and UI state/viewport/reference. This extends the minimal-diff and regression-first review discipline; it does **not** make A2A an automated coding-quality reviewer. Ordinary local test assertions never imply independently verified end-to-end behavior. For long-running tasks, preserve concise explicit decisions and untested scenarios in revision-bound checkpoints, then revalidate after edits. See [current contracts](CONTRACTS.md) and [Five Whys](BEHAVIORAL_5_WHYS_V2_0_1.md).

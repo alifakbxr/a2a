@@ -35,3 +35,7 @@ Place the registry at `~/.config/a2a/acceptance-registry.json` outside the gener
 The registry is read by `a2a_verify(operation="assess_release")`. The CLI `scripts/evaluate-acceptance.mjs` also accepts an optional pinned-registry path after the trust-keys path.
 
 Without a matching registry, `release_ready` stays false even if all submitted assertions have valid signatures. A true result means eligible for independent review of signed evidence, not proof of test execution or production certification. File permissions and reviewer keys must be protected by the user's OS.
+
+## Behavioral completion versus release gate (v2.0.1)
+
+[PR #36](https://github.com/alifakbxr/a2a/pull/36) added a separate **typed** plan/assessment contract: each criterion may declare `given`, `when`, `then` and `evidence_type`; browser and visual criteria require `viewport`, `ui_state` and `reference`. Planning is `not_tested`. Local `assess` can report passed **named machine assertions** but its `completion.fully_verified` stays false, and local test artifacts cannot independently establish UI/browser, hardware, security or release evidence. `assess_semantic` and `assess_browser` remain **unattested structural reviews**. Only the separately signed, pinned `assess_release` plus the [publish authorization policy](RELEASE_AUTHORIZATION.md) can contribute to release eligibility. F01–F18 external evidence is [still pending](https://github.com/alifakbxr/a2a/issues/15).

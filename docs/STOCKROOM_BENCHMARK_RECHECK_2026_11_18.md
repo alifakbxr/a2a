@@ -45,3 +45,7 @@ Execution still requires isolated Laravel PHP with PDO SQLite and DOM/mbstring/X
 The reproducible, frozen source archives are available to the user in their private Library and were intentionally **not committed** to `alifakbxr/a2a`. Do not put their `.env`, logs, browser profiles, customer data or session archives into a public GitHub release.
 
 This report is not release acceptance. The release gate remains blocked until independent live evidence and controlled repeated benchmark trials are available.
+
+## Later A2A implementation does not retroactively change this baseline
+
+[Behavioral PR #36](https://github.com/alifakbxr/a2a/pull/36) later merged to `v2.0.1` with 213/213 **A2A Node tests**, including local MCP stdio/SQLite E2E. Those tests are **not reruns of these frozen Laravel applications**. The PHP extension blocker and missing independent F01–F18 browser/database execution remain unchanged. Do not relabel the private STOCKROOM negative controls as passing just because A2A CI succeeded. See [release issue #15](https://github.com/alifakbxr/a2a/issues/15).
