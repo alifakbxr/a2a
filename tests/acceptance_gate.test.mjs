@@ -10,12 +10,13 @@ function entry(type='integration'){
  e.signature=crypto.sign(null,Buffer.from(attestationPayload({revision:rev,scenarioId:'checkout',evidence:e})),privateKey).toString('base64');
  return e;
 }
+const pinnedRegistry=()=>[{id:'checkout',requirement_sha256:crypto.createHash('sha256').update('Retry commit exactly once').digest('hex'),critical:true,required_evidence_types:['integration']}];
 const basic=()=>({revision:rev,evaluator:{name:'external-ci',independent:true},scenarios:[{id:'checkout',requirement:'Retry commit exactly once',critical:true,verdict:'passed',required_evidence_types:['integration'],evidence:[entry()]}],critical_defects:[]});
 test('untrusted self asserted independent:true cannot pass a release gate',()=>{
  const r=assessRelease(basic());assert.equal(r.release_ready,false);assert.equal(r.scenarios.results[0].verdict,'not-tested');
 });
 test('pinned trusted key validates only correct signed rev/scenario/evidence bytes',()=>{
- assert.equal(assessRelease(basic(),{trustKeys}).release_ready,true);
+ assert.equal(assessRelease(basic(),{trustKeys,requiredScenarios:pinnedRegistry()}).release_ready,true);
  const a=basic();a.scenarios[0].evidence[0].revision='old';assert.equal(assessRelease(a,{trustKeys}).release_ready,false);
  const b=basic();b.scenarios[0].evidence[0].artifact_sha256='b'.repeat(64);assert.equal(assessRelease(b,{trustKeys}).release_ready,false);
 });
@@ -40,4 +41,23 @@ test('release assessment does not export untrusted private requirement text',()=
  const a=basic();a.scenarios[0].requirement='Secret=/home/user/.env API_KEY=abc';
  const text=JSON.stringify(assessRelease(a,{trustKeys}));
  assert.equal(text.includes('/home/user'),false);assert.equal(text.includes('API_KEY=abc'),false);
+});
+
+
+test('no pinned registry rejects even a correctly signed passing assertion',()=>{
+ const r=assessRelease(basic(),{trustKeys});
+ assert.equal(r.scope_verified,false);
+ assert.equal(r.release_ready,false);
+ assert.ok(r.blockers.some(b=>String(b.reason).includes('registry')));
+});
+test('omitted critical scenario rejects otherwise valid evidence',()=>{
+ const extra={id:'tenant-isolation',requirement_sha256:crypto.createHash('sha256').update('Tenant isolation for offline sync').digest('hex'),critical:true,required_evidence_types:['security']};
+ const r=assessRelease(basic(),{trustKeys,requiredScenarios:[...pinnedRegistry(),extra]});
+ assert.equal(r.release_ready,false);
+ assert.ok(r.blockers.some(x=>x.scenario_id==='tenant-isolation'));
+});
+test('modified requirement and criticality cannot bypass pinned registry',()=>{
+ const a=basic();a.scenarios[0].requirement='We tested something easier';a.scenarios[0].critical=false;
+ const r=assessRelease(a,{trustKeys,requiredScenarios:pinnedRegistry()});
+ assert.equal(r.scope_verified,false);assert.equal(r.release_ready,false);
 });
