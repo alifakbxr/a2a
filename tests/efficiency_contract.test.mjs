@@ -94,6 +94,9 @@ test('Always-On bounded impact summary preserves risk, uncertainty and full coun
     assert.ok(JSON.stringify(quick).length<JSON.stringify(full).length);
     assert.equal(quick.tokens_affected,undefined);
     assert.ok(full.teamwork_advisory, 'Broad dependency changes may justify Teamwork advisory');
+    assert.equal(full.teamwork_advisory.capability_confirmed,false);
+    assert.equal(full.teamwork_advisory.user_approval_required,true);
+    assert.equal(full.teamwork_advisory.automatic_worker_launch,false);
     // Sensitive risk alone is not evidence that parallel execution is beneficial.
     const solo=path.join(root,'src','payments.js');
     fs.writeFileSync(solo,'export const payment = true;');
