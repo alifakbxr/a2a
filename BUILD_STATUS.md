@@ -22,7 +22,7 @@
 - Local-only browser/semantic evidence parsing with **unattested** provenance. Signed external acceptance and second reviewer approval are separate.
 - Source-fresh model/checkpoint recovery (explicit decisions, pending tests, secret-assignment rejection), bounded native tool failure advice without interception or execution.
 - Opt-in teamwork advisor requires explicit low coupling and independent file ownership. No automatic workers or additional runtime dependencies.
-- Privacy-preserving telemetry for historic conversations; no fabricated token savings.
+- Privacy-preserving telemetry for historic conversations; no fabricated token savings. Optional `a2a stats` calls remote GitHub APIs via the user's installed `gh` CLI only when explicitly requested; clone traffic is not a verified installation metric.
 
 ## Actual private STOCKROOM preflight
 
