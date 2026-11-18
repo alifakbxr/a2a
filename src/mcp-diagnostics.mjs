@@ -20,6 +20,9 @@ export function classifyMcpFailure(toolName,error){
    message:'A2A denied workspace or file access under its safety policy.',
    next_step:'Choose an authorized project and permitted project file. Do not change protected-root checks.'};
  }
+ if(/ENOENT|no such file|does not exist|not found|cannot find (?:the )?(?:file|path)|unknown workspace|invalid workspace/i.test(msg)){
+  return {status:'error',code:'workspace_not_found',message:'Requested workspace does not exist or is not accessible.',next_step:'Provide an existing authorized project path; no permissions are automatically changed.'};
+ }
  if(/Unknown tool/i.test(msg)){
   return {status:'error',code:'unknown_tool',message:'Tool is not available.',
    available_tools:ALL_TOOLS.filter(x=>x.name.startsWith('a2a_')).map(x=>x.name),
