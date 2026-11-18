@@ -75,7 +75,21 @@ export function planVerification({index,impact,criteria=[]}){
     return {id,description:c,status:'not_run',evidence_required:true};
   });
   const checks=discoverTestCommands(index);
-  return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,risk_guidance:proposeRiskTests({paths:impact?.changed??[],criteria}),checks,execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
+  const riskGuidance=proposeRiskTests({paths:impact?.changed??[],criteria});
+  const highRisk=impact?.risk==='high'||riskGuidance.findings.some(x=>x.priority==='critical');
+  // Maintainer discipline is a bounded NOT-REVIEWED checklist, never a quality verdict.
+  // It costs no extra tool call and is omitted for unrelated/trivial tasks.
+  const maintainerReview=highRisk?{
+    status:'not-reviewed',
+    required_checks:[
+      'Reproduce defect; failing regression before fix, passing after',
+      'Minimal diff; preserve local conventions and public API compatibility',
+      'Test observable behavior and adversarial boundary, not test names',
+      'Review maintenance/performance cost; no unapproved dependencies'
+    ],
+    proof:'native-test-and-human-review-required'
+  }:null;
+  return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,risk_guidance:riskGuidance,...(maintainerReview?{maintainer_review:maintainerReview}:{}),checks,execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
 }
 function aggregate(results){if(results.some(r=>r.status==='failed'))return 'failed';if(results.some(r=>r.status==='blocked'))return 'blocked';if(results.length&&results.every(r=>r.status==='passed'))return 'passed';return 'inconclusive'}
 export function assessVerification(store,wsId,root,rev,criteria){
