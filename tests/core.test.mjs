@@ -595,3 +595,28 @@ test('artifact versioning: snapshots versions, computes unified diffs, and integ
   assert.equal(diffRes.v2,2);
   assert.ok(diffRes.diff.includes('+- Item 2 added'));
 }));
+
+test('A2A semantic JSON reports do not change their own source revision',()=>withEngine((e,root,write)=>{
+ const baseline=e.sync(root,{verifyIntegrity:true});
+ const report={revision:baseline.revision,claims:[{id:'retry-case',scenario:'lost-response-retry',evidence:[]}]};
+ write('reports/scenarios.json',JSON.stringify(report));
+ const result=e.verify({workspace:root,operation:'assess_semantic',artifact:'reports/scenarios.json'});
+ assert.equal(result.report_status,'insufficient-evidence');
+ assert.equal(result.current_revision,baseline.revision);
+ assert.equal(e.sync(root,{verifyIntegrity:true}).revision,baseline.revision);
+ // Tampering invalidates the stored evidence hash even though reports do not change source revisions.
+ write('reports/scenarios.json',JSON.stringify({...report,note:'modified evidence'}));
+ const history=e.context({workspace:root,action:'freshness'});
+ assert.ok(history.evidence.some(x=>x.artifact_intact===false));
+ assert.equal(e.sync(root,{verifyIntegrity:true}).revision,baseline.revision);
+ write('src/config.json',JSON.stringify({enabled:true}));
+ assert.notEqual(e.sync(root,{verifyIntegrity:true}).revision,baseline.revision);
+ const stale=e.verify({workspace:root,operation:'assess_semantic',artifact:'reports/scenarios.json'});
+ assert.equal(stale.report_status,'stale');
+}));
+test('ordinary source JSON remains revision-bound even within reports folder',()=>withEngine((e,root,write)=>{
+ const before=e.sync(root,{verifyIntegrity:true});
+ write('reports/app-configuration.json',JSON.stringify({feature:true}));
+ const after=e.sync(root,{verifyIntegrity:true});
+ assert.notEqual(before.revision,after.revision);
+}));
