@@ -14,7 +14,7 @@ export const isTestFile=rel=>testFile.test(rel);
 // exclusion to report directories AND recognized report shapes; ordinary JSON,
 // including application configuration, must still affect the source revision.
 export function isGeneratedA2AReport(rel,content){
-  if(!/(^|\\/)(?:reports?|test-results)\\/[^/]+\\.json$/i.test(String(rel||'').replaceAll('\\\\','/')))return false;
+  if(!/(^|\/)(?:reports?|test-results)\/[^/]+\.json$/i.test(String(rel||'').replaceAll('\\','/')))return false;
   try{
     const x=JSON.parse(String(content));
     if(!x||typeof x!=='object'||Array.isArray(x))return false;
@@ -51,7 +51,7 @@ export function discover(root,{limit=MAX_INDEX_FILES,cachedFiles=null}={}){
       try{const full=safeFile(root,rel);const st=fs.statSync(full);if(st.size>MAX_SOURCE_BYTES){skip.push('large:'+rel);continue}
         if(totalBytes+st.size>32*1024*1024){skip.push('index_byte_budget_exceeded');stack.length=0;break}
         const cached=cachedFiles?.get(rel);
-        if(cached && ent.name!=='package.json' && cached.mtime_ms!=null && cached.mtime_ms===st.mtimeMs && cached.bytes===st.size && (now-st.mtimeMs)>1500){
+        if(cached && ent.name!=='package.json' && !/(^|\/)(?:reports?|test-results)\/[^/]+\.json$/i.test(rel) && cached.mtime_ms!=null && cached.mtime_ms===st.mtimeMs && cached.bytes===st.size && (now-st.mtimeMs)>1500){
           totalBytes+=st.size;
           paths.push({path:rel,hash:cached.hash,language:cached.language||detectLanguage(rel),bytes:st.size,mtime_ms:st.mtimeMs,text:null});
           continue;
