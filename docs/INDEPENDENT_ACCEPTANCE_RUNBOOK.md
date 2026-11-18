@@ -1,4 +1,4 @@
-# Final independent validation runbook — pre-vNext
+# Independent validation runbook — A2A v2.0.1
 
 This is an **execution checklist**, not a report claiming these tests were run.
 Never modify the four original STOCKROOM benchmark ZIPs. Copy to disposable test workspaces.
@@ -53,4 +53,4 @@ No unit-test name, human prose or custom JSON witness list may be accepted as pr
 ## 6. Merge policy
 - Keep all 12 original feature PRs **Draft and Open**. Integration PR #29 has been merged **only** into `v2.0.1` with the user's approval.
 - Keep `main` unchanged. The `v2.0.1` branch contains the combined implementation; do not publish an npm/GitHub release or promote the version branch to `main` until real external acceptance and Antigravity install/browser smoke checks have passed.
-- Once passed, merge only reviewed feature commits to a dedicated versioned benchmark branch, run combined CI again and compare against frozen main. Production merge into main requires explicit user authorization.
+- The reviewed features are already integrated in `v2.0.1` via #29. Do **not** merge the original feature PRs a second time. After independent acceptance and benchmarks pass, open a **single** PR `v2.0.1 → main` and merge it only with explicit user authorization. See [v2.0.1 traceability](./V2_0_1_TRACEABILITY.md).
