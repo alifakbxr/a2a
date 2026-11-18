@@ -13,3 +13,5 @@ Statuses: passed, failed, blocked, partial, running, not-tested. Only externally
 The output includes a suggested `agy --conversation ID` command ONLY when the ID is validated; using it requires user approval and may be impossible if the conversation is unavailable. It never resumes automatically. Browser cookies, raw prompts, model text and verbose error bodies are discarded. The checkpoint does not prove source revision freshness.
 
 Official sources: https://antigravity.google/docs/cli/headless/ and https://antigravity.google/docs/cli/commands/resume/ ; related user reports: https://github.com/google-antigravity/antigravity-cli/issues/163 .
+
+**Pre-vNext trust note:** The checkpoint summarizes **reported** states, not independent test results. The output explicitly records `summary.reported_passed` and `summary.verified_passed:0` unless a separate verifier establishes actual evidence. Caller-supplied source and served-build revisions are not authenticated; a mismatch is flagged but matching strings are not proof of served build identity. No browser or model is resumed automatically.
