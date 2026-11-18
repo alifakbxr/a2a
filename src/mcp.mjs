@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import pkg from '../package.json' with {type:'json'};
 import path from 'node:path';
 import readline from 'node:readline';
 import {Engine} from './engine.mjs';
@@ -8,7 +9,7 @@ import {dataDir,getA2AMode,getCompactMode,getAutoTrustMode,loadAllowlist,loadAnt
 import {getSessionTokenUsage} from './tokens.mjs';
 import {classifyMcpFailure} from './mcp-diagnostics.mjs';
 
-const server={name:'a2a',version:'2.0.0'}, engine=new Engine();
+const server={name:'a2a',version:pkg.version}, engine=new Engine();
 const io=readline.createInterface({input:process.stdin,crlfDelay:Infinity,terminal:false});
 const answer=(id,result,error)=>{
   const message={jsonrpc:'2.0',id,...(error?{error:{code:error.code||-32603,message:String(error.message||error).slice(0,300)}}:{result})};
