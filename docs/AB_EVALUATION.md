@@ -48,3 +48,5 @@ Values are medians with min/max, but interpretation depends on independent evide
 **Sources:** [Antigravity headless output](https://antigravity.google/docs/cli/headless/), [plan quotas](https://antigravity.google/docs/plans), [Google DeepMind AlphaProof Code: independent verification](https://deepmind.google/blog/introducing-alphaproof-code/).
 
 **Limitations:** Comparison readiness means repeated captures exist; it does not automatically prove randomization, identical external conditions, causal improvements or quota equivalence.
+
+**Pre-vNext correction (18 Nov 2026):** This evaluator now refuses identical capture bytes reused as independent runs (SHA-256 collision of the entire captured result) and rejects per-run setup overrides that contradict the frozen manifest. `comparability.capture_repetitions_ready` only indicates sufficient **distinct captures**; `comparability.ready` remains **false** until independence, acceptance evidence and provider usage are established out of band. Distinct files alone still do not prove statistical or causal equivalence. No winner can be declared from self-reported weekly Free Tier percentages.
