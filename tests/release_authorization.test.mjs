@@ -2,13 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
-import {assertPublishAuthorized} from '../scripts/release-authorization.mjs';
+import {assertPublishAuthorized,releaseApprovalPayload} from '../scripts/release-authorization.mjs';
 import {attestationPayload} from '../scripts/evaluate-acceptance.mjs';
 
 const sha='a'.repeat(40);
 function fixture(){
   const {publicKey,privateKey}=crypto.generateKeyPairSync('ed25519');
-  const trustKeys={independent:publicKey.export({type:'spki',format:'pem'}).toString()};
+  const {publicKey:reviewerPub,privateKey:reviewerPriv}=crypto.generateKeyPairSync('ed25519');
+  const trustKeys={
+    independent:publicKey.export({type:'spki',format:'pem'}).toString(),
+    reviewer:reviewerPub.export({type:'spki',format:'pem'}).toString()
+  };
   const revision='source-rev-01';
   const scenarios=[],requirements=[];
   for(let i=1;i<=18;i++){
@@ -33,6 +37,13 @@ function fixture(){
       acceptance_registry_sha256:crypto.createHash('sha256').update(JSON.stringify(registry)).digest('hex'),
       real_antigravity_validation:true,privacy_reviewed:true,repeated_benchmark_verified:true
     }
+  };
+  const approved_at=new Date().toISOString();
+  manifest.release_approval={
+    key_id:'reviewer',approved_at,
+    signature:crypto.sign(null,Buffer.from(releaseApprovalPayload({
+      release_target:manifest.release_target,revision:manifest.revision,approved_at
+    })),reviewerPriv).toString('base64')
   };
   return {
     repository:'alifakbxr/a2a',eventName:'release',ref:'refs/tags/v2.0.1',
@@ -68,6 +79,9 @@ test('publish gate rejects unapproved, divergent, forged, incomplete and wrong-r
     x=>{x.registry.scenarios.pop()},
     x=>{x.trustKeys={}},
     x=>{x.manifest.scenarios[0].requirement='Silently changed'},
+    x=>{x.manifest.release_approval.signature='AA=='},
+    x=>{x.manifest.release_approval.approved_at='2020-01-01T00:00:00.000Z'},
+    x=>{x.manifest.release_target.privacy_reviewed=false},
   ];
   for(const mutate of cases){
     const input=fixture();
