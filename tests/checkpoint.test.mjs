@@ -6,7 +6,7 @@ test('captures interrupted browser step and distinguishes unverified scenario',(
  const ev=[{event:'init',conversation_id:c},{event:'step_update',step_update:{step_index:1,state:'DONE'}},{event:'step_update',step_update:{step_index:2,state:'ACTIVE'}}];
  const out=checkpointFromStream(ev,{scenarios:[{id:'online-pos',status:'passed',evidence_ref:'ci/1'},{id:'offline-restart',status:'not-tested'}]});
  assert.equal(out.completed_steps,1);assert.equal(out.unfinished_step_count,1);
- assert.equal(out.summary.passed,1);assert.equal(out.summary.not_tested,1);
+ assert.equal(out.summary.reported_passed,1);assert.equal(out.summary.verified_passed,0);assert.equal(out.summary.not_tested,1);
  assert.equal(out.resume_suggestion.manual_command,'agy --conversation '+c);
  assert.equal(out.resume_suggestion.auto_executed,false);
 });
@@ -26,4 +26,11 @@ test('untrusted evidence paths or error strings are excluded from checkpoint',()
  const report=checkpointFromStream([],{scenarios:[{id:'secret-location',status:'blocked',evidence_ref:'/home/private/.env',reason_code:'token=abc'}]});
  assert.equal(report.scenarios[0].evidence_ref,undefined);
  assert.equal(report.scenarios[0].reason_code,undefined);
+});
+
+test('untrusted matched revisions cannot become authenticated evidence',()=>{
+ const r=checkpointFromStream([],{revision:'sha123',served_build_revision:'sha123',scenarios:[{id:'foo',status:'passed'}]});
+ assert.equal(r.revision_authenticated,false);assert.equal(r.summary.verified_passed,0);
+ const mismatch=checkpointFromStream([],{revision:'sha123',served_build_revision:'sha999',scenarios:[]});
+ assert.equal(mismatch.reported_build_mismatch,true);
 });
