@@ -555,6 +555,7 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
   const resolved = path.resolve(targetPath);
 
   let authorizedBoundary = null;
+  let trustedBrainArtifact=false;
   if (workspaceRoot) {
     try {
       const authWs = requireAuthorizedWorkspace(workspaceRoot);
@@ -570,6 +571,7 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
     if (path.dirname(resolved) === brainDir && path.extname(resolved).toLowerCase()==='.md'
         && !path.basename(resolved).startsWith('.')) {
       authorizedBoundary = brainDir;
+      trustedBrainArtifact=true;
     }
   }
   // No global allowlist fallback: authorization is bound to the *requested* workspace.
@@ -578,7 +580,7 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
     throw new Error('Path escapes authorized workspace or brain boundary');
   }
 
-  if (isProtectedRoot(resolved)) {
+  if (isProtectedRoot(resolved) && !trustedBrainArtifact) {
     throw new Error('Access to protected root denied');
   }
 
