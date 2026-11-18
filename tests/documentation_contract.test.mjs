@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {TOOLS} from '../src/tools.mjs';
 
-const root=fileURLToPath(new URL('../',import.meta.url));
+const root=path.resolve(fileURLToPath(new URL('../',import.meta.url)));
 const read=relative=>fs.readFileSync(path.join(root,relative),'utf8');
 const files=['README.md','BUILD_STATUS.md','skills/a2a/SKILL.md',
   ...fs.readdirSync(path.join(root,'docs')).filter(n=>n.endsWith('.md')).map(n=>'docs/'+n)];
