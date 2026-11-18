@@ -205,51 +205,58 @@ export class Store {
       throw new Error(`Artifact content exceeds maximum allowed size (${MAX_ARTIFACT_BYTES/1024} KB)`);
     }
     const contentSha=sha256(rawContent);
-    const latest=this.get(
-      'SELECT * FROM artifact_versions WHERE workspace_id IS ? AND conversation_id=? AND artifact_name=? ORDER BY version_number DESC LIMIT 1',
-      workspaceId||null,conversationId,artifactName
-    );
-    if(latest && latest.content_sha===contentSha){
-      return {...latest,changed:false};
-    }
-    const versionNumber=latest?(latest.version_number+1):1;
-    const diff=latest?computeUnifiedDiff(latest.content,rawContent,`v${latest.version_number}`,`v${versionNumber}`):'';
-    const id=sha256(`${workspaceId||'unassigned'}:${conversationId}:${artifactName}:${versionNumber}:${contentSha}`).slice(0,32);
-    const now=new Date().toISOString();
-    this.run(
-      'INSERT INTO artifact_versions(id,workspace_id,conversation_id,artifact_name,version_number,content_sha,content,diff_from_previous,created_at) VALUES(?,?,?,?,?,?,?,?,?)',
-      id,workspaceId||null,conversationId,artifactName,versionNumber,contentSha,rawContent,diff,now
-    );
+    // Serialize version allocation and retention across concurrent processes.
+    // The database is the source of truth; filesystem shadows are best-effort.
+    let outcome,removedVersions=[];
+    this.transaction(()=>{
+      const latest=this.get(
+        'SELECT * FROM artifact_versions WHERE workspace_id IS ? AND conversation_id=? AND artifact_name=? ORDER BY version_number DESC LIMIT 1',
+        workspaceId||null,conversationId,artifactName
+      );
+      if(latest&&latest.content_sha===contentSha){
+        outcome={...latest,changed:false};
+        return;
+      }
+      const versionNumber=latest?latest.version_number+1:1;
+      const diff=latest?computeUnifiedDiff(latest.content,rawContent,'v'+latest.version_number,'v'+versionNumber):'';
+      const id=sha256((workspaceId||'unassigned')+':'+conversationId+':'+artifactName+':'+versionNumber+':'+contentSha).slice(0,32);
+      const now=new Date().toISOString();
+      this.run(
+        'INSERT INTO artifact_versions(id,workspace_id,conversation_id,artifact_name,version_number,content_sha,content,diff_from_previous,created_at) VALUES(?,?,?,?,?,?,?,?,?)',
+        id,workspaceId||null,conversationId,artifactName,versionNumber,contentSha,rawContent,diff,now
+      );
+      // Keep retention independent of filesystem-shadow write success.
+      const excess=this.all(
+        'SELECT id,version_number FROM artifact_versions WHERE workspace_id IS ? AND conversation_id=? AND artifact_name=? ORDER BY version_number DESC LIMIT -1 OFFSET 10',
+        workspaceId||null,conversationId,artifactName
+      );
+      for(const oldRow of excess)this.run('DELETE FROM artifact_versions WHERE id=?',oldRow.id);
+      removedVersions=excess.map(x=>x.version_number);
+      outcome={
+        id,workspace_id:workspaceId||null,conversation_id:conversationId,artifact_name:artifactName,
+        version_number:versionNumber,content_sha:contentSha,diff_from_previous:diff,created_at:now,
+        changed:true,bytes:Buffer.byteLength(rawContent)
+      };
+    });
+    if(!outcome.changed)return outcome;
     try{
       const histDir=path.join(this.base,'artifact_history',workspaceId||'unassigned',conversationId);
       fs.mkdirSync(histDir,{recursive:true,mode:0o700});
+      // A symlink in the history path must never redirect private snapshots.
+      let cursor=this.base;
+      for(const part of path.relative(this.base,histDir).split(path.sep)){
+        cursor=path.join(cursor,part);
+        if(fs.lstatSync(cursor).isSymbolicLink())throw Error('Unsafe artifact shadow path');
+      }
       try{fs.chmodSync(histDir,0o700)}catch{}
-      const shadowPath=path.join(histDir,`${artifactName}.v${versionNumber}.md`);
-      fs.writeFileSync(shadowPath,rawContent,{encoding:'utf8',mode:0o600,flag:'wx'});
-
-      // Retention policy: Keep at most 10 versions per artifact
-      const excess=this.all(
-        'SELECT id, version_number FROM artifact_versions WHERE workspace_id IS ? AND conversation_id=? AND artifact_name=? ORDER BY version_number DESC LIMIT -1 OFFSET 10',
-        workspaceId||null,conversationId,artifactName
-      );
-      for(const oldRow of excess){
-        this.run('DELETE FROM artifact_versions WHERE id=?',oldRow.id);
-        const oldShadow=path.join(histDir,`${artifactName}.v${oldRow.version_number}.md`);
-        if(fs.existsSync(oldShadow)) try{fs.unlinkSync(oldShadow)}catch{}
+      const shadowPath=path.join(histDir,artifactName+'.v'+outcome.version_number+'.md');
+      try{fs.writeFileSync(shadowPath,rawContent,{encoding:'utf8',mode:0o600,flag:'wx'})}catch{}
+      for(const n of removedVersions){
+        const oldShadow=path.join(histDir,artifactName+'.v'+n+'.md');
+        try{fs.unlinkSync(oldShadow)}catch{}
       }
     }catch{}
-    return {
-      id,
-      workspace_id:workspaceId||null,
-      conversation_id:conversationId,
-      artifact_name:artifactName,
-      version_number:versionNumber,
-      content_sha:contentSha,
-      diff_from_previous:diff,
-      created_at:now,
-      changed:true,
-      bytes:Buffer.byteLength(rawContent)
-    };
+    return outcome;
   }
   listArtifactVersions({workspaceId=null,conversationId,artifactName=null,limit=50}={}){
     let sql="SELECT id,workspace_id,conversation_id,artifact_name,version_number,content_sha,created_at,LENGTH(content) AS bytes,(diff_from_previous IS NOT NULL AND diff_from_previous!='') AS has_diff FROM artifact_versions WHERE 1=1";
