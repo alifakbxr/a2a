@@ -56,7 +56,8 @@ export class Engine {
       return {action:'tokens',history:output,note:'Historical token counters are not equivalent to provider-reported usage.'};
     }
     if(action==='skeleton'){
-      const s=this.resolveMeta(workspace);
+      // The preview must be labeled with the revision of the bytes actually read.
+      const s=this.sync(workspace,{verifyIntegrity:true});
       const singleTarget=file||targetPath;
       const targets=[...(typeof singleTarget==='string'&&singleTarget.trim()?[singleTarget.trim()]:[]),...(Array.isArray(files)?files:[])].filter(Boolean);
       const uniqueTargets=[...new Set(targets)].slice(0,20);
@@ -109,7 +110,7 @@ export class Engine {
       return payload;
     }
 
-    const s=this.sync(workspace,{verifyIntegrity:action==='freshness'});
+    const s=this.sync(workspace,{verifyIntegrity:action==='freshness'||action==='query'});
     const base={
       workspace_id:s.wsId,
       revision:s.revision,
@@ -182,7 +183,7 @@ export class Engine {
   impact({workspace,changed=[],depth=3,summary=false}={}){
     validateChangedPaths(changed);
     const compact=getCompactMode();
-    const s=this.sync(workspace);
+    const s=this.sync(workspace,{verifyIntegrity:true});
     const res=analyzeImpact(this.store,s.wsId,s.root,{changed,depth});
     // Always-On uses this one-call triage response for risky or multi-module work.
     // Preserve risk, uncertainty, source freshness, and total counts. Never imply
@@ -245,7 +246,7 @@ export class Engine {
   }
   verify({workspace,operation='plan',criteria=[],changed=[],worker_name,artifact,allow_stale}={}){
     const compact=getCompactMode();
-    const s=this.sync(workspace,{verifyIntegrity:operation!=='plan'});
+    const s=this.sync(workspace,{verifyIntegrity:true});
     if(operation==='plan'){
       validateChangedPaths(changed);
       const plan=planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria});
