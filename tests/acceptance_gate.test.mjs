@@ -35,3 +35,9 @@ test('no machine evidence or self-review declaration fails closed',()=>{
  assert.equal(assessRelease(a,{trustKeys}).release_ready,false);
  assert.throws(()=>assessRelease({...a,evaluator:{independent:false,name:'agent'}},{trustKeys}),/independent/);
 });
+
+test('release assessment does not export untrusted private requirement text',()=>{
+ const a=basic();a.scenarios[0].requirement='Secret=/home/user/.env API_KEY=abc';
+ const text=JSON.stringify(assessRelease(a,{trustKeys}));
+ assert.equal(text.includes('/home/user'),false);assert.equal(text.includes('API_KEY=abc'),false);
+});
