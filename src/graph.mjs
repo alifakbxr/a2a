@@ -31,6 +31,27 @@ export function contextQuery(store,wsId,{query='',limit=12}={}){
   return {nodes:nodes.map(({id,kind,label,file_path,line,basis})=>({id,kind,label,file:file_path,line,basis})),relations:[...new Map(relationships.map(e=>[e.source+'|'+e.target+'|'+e.kind,e])).values()].slice(0,80),uncertainty:['Static discovery is not full behavioral or runtime dependency coverage.']};
 }
 
+// A changed entry point often reaches services through dynamic framework dispatch.
+// This is a review trigger, never proof of route coverage or authorization.
+export function inferEntryPointRisks(changed=[]){
+ const paths=Array.isArray(changed)?changed:[];
+ const groups=[
+  ['routes',/^(?:routes\/|app\/Http\/routes\/)/i],
+  ['middleware',/(?:Middleware\/|Policy\.php$|Policies\/|Guard\.php$)/i],
+  ['http-controller',/(?:Controllers?\/|Http\/Requests?\/)/i],
+  ['service',/(?:Services?\/|Actions?\/|Repositories?\/)/i],
+  ['background',/(?:Jobs?\/|Listeners?\/|Commands?\/|Queue\/)/i],
+  ['offline-sync',/(?:offline|sync|replay|service[-_]?worker|\bsw\.js\b)/i],
+  ['financial',/(?:checkout|payment|refund|price|discount|tax|ledger|invoice|poscontroller)/i],
+  ['tenant-relationship',/(?:tenant|organization|organisation|store|supplier|membership|inventory|productvariant)/i]
+ ];
+ const entry_points=groups.filter(([,re])=>paths.some(x=>re.test(x))).map(([name])=>name);
+ return {entry_points,requires_role_matrix:entry_points.some(x=>['routes','middleware','http-controller','background','offline-sync','tenant-relationship'].includes(x)),
+  requires_domain_invariant_tests:entry_points.some(x=>['financial','offline-sync','tenant-relationship'].includes(x)),
+  verified_coverage:false,
+  warning:'Framework route/middleware dispatch and foreign-key ownership are not established by static file references. Test each entry point independently.'};
+}
+
 // Suggestions only: filename proximity does not prove that a test exercises a path.
 export function rankFallbackTests(changed,available,limit=5){
   const stems=changed.map(p=>p.split('/').at(-1).replace(/\.[^.]+$/,'').replace(/(?:Service|Controller|Repository|Request|Model)$/,'').toLowerCase()).filter(Boolean);
@@ -83,10 +104,12 @@ export function analyzeImpact(store,wsId,workspace,{changed=[],depth=3}={}){
   if(uniquePaths.some(p=>/schema|migration|lock|config|middleware/i.test(p)))risks.push('cross-module-configuration');
   if(nodes.some(n=>n.basis==='derived')||foundEdges.some(e=>e.state==='derived'))risks.push('heuristic-relations');
   if(!relatedTests.length)risks.push('no-mapped-tests');
+  const entryReview=inferEntryPointRisks(uniquePaths);
+  if(entryReview.requires_role_matrix||entryReview.requires_domain_invariant_tests)risks.push('unverified-runtime-authorization-or-domain-constraints');
   const risk=risks.includes('security-or-state-sensitive')?'high':risks.length>=2?'medium':uniquePaths.length?'low':'unknown';
   const affected=nodes.filter(n=>n.kind!=='symbol');
   const uniqueTests=uniq(relatedTests);
-  return {changed:uniquePaths,affected:affected.slice(0,25),affected_total:affected.length,related_tests:uniqueTests.slice(0,10),related_tests_total:uniqueTests.length,fallback_test_candidates:relatedTests.length?[]:fallback,risk,signals:risks,coverage:{graph_nodes_visited:visited.size,traversal_depth:cappedDepth,static_only:true,result_truncated:affected.length>25||uniqueTests.length>10,graph_visit_limit_reached:queue.length>0,indexed_changed_files:uniquePaths.length-missingChanged.length,unindexed_changed_files:missingChanged.length,unindexed_changed_paths:missingChanged.slice(0,10),mapped_test_evidence:uniqueTests.length?'static_graph_only':'none',fallback_test_confidence:fallback.length?'filename_heuristic_only':'none',analysis_complete:false},uncertainty:["Static references and naming heuristics cannot prove complete runtime impact.",...(missingChanged.length?['Some changed files are not in the index: results may miss dependencies or tests.']:[]),...(!uniqueTests.length?['No tests mapped by static graph; suggested filenames are not verified test coverage.']:[]),...(queue.length?['Graph visit limit reached; dependency traversal was truncated.']:[]),...(uniquePaths.length?[]:['No changed paths detected. Provide changed paths explicitly or modify the working tree.'])]};
+  return {changed:uniquePaths,affected:affected.slice(0,25),affected_total:affected.length,related_tests:uniqueTests.slice(0,10),related_tests_total:uniqueTests.length,fallback_test_candidates:relatedTests.length?[]:fallback,risk,signals:risks,entry_point_review:entryReview,coverage:{graph_nodes_visited:visited.size,traversal_depth:cappedDepth,static_only:true,result_truncated:affected.length>25||uniqueTests.length>10,graph_visit_limit_reached:queue.length>0,indexed_changed_files:uniquePaths.length-missingChanged.length,unindexed_changed_files:missingChanged.length,unindexed_changed_paths:missingChanged.slice(0,10),mapped_test_evidence:uniqueTests.length?'static_graph_only':'none',fallback_test_confidence:fallback.length?'filename_heuristic_only':'none',analysis_complete:false},uncertainty:["Static references and naming heuristics cannot prove complete runtime impact.",...(missingChanged.length?['Some changed files are not in the index: results may miss dependencies or tests.']:[]),...(!uniqueTests.length?['No tests mapped by static graph; suggested filenames are not verified test coverage.']:[]),...(queue.length?['Graph visit limit reached; dependency traversal was truncated.']:[]),...(entryReview.requires_role_matrix?['Role matrix, route middleware and background operation access have not been dynamically tested.']:[]),...(entryReview.requires_domain_invariant_tests?['Financial and tenant/store relationships require independent integration assertions; static edges are insufficient.']:[]),...(uniquePaths.length?[]:['No changed paths detected. Provide changed paths explicitly or modify the working tree.'])]};
 }
 export function validateChangedPaths(paths){if(!Array.isArray(paths)||paths.length>200)throw new Error('changed must be an array with at most 200 paths');for(const p of paths)if(!isSafeRelative(p)||shouldIgnore(p))throw new Error('Invalid changed file path')}
 export function shortGraphSummary(store,wsId){return {files:store.get('SELECT COUNT(*) as n FROM files WHERE workspace_id=?',wsId)?.n||0,nodes:store.get('SELECT COUNT(*) as n FROM nodes WHERE workspace_id=?',wsId)?.n||0,relations:store.get('SELECT COUNT(*) as n FROM edges WHERE workspace_id=?',wsId)?.n||0,tests:store.get("SELECT COUNT(*) as n FROM nodes WHERE workspace_id=? AND kind='test'",wsId)?.n||0}}
