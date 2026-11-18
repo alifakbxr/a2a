@@ -10,6 +10,21 @@ const textName=/\.(?:js|jsx|ts|tsx|mts|cts|mjs|cjs|php|py|go|rs|java|kt|kts|dart
 const testFile=/(?:^|\/)(?:tests?|specs?|__tests__)(?:\/|$)|(?:\.test\.|\.spec\.|_test\.|_spec\.|Test\.(?:java|kt|cs|php)$)/i;
 export const detectLanguage=rel=>langMap[path.extname(rel).toLowerCase()]||(manifestName.test(path.basename(rel))?'config':'unknown');
 export const isTestFile=rel=>testFile.test(rel);
+// Generated A2A reports are evidence, not application source. Restrict this
+// exclusion to report directories AND recognized report shapes; ordinary JSON,
+// including application configuration, must still affect the source revision.
+export function isGeneratedA2AReport(rel,content){
+  if(!/(^|\\/)(?:reports?|test-results)\\/[^/]+\\.json$/i.test(String(rel||'').replaceAll('\\\\','/')))return false;
+  try{
+    const x=JSON.parse(String(content));
+    if(!x||typeof x!=='object'||Array.isArray(x))return false;
+    if(x.schema==='a2a-browser-evidence-v1'&&typeof x.source?.revision==='string')return true;
+    if(typeof x.revision==='string'&&Array.isArray(x.claims)&&x.claims.length>0)return true;
+    if(typeof x.revision==='string'&&x.evaluator&&Array.isArray(x.scenarios))return true;
+    return x.format==='a2a-test-report-v1'&&Array.isArray(x.cases)&&x.completed===true;
+  }catch{return false}
+}
+
 export function gitHead(root){const p=spawnSync('git',['rev-parse','HEAD'],{cwd:root,timeout:1500,encoding:'utf8',windowsHide:true});return p.status===0?p.stdout.trim():null}
 export function gitChanges(root){
   const p=spawnSync('git',['status','--porcelain=v1','-z','--untracked-files=normal'],{cwd:root,timeout:4000,encoding:'utf8',windowsHide:true});
@@ -42,6 +57,7 @@ export function discover(root,{limit=MAX_INDEX_FILES,cachedFiles=null}={}){
           continue;
         }
         const buf=fs.readFileSync(full);totalBytes+=st.size;if(buf.includes(0)){skip.push('binary:'+rel);continue}
+        if(isGeneratedA2AReport(rel,buf))continue;
         paths.push({path:rel,hash:sha256(buf),language:detectLanguage(rel),bytes:st.size,mtime_ms:st.mtimeMs,text:buf.toString('utf8')});
       }catch{skip.push('unreadable:'+rel)}
     }
