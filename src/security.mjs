@@ -366,25 +366,10 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
     }
   } catch {}
 
-  if (autoTrust === 'active-only' || autoTrust === 'project-markers') {
-    // 3. Running Antigravity processes with --add-dir=... (active sessions)
-    try {
-      if (process.platform === 'linux') {
-        const pids = fs.readdirSync('/proc').filter(p => /^\d+$/.test(p));
-        for (const pid of pids) {
-          try {
-            const cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
-            if (cmdline.includes('agy') || cmdline.includes('antigravity')) {
-              const matches = cmdline.matchAll(/--add-dir=([^\0]+)/g);
-              for (const match of matches) {
-                addPath(match[1], { requireMarker: false });
-              }
-            }
-          } catch {}
-        }
-      }
-    } catch {}
-  }
+  // Never grant workspace authorization from /proc command-line text.
+  // A separate, unrelated user process can spoof "agy --add-dir=<victim>"
+  // in its argv. Only IDE/CLI trust state, user allowlist, and narrowly
+  // reviewed project records are eligible authorization sources.
 
   if (autoTrust === 'project-markers') {
     // 4. ~/.gemini/config/projects/*.json (historical projects — require project marker)
