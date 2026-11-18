@@ -1,6 +1,6 @@
 # A2A Native-First Workflow — v2.0.1 candidate
 
-**Status:** workflow contract for the `v2.0.1` branch. This document is not evidence of external benchmark acceptance or production readiness.
+**Status:** workflow contract for the `v2.0.1` branch. This document is not evidence of external benchmark acceptance or production readiness. **No third-party runtime integration whatsoever:** only A2A and native Antigravity capabilities; external projects may be cited as research but are never installed, loaded, or invoked.
 
 ## Purpose and non-goals
 
@@ -42,13 +42,13 @@ These are **code defects**, not fixed by writing a workflow:
 
 **Consequently, `v2.0.1 → main` is blocked.** The frozen STOCKROOM F01–F18 acceptance scenarios still require *actual* isolated HTTP/browser/database execution, plus real installed Antigravity MCP/browser smoke testing and comparable repeated A/B trials. Track these externally in [issue #15](https://github.com/alifakbxr/a2a/issues/15).
 
-## Prior research: adopt the lesson, not a second runtime
+## External research is only reference material
 
-- [Antigravity slash commands and browser](https://antigravity.google/docs/slash-commands): native `/browser`, optional native Teamwork/Swarm, and ordinary native terminal remain execution owners. Discover actual account and environment capabilities; don't infer from model effort.
-- [Chrome Modern Web Guidance](https://developer.chrome.com/docs/modern-web-guidance): consult **on demand**, when relevant to web platform ergonomics, compatibility, accessibility or performance. Avoid injecting the full guidance into every task or installing another skill automatically.
-- [Chrome DevTools integration](https://developer.chrome.com/docs/modern-web-guidance): use browser/devtools evidence **if already available in the native workflow**. A2A validates report metadata and proof scope, not duplicate browser automation or a second Chrome MCP server.
-- [Taste Skill](https://www.tasteskill.dev/) and [Impeccable audit](https://impeccable.style/docs/audit/): optional external design *references*, not dependencies or mandatory aesthetic policies. Borrow accessibility, layout clarity and visual QA checks only for relevant UI tasks; do not auto-install or auto-fetch.
-- Prior compact-context and deterministic-hook research: load only needed evidence, cache scoped results, avoid repeating full file reads after a bounded index query, and make every proactive action conditional on its measured value. Do **not** advertise a numerical token-reduction percentage without controlled experiments.
+- The A2A plugin **does not invoke or depend on any third-party skill, library, Chrome MCP server, coding agent, formatter, or new runtime**. There are no runtime network requests for research documents.
+- Modern web compatibility, accessibility, usability and performance *principles* may inform A2A's on-demand test plans, but actual checks remain native Antigravity commands/browser with existing permissions.
+- Open-source maintainers' practices (Taylor Otwell/Laravel, Vue core, SQLite, Sindre Sorhus, Kent C. Dodds and Rails) are distilled into [internal maintainer rules](./OPEN_SOURCE_ENGINEERING_STANDARDS.md): minimal targeted diffs, regression-first, existing style, user-visible contracts and explicit maintenance cost.
+- These internal rules appear as a **small, not-reviewed `maintainer_review` checklist only for risky verify plans**. They do not call another MCP tool, automatically review code, pass a release gate, or force other developers' language style on a different repository.
+- The list of scholarly/public sources is documentation-only. Never auto-install or ask the user to connect external tools because a source is cited.
 
 ## Workflow quality checks
 
