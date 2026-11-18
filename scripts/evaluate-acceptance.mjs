@@ -47,7 +47,7 @@ export function assessRelease(input,{trustKeys={}}={}){
     verdict='partial';note='Critical machine scenario cannot be verified by manual prose alone';
    }
   }
-  const row={id:s.id,requirement:s.requirement,critical:s.critical,verdict,evidence_count:s.evidence.length,signature_verified_evidence:verified.length,...(note?{note}:{})};results.push(row);
+  const row={id:s.id,requirement_sha256:crypto.createHash('sha256').update(s.requirement).digest('hex'),critical:s.critical,verdict,evidence_count:s.evidence.length,signature_verified_evidence:verified.length,...(note?{note}:{})};results.push(row);
   if(s.critical&&verdict!=='passed')blockers.push({scenario_id:s.id,verdict,reason:note||'Critical scenario not verified'});
  }
  const defects=Array.isArray(input.critical_defects)?input.critical_defects:[];
