@@ -77,6 +77,8 @@ test('symbol query and relationship graph provide source-backed location',()=>wi
 }));
 test('impact finds reverse import dependencies and suggested tests',()=>withEngine((e,root)=>{
   const r=e.impact({workspace:root,changed:['src/auth.js']});assert.ok(r.affected.some(n=>n.path==='src/page.js'));assert.ok(r.affected.some(n=>n.path==='tests/auth.test.js'));assert.ok(r.related_tests.includes('tests/auth.test.js'));
+  assert.equal(r.coverage.graph_visit_limit_reached,false);
+  assert.ok(!r.uncertainty.some(x=>x.includes('Graph visit limit reached')));
 }));
 test('risk elevates sensitive area and never claims complete coverage',()=>withEngine((e,root)=>{
   const r=e.impact({workspace:root,changed:['src/auth.js']});assert.equal(r.risk,'high');assert.equal(r.coverage.static_only,true);assert.ok(r.uncertainty.length);
