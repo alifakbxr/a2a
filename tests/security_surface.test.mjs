@@ -6,7 +6,7 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {validateArgs} from '../src/tools.mjs';
 import {getSessionTokenUsage} from '../src/tokens.mjs';
-import {localAntigravityRpcUrl,authorizeWorkspace,invalidateWorkspaceCache} from '../src/security.mjs';
+import {localAntigravityRpcUrl,authorizeWorkspace,invalidateWorkspaceCache,safeArtifactPath} from '../src/security.mjs';
 import {Store} from '../src/storage.mjs';
 
 test('strict MCP parameter schemas reject inherited Object prototype keys at every depth',()=>{
@@ -131,6 +131,39 @@ test('artifact history version allocation and retention remain correct if shadow
     if(oldHome===undefined)delete process.env.HOME;else process.env.HOME=oldHome;
     if(oldUser===undefined)delete process.env.USERPROFILE;else process.env.USERPROFILE=oldUser;
     invalidateWorkspaceCache();
+    fs.rmSync(base,{recursive:true,force:true});
+  }
+});
+
+
+test('brain Markdown snapshot cannot traverse a symlinked trusted brain directory',()=>{
+  const base=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-brain-symlink-'));
+  const previous=process.env.HOME;
+  try{
+    const home=path.join(base,'home');
+    const outside=path.join(base,'outside');
+    fs.mkdirSync(home);
+    fs.mkdirSync(outside);
+    const linkParent=path.join(home,'.gemini');
+    fs.mkdirSync(linkParent);
+    const conv='conv-brain-symlink';
+    const actual=path.join(outside,'brain',conv);
+    fs.mkdirSync(actual,{recursive:true});
+    const actualFile=path.join(actual,'notes.md');
+    fs.writeFileSync(actualFile,'PRIVATE_NOT_FOR_SNAPSHOT');
+    try{
+      fs.symlinkSync(outside,path.join(linkParent,'antigravity'),'dir');
+    }catch(e){
+      if(['EPERM','EACCES','ENOTSUP'].includes(e.code))return;
+      throw e;
+    }
+    process.env.HOME=home;
+    const escaped=path.join(home,'.gemini','antigravity','brain',conv,'notes.md');
+    assert.throws(()=>safeArtifactPath(null,conv,escaped),/Symlink access denied/);
+    assert.equal(fs.readFileSync(actualFile,'utf8'),'PRIVATE_NOT_FOR_SNAPSHOT');
+  }finally{
+    if(previous===undefined)delete process.env.HOME;
+    else process.env.HOME=previous;
     fs.rmSync(base,{recursive:true,force:true});
   }
 });
