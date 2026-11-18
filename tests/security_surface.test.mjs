@@ -125,6 +125,10 @@ test('artifact history version allocation and retention remain correct if shadow
     assert.equal(versions.at(-1).version_number,3);
     const repeated=store.snapshotArtifact({workspaceId:wsId,workspaceRoot:root,conversationId:'conv-test-retention',artifactPath:artifact,content:'version-11'});
     assert.equal(repeated.changed,false);
+    const absent=store.getArtifactDiff({workspaceId:wsId,conversationId:'conv-test-retention',artifactName:'notes.md',v1:1,v2:999});
+    assert.equal(absent.status,'version_not_found');
+    assert.deepEqual(absent.missing_versions,[1,999]);
+    assert.equal(absent.diff,null);
     if(hasSymlink)assert.deepEqual(fs.readdirSync(outside),[]);
   }finally{
     try{store?.close()}catch{}
