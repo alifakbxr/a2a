@@ -10,7 +10,7 @@ test('pro with independent workstreams may suggest swarm with consent',()=>{
  assert.equal(r.recommended,'/swarm');assert.equal(r.user_approval_required,true);
 });
 test('multi-milestone team preference only with explicit availability',()=>{
- const r=adviseOrchestration({tier:'pro',milestones:3,long_horizon:true,workstreams:['api','frontend'],dependencies:'low',available_commands:['/teamwork','/swarm']});
+ const r=adviseOrchestration({tier:'pro',milestones:3,long_horizon:true,workstreams:['api','frontend'],dependencies:'low',file_ownership:'independent',available_commands:['/teamwork','/swarm']});
  assert.equal(r.recommended,'/teamwork');
 });
 test('unknown capabilities never invent command access',()=>assert.equal(adviseOrchestration({milestones:5,long_horizon:true}).recommended,'single-agent'));
