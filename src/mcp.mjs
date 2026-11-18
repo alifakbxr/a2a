@@ -26,7 +26,8 @@ const RESOURCES = [
 function getActiveSession(){
   try{
     const file=path.join(engine.store.base,'active-session.json');
-    if(!fs.existsSync(file))return null;
+    const stat=fs.lstatSync(file);
+    if(!stat.isFile()||stat.size>128*1024)return null;
     const active=JSON.parse(fs.readFileSync(file,'utf8'))?.latest;
     const workspace=active?.workspacePaths?.[0] || active?.cwd;
     return active?.conversationId && workspace ? {conversationId:active.conversationId,workspace} : null;
