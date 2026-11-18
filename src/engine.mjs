@@ -8,6 +8,10 @@ import {contextQuery,analyzeImpact,shortGraphSummary,validateChangedPaths} from 
 import {planVerification,assessVerification,listEvidence,freshness,verifyHandoff} from './verification.mjs';
 import {estimateTokens,getSessionTokenUsage,analyzeWorkspaceTokens,skeletonizeCode} from './tokens.mjs';
 import {scanConversationHistory,attachReportSize} from './conversations.mjs';
+import {assessRelease} from '../scripts/evaluate-acceptance.mjs';
+import {evaluateSemanticClaims} from './semantic-evidence.mjs';
+import {assessBrowserEvidence} from './browser-evidence.mjs';
+import {adviseOrchestration} from './orchestration-advisor.mjs';
 
 export class Engine {
   constructor({store}={}) {this.store=store||new Store();this.owned=!store;}
@@ -35,8 +39,9 @@ export class Engine {
     if(!current) return this.sync(workspace);
     return {root,wsId,revision:current.id,git:current.git_head};
   }
-  context({workspace,action='inspect',query='',limit=12,conversation_id=null,transcript_path=null,history_scope='current',history_limit=10,file=null,files=[],path:targetPath=null}={}){
+  context({workspace,action='inspect',query='',limit=12,conversation_id=null,transcript_path=null,history_scope='current',history_limit=10,file=null,files=[],task={},path:targetPath=null}={}){
     const compact=getCompactMode();
+    if(action==='orchestration'){requireAuthorizedWorkspace(workspace);return adviseOrchestration(task)}
     if(action==='tokens'&&history_scope==='all'){
       // This must be an explicit tokens action. Do not walk private transcripts
       // as a side effect of ordinary inspect/impact calls.
@@ -256,6 +261,64 @@ export class Engine {
         res.compact=true;
       }
       return res;
+    }
+    if(operation==='assess_release'){
+      if(typeof artifact!=='string'||!artifact)throw Error('Required relative release manifest');
+      const source=safeFile(s.root,artifact),stat=fs.statSync(source);
+      if(!stat.isFile()||stat.size>1024*1024)throw Error('Release manifest must be <=1 MiB');
+      let document;
+      try{document=JSON.parse(fs.readFileSync(source,'utf8'))}catch{throw Error('Invalid release manifest JSON')}
+      const trustFile=path.join(os.homedir(),'.config','a2a','trusted-evaluators.json');
+      let trustKeys={};
+      try{
+        const configStat=fs.lstatSync(trustFile);
+        if(configStat.isFile()&&configStat.size<=65536&&(process.platform==='win32'||(configStat.mode&0o022)===0)){
+          trustKeys=JSON.parse(fs.readFileSync(trustFile,'utf8'));
+        }
+      }catch{}
+      const evaluation=assessRelease(document,{trustKeys});
+      if(document.revision!==s.revision){
+        evaluation.verdict='blocked';evaluation.release_ready=false;
+        evaluation.blockers.push({reason:'Current workspace snapshot differs from submitted release manifest'});
+      }
+      const evidenceId=uniqueId('ev'),bytes=fs.readFileSync(source);
+      this.store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',evidenceId,s.wsId,s.revision,'release-readiness',
+        evaluation.release_ready?'passed':'inconclusive','signed-release-evaluation',artifact,sha256(bytes),
+        JSON.stringify({trust:'public-key-verified-issuer-claim',release_ready:evaluation.release_ready,signature_evidence:evaluation.scenarios.results.reduce((n,x)=>n+x.signature_verified_evidence,0)}),new Date().toISOString());
+      return {revision:s.revision,evidence_id:evidenceId,...evaluation,
+        limitations:[...evaluation.limits,'User-pinned public key is read only from local A2A config; the plugin does not create or trust keys from project source']};
+    }
+    if(operation==='assess_semantic'||operation==='assess_browser'){
+      if(typeof artifact!=='string'||!artifact)throw Error('Required relative evidence artifact path');
+      const full=safeFile(s.root,artifact),stat=fs.statSync(full);
+      if(!stat.isFile()||stat.size>1024*1024)throw Error('Evidence artifact exceeds 1 MiB');
+      const bytes=fs.readFileSync(full);
+      let report;
+      try{report=JSON.parse(bytes.toString('utf8'))}catch{throw Error('Invalid semantic/browser evidence JSON')}
+      let result;
+      if(operation==='assess_semantic'){
+        result=evaluateSemanticClaims(report);
+        if(result.revision!==s.revision)result={...result,report_status:'stale',release_verified:false};
+      }else{
+        const checkList=[];
+        for(const a of Array.isArray(report?.artifacts)?report.artifacts.slice(0,40):[]){
+          if(typeof a?.path!=='string'||!a.path)continue;
+          try{
+            const source=safeFile(s.root,a.path),info=fs.statSync(source);
+            if(!info.isFile()||info.size>4*1024*1024)continue;
+            checkList.push({reference:a.reference,sha256:sha256(fs.readFileSync(source)),intact:true});
+          }catch{}
+        }
+        result=assessBrowserEvidence(report,{expectedRevision:s.revision,artifactChecks:checkList});
+      }
+      const recordStatus=result.report_status==='stale'||result.status==='stale'?'inconclusive':'inconclusive';
+      const evidenceId=uniqueId('ev');
+      this.store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',
+        evidenceId,s.wsId,s.revision,report?.scenario_id||'semantic-review',recordStatus,operation,artifact,sha256(bytes),
+        JSON.stringify({trust:'unattested-local-report',release_verified:false,summary:result.report_status||result.status,artifact_sha256:sha256(bytes)}),
+        new Date().toISOString());
+      return {revision:s.revision,evidence_id:evidenceId,...result,verification_verdict:'inconclusive',
+        note:'The evidence artifact is parsed and hashed locally; reported execution is not independently authenticated.'};
     }
     if(operation==='verify_handoff'||operation==='handoff'){
       validateChangedPaths(changed);
