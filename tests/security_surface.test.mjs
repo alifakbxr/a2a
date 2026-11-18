@@ -255,3 +255,36 @@ test('spoofed Linux process arguments do not confer workspace authorization',asy
     fs.rmSync(root,{recursive:true,force:true});
   }
 });
+
+
+test('active-only auto-trust is restricted to current hook workspace AND existing IDE trust',()=>{
+  const base=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-active-autotrust-'));
+  const keys=['HOME','USERPROFILE','APPDATA','A2A_DATA_DIR'];
+  const saved=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
+  try{
+    const home=path.join(base,'home'),data=path.join(base,'data');
+    const trusted=path.join(base,'trusted'),sibling=path.join(trusted,'sibling');
+    const active=path.join(trusted,'active'),untrusted=path.join(base,'untrusted');
+    for(const dir of [home,data,active,sibling,untrusted])fs.mkdirSync(dir,{recursive:true});
+    process.env.HOME=home;process.env.USERPROFILE=home;
+    process.env.APPDATA=path.join(home,'AppData');process.env.A2A_DATA_DIR=data;
+    const cfg=path.join(home,'.gemini','antigravity-cli');
+    fs.mkdirSync(cfg,{recursive:true});
+    fs.writeFileSync(path.join(cfg,'settings.json'),JSON.stringify({trustedWorkspaces:[trusted]}));
+    setAutoTrustMode('active-only');
+    assert.deepEqual(loadAntigravityWorkspaces({bypassCache:true}),[]);
+    fs.writeFileSync(path.join(data,'active-session.json'),JSON.stringify({latest:{workspacePaths:[active],cwd:active}}));
+    assert.deepEqual(loadAntigravityWorkspaces({bypassCache:true}),[fs.realpathSync(active)]);
+    assert.equal(isWorkspaceAuthorized(active),true);
+    assert.equal(isWorkspaceAuthorized(sibling),false);
+    fs.writeFileSync(path.join(data,'active-session.json'),JSON.stringify({latest:{workspacePaths:[untrusted],cwd:untrusted}}));
+    assert.deepEqual(loadAntigravityWorkspaces({bypassCache:true}),[]);
+    assert.equal(isWorkspaceAuthorized(untrusted),false);
+  }finally{
+    for(const [k,v] of Object.entries(saved)){
+      if(v===undefined)delete process.env[k];else process.env[k]=v;
+    }
+    invalidateWorkspaceCache();
+    fs.rmSync(base,{recursive:true,force:true});
+  }
+});
