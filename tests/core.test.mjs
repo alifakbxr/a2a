@@ -622,3 +622,24 @@ test('ordinary source JSON remains revision-bound even within reports folder',()
  const after=e.sync(root,{verifyIntegrity:true});
  assert.notEqual(before.revision,after.revision);
 }));
+
+
+test('read-only evidence and run views invalidate freshness after same-size source edits',()=>withEngine((e,root,write)=>{
+  write('reports/regression.tap','TAP version 13\n1..1\nok 1 - works\n');
+  const observed=e.verify({workspace:root,operation:'assess',criteria:[{id:'integrity',artifact:'reports/regression.tap',test_name:'works'}]});
+  assert.equal(observed.verdict,'passed');
+  const before=e.evidence({workspace:root,operation:'list'});
+  assert.ok(before.items.some(x=>x.fresh===true));
+  const originalFile=path.join(root,'src/auth.js');
+  const previous=fs.statSync(originalFile);
+  const original=fs.readFileSync(originalFile,'utf8');
+  const changed=original.replace('true','null');
+  assert.equal(Buffer.byteLength(changed),Buffer.byteLength(original));
+  fs.writeFileSync(originalFile,changed);
+  fs.utimesSync(originalFile,previous.atime,previous.mtime);
+  const after=e.evidence({workspace:root,operation:'list'});
+  assert.notEqual(before.revision,after.revision);
+  assert.ok(after.items.some(x=>x.fresh===false));
+  const runs=e.evidence({workspace:root,operation:'runs'});
+  assert.ok(runs.runs.some(x=>x.fresh===false));
+}));
