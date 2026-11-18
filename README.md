@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@aliip/a2a"><img src="https://img.shields.io/npm/v/@aliip/a2a?color=blue&logo=npm" alt="npm version" /></a>
-  <a href="https://github.com/alifakbxr/a2a/actions"><img src="https://img.shields.io/badge/tests-44%2F44%20passed-brightgreen?logo=node.js" alt="Tests" /></a>
+  <a href="https://github.com/alifakbxr/a2a/actions"><img src="https://github.com/alifakbxr/a2a/actions/workflows/ci.yml/badge.svg?branch=v2.0.1" alt="Tests" /></a>
   <a href="https://github.com/alifakbxr/a2a"><img src="https://img.shields.io/badge/Antigravity-native%20plugin-blueviolet" alt="Antigravity Plugin" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License" /></a>
   <img src="https://img.shields.io/badge/dependencies-0%20external-success" alt="Zero External Dependencies" />
@@ -18,7 +18,7 @@
 
 ---
 
-**A2A** elevates AI coding agents into deterministic, risk-aware, and evidence-driven software engineers. It replaces guessing and full-file context dumps with local graph indexing (`node:sqlite`), lexer-safe skeletonization, and strict machine verification gates.
+**A2A** provides risk-aware, evidence-scoped guidance to Antigravity without replacing its native coding agent. It reduces unnecessary full-file context dumps with local graph indexing (`node:sqlite`), lexer-safe skeletonization, and strict machine verification gates.
 
 ---
 
@@ -26,9 +26,9 @@
 
 - 📉 **Scoped code previews:** On-demand symbol queries and comment-stripped source previews can reduce output size, but net session savings require A/B evaluation. `a2a tokens` now reports **source-size estimates**, never invented savings.
 - 🔍 **Shift-Left Impact Analysis:** Maps reverse imports and dependent test suites *before* modifying code.
-- 🛡️ **The Iron Law of Verification:** Rejects task completion unless fresh machine test evidence (JUnit XML, TAP, or JSON) passes.
-- 🤝 **Subagent & Teamwork Gate:** Enforces test evidence on parallel `/teamwork` workers and subagents before handoff.
-- 🔒 **Zero-Trust & Local-First:** 0 outbound network calls, 0 cloud telemetry, and 0 external dependencies.
+- 🛡️ **Evidence-scoped verification:** Reports the scope of named JUnit/TAP/JSON assertions and keeps independent release/semantic/browser proof separate. Passing tests alone do not certify an application.
+- 🤝 **Native orchestration guidance:** Suggests available worker modes only when useful and approved; optional evidence review for handoffs never launches workers automatically.
+- 🔒 **Zero-Trust & Local-First:** no outbound runtime requests, no cloud telemetry, no external dependencies. External engineering sources are research references only.
 
 ---
 
@@ -83,7 +83,7 @@ node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs verify-handoff /path/to/worksp
 | :--- | :--- | :--- |
 | **`a2a_impact`** | `depth`, `changed` | Bounded static graph impact analysis, reverse dependencies, and test targets. |
 | **`a2a_context`** | `skeleton`, `inspect`, `query`, `tokens` | Comment-free AST skeletons, symbol lookups, and session token telemetry. |
-| **`a2a_verify`** | `plan`, `assess`, `verify_handoff` | Evaluates JUnit XML, TAP, or JSON reports, and validates subagent deliverables. |
+| **`a2a_verify`** | `plan`, `assess`, `verify_handoff`, `assess_release`, `assess_semantic`, `assess_browser` | Scopes test reports, risk-specific quality plans and evidence trust; never executes tests itself. |
 | **`a2a_evidence`** | `list`, `runs`, `incidents`, `side_questions` | Historical run verdicts, regression memory, and Antigravity `/btw` side questions. |
 
 ---
@@ -110,6 +110,9 @@ Inside Antigravity, `a2a_context(action="tokens", history_scope="all")` explicit
 
 - **[Token efficiency evaluation](docs/TOKEN_EFFICIENCY.md):** Reproducible A/B protocol; source-size comparisons are not net session savings.
 - **[Always-On 5 Whys](docs/ALWAYS_ON_5_WHYS.md):** Five causal scenarios, corrective changes, and acceptance checks.
+- **[Native-first workflow](docs/NATIVE_FIRST_WORKFLOW.md):** Zero-call fast path, scoped risk reviews and native test/browser ownership.
+- **[OSS maintainer engineering standards](docs/OPEN_SOURCE_ENGINEERING_STANDARDS.md):** Internal A2A review principles adapted from Laravel, Vue, SQLite and others — no third-party packages or integrations.
+- **[Independent acceptance runbook](docs/INDEPENDENT_ACCEPTANCE_RUNBOOK.md):** External benchmark and release gates not yet satisfied.
 
 - 🏛️ **[Technical Architecture](docs/ARCHITECTURE.md):** Invariants, SQLite schema, and sequence diagrams.
 - 📜 **[Contracts & Data Dictionary](docs/CONTRACTS.md):** MCP schemas, SQLite tables, and verification constraints.
