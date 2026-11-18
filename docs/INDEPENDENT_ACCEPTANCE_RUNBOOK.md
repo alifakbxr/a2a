@@ -2,7 +2,7 @@
 
 This is an **execution checklist**, not a report claiming these tests were run.
 Never modify the four original STOCKROOM benchmark ZIPs. Copy to disposable test workspaces.
-PR #29 was merged into the dedicated `v2.0.1` branch at commit `049a5297fbd4c542918f4a23e9676d5e2b0530ce`; #16–#27 remain Draft and `main` is unchanged. This is a version-branch merge, not a published or independently validated release.
+PR #29 was merged into the dedicated `v2.0.1` branch at commit `049a5297fbd4c542918f4a23e9676d5e2b0530ce`; #16–#27 were subsequently individually merged into `v2.0.1`, and `main` remains unchanged. This is a version-branch merge, not a published or independently validated release.
 
 ## 1. Reproducible installed-plugin environment
 - Antigravity with documented native CLI/MCP/browser access, explicitly authorized **temporary** workspace.
@@ -51,6 +51,6 @@ No unit-test name, human prose or custom JSON witness list may be accepted as pr
 - Before sharing results, use the opt-in `scripts/export-benchmark.mjs` allowlist output, inspect it manually, and do not upload raw brain ZIPs, cookies or database secrets.
 
 ## 6. Merge policy
-- Keep all 12 original feature PRs **Draft and Open**. Integration PR #29 has been merged **only** into `v2.0.1` with the user's approval.
+- All 12 original feature PRs #16–#27 and integration PR #29 are **Merged to `v2.0.1`**. Git tree was preserved; implementation issues #3–#14 are closed with outstanding external acceptance tracked in issue #15.
 - Keep `main` unchanged. The `v2.0.1` branch contains the combined implementation; do not publish an npm/GitHub release or promote the version branch to `main` until real external acceptance and Antigravity install/browser smoke checks have passed.
-- The reviewed features are already integrated in `v2.0.1` via #29. Do **not** merge the original feature PRs a second time. After independent acceptance and benchmarks pass, open a **single** PR `v2.0.1 → main` and merge it only with explicit user authorization. See [v2.0.1 traceability](./V2_0_1_TRACEABILITY.md).
+- The reviewed features are integrated in `v2.0.1` via #29 **and** individually recorded as merged PRs #16–#27; do not merge them again. After independent acceptance and benchmarks pass, open a **single** PR `v2.0.1 → main` and merge it only with explicit user authorization. See [v2.0.1 traceability](./V2_0_1_TRACEABILITY.md).
