@@ -2,12 +2,12 @@
 
 The original pre-vNext audit from `main` at `b622110d0feabf469390a41f3c93338053b3c7b6` was superseded by an explicit request to integrate directly into the `v2.0.1` branch, **not vNext**.
 
-- Source draft PRs: #16–#27, still open and unmerged individually.
+- Original feature PRs: #16–#27, all individually merged into `v2.0.1` after integration PR #29, retaining the same source tree.
 - Integration PR: #29, merged to `v2.0.1` on 2026-11-18.
 - Merge commit: `049a5297fbd4c542918f4a23e9676d5e2b0530ce`.
 - `package.json` and `plugin.json` both identify version `2.0.1`.
 - Default `main` remains unchanged.
-- CI for the integrated source (before version-branch merge and docs-only updates): https://github.com/alifakbxr/a2a/actions/runs/44239699931 — success.
+- CI after all twelve individual merges: https://github.com/alifakbxr/a2a/actions/runs/44248690103 — success. Implementation issues #3–#14 are closed; actual external validation remains open in #15.
 - This branch merge is **not** an npm publish, GitHub version tag, GitHub Release, or proof that A2A is production-ready.
 
 ## Remaining independent release gates
