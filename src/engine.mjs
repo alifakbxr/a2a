@@ -110,7 +110,7 @@ export class Engine {
       return payload;
     }
 
-    const s=this.sync(workspace,{verifyIntegrity:action==='freshness'||action==='query'});
+    const s=this.sync(workspace,{verifyIntegrity:action==='freshness'||action==='query'||action==='inspect'});
     const base={
       workspace_id:s.wsId,
       revision:s.revision,
