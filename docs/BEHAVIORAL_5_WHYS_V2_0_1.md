@@ -100,4 +100,4 @@
 
 ## Release and merge policy
 
-This behavioral work merges **only into `v2.0.1`**, with all six issues (#30–#35) traceable to tests and docs. After GitHub CI passes on the merge commit, close implementation-scoped issues as **implemented** while keeping #15 open for externally unverified acceptance. Do not merge to `main`, create a tag, publish an npm package or declare production-readiness without independent acceptance and explicit approval.
+This behavioral work **merged only into `v2.0.1`** via [PR #36](https://github.com/alifakbxr/a2a/pull/36), commit `67ea5888caf61751952c8a7daa1eb222d738d4b6`, and all six code-level issues #30–#35 were closed as **implemented**. Post-merge [GitHub CI](https://github.com/alifakbxr/a2a/actions/runs/44325007116) passed 4/4 OS/runtime jobs with 213/213 tests on Ubuntu Node 22. External #15 remains open. Do not merge to `main`, create a tag, publish an npm package or declare production-readiness without independent acceptance and explicit approval.
