@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {spawnSync} from 'node:child_process';
+import {spawnSync,spawn} from 'node:child_process';
 import {validateArgs} from '../src/tools.mjs';
 import {getSessionTokenUsage} from '../src/tokens.mjs';
-import {localAntigravityRpcUrl,authorizeWorkspace,revokeWorkspace,isWorkspaceAuthorized,loadRevokedWorkspaces,invalidateWorkspaceCache,safeArtifactPath} from '../src/security.mjs';
+import {localAntigravityRpcUrl,authorizeWorkspace,revokeWorkspace,isWorkspaceAuthorized,loadRevokedWorkspaces,invalidateWorkspaceCache,safeArtifactPath,setAutoTrustMode,loadAntigravityWorkspaces} from '../src/security.mjs';
 import {Store} from '../src/storage.mjs';
 
 test('strict MCP parameter schemas reject inherited Object prototype keys at every depth',()=>{
@@ -226,5 +226,32 @@ test('explicit revoke stays enforced even when Antigravity still trusts that wor
     }
     invalidateWorkspaceCache();
     fs.rmSync(base,{recursive:true,force:true});
+  }
+});
+
+
+test('spoofed Linux process arguments do not confer workspace authorization',async()=>{
+  if(process.platform!=='linux')return;
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-argv-spoof-'));
+  const envBackup=Object.fromEntries(['HOME','USERPROFILE','APPDATA'].map(k=>[k,process.env[k]]));
+  let processHandle;
+  try{
+    const home=path.join(root,'home'),ws=path.join(root,'victim-project');
+    fs.mkdirSync(home);fs.mkdirSync(ws);
+    fs.writeFileSync(path.join(ws,'package.json'),'{}');
+    process.env.HOME=home;process.env.USERPROFILE=home;
+    process.env.APPDATA=path.join(home,'AppData','Roaming');
+    setAutoTrustMode('project-markers');
+    processHandle=spawn(process.execPath,['-e','setTimeout(()=>{},6000)','agy','--add-dir='+ws],{stdio:'ignore'});
+    await new Promise((resolve,reject)=>{processHandle.once('spawn',resolve);processHandle.once('error',reject)});
+    assert.equal(loadAntigravityWorkspaces({bypassCache:true}).includes(fs.realpathSync(ws)),false);
+    assert.equal(isWorkspaceAuthorized(ws),false);
+  }finally{
+    try{processHandle?.kill()}catch{}
+    for(const [k,v] of Object.entries(envBackup)){
+      if(v===undefined)delete process.env[k];else process.env[k]=v;
+    }
+    invalidateWorkspaceCache();
+    fs.rmSync(root,{recursive:true,force:true});
   }
 });
