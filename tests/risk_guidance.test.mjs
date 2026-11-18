@@ -36,3 +36,24 @@ test('service worker triggers both offline cross-account and browser restart sce
  assert.ok(r.required_test_ids.includes('offline-user-switch'));
  assert.ok(r.required_test_ids.includes('offline-process-restart'));
 });
+
+test('maintainer workflow for risky changes is opt-in within existing verify plan and never claims a pass',async()=>{
+ const {planVerification}=await import('../src/verification.mjs');
+ const plan=planVerification({index:{files:[]},impact:{changed:['app/Http/Controllers/PosController.php'],risk:'high',related_tests:[],uncertainty:['static only']},criteria:['Checkout cannot access foreign stores']});
+ assert.equal(plan.maintainer_review.status,'not-reviewed');
+ assert.equal(plan.maintainer_review.required_checks.length,4);
+ assert.ok(plan.maintainer_review.required_checks.some(x=>x.includes('Minimal diff')));
+ assert.ok(plan.maintainer_review.required_checks.some(x=>x.includes('regression')));
+ assert.ok(plan.maintainer_review.required_checks.some(x=>x.includes('public API')));
+ assert.equal(plan.maintainer_review.proof,'native-test-and-human-review-required');
+ assert.equal(plan.state,'not_run');
+ assert.ok(!('release_ready' in plan));
+ assert.ok(JSON.stringify(plan.maintainer_review).length<500);
+});
+test('low-risk styling and no-op work does not receive extra maintainer guidance',async()=>{
+ const {planVerification}=await import('../src/verification.mjs');
+ const low=planVerification({index:{files:[]},impact:{changed:['src/components/Navbar.vue'],risk:'low',related_tests:[],uncertainty:[]},criteria:['Update padding']});
+ assert.equal(low.maintainer_review,undefined);
+ const none=planVerification({index:{files:[]},impact:{changed:[],risk:'unknown',related_tests:[],uncertainty:[]},criteria:[]});
+ assert.equal(none.maintainer_review,undefined);
+});
