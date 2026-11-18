@@ -109,8 +109,12 @@ io.on('line',(line)=>{
   if(line.length>180000){answer(null,null,{code:-32600,message:'Request too large'});return}
   let req;
   try{req=JSON.parse(line)}catch{answer(null,null,{code:-32700,message:'Parse error'});return}
-  if(!req || Array.isArray(req)){answer(null,null,{code:-32600,message:'Invalid JSON-RPC request'});return}
-  if(req.id===undefined){try{if(req.method!=='notifications/initialized'&&req.method!=='notifications/cancelled')route(req)}catch{}return}
+  if(!req || typeof req!=='object' || Array.isArray(req)){answer(null,null,{code:-32600,message:'Invalid JSON-RPC request'});return}
+  if(req.id!==undefined && req.id!==null && typeof req.id!=='string' && typeof req.id!=='number'){
+    answer(null,null,{code:-32600,message:'Invalid JSON-RPC id'});return;
+  }
+  // JSON-RPC notifications have no response and MUST NOT run data-changing tool handlers.
+  if(req.id===undefined)return;
   try{answer(req.id,route(req))}catch(e){
     if(req.method==='tools/call'){answer(req.id,{content:[{type:'text',text:JSON.stringify(classifyMcpFailure(req.params?.name,e))}],isError:true});return}
     answer(req.id,null,e);
