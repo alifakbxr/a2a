@@ -56,6 +56,7 @@ The npm registry package can be used separately (`npm install -g @aliip/a2a`), b
 node scripts/a2a.mjs help
 node scripts/a2a.mjs mode on-demand
 node scripts/a2a.mjs mode always-on
+node scripts/a2a.mjs toggle
 node scripts/a2a.mjs compact on
 node scripts/a2a.mjs autotrust active-only
 node scripts/a2a.mjs allow /absolute/path/to/project
