@@ -110,14 +110,14 @@ function validateValue(spec, value, key) {
     const props = spec.properties || {};
     if (spec.additionalProperties === false) {
       for (const k of Object.keys(value)) {
-        if (!(k in props)) throw new Error('Unknown argument: ' + key + '.' + k);
+        if (!Object.hasOwn(props,k)) throw new Error('Unknown argument: ' + key + '.' + k);
       }
     }
     for (const req of spec.required || []) {
       if (value[req] === undefined) throw new Error('Missing ' + key + '.' + req);
     }
     for (const [k, v] of Object.entries(value)) {
-      if (k in props) validateValue(props[k], v, key + '.' + k);
+      if (Object.hasOwn(props,k)) validateValue(props[k], v, key + '.' + k);
     }
     return;
   }
@@ -137,7 +137,7 @@ export function validateArgs(name,args){
   const tool=ALL_TOOLS.find(t=>t.name===name);if(!tool)throw new Error('Unknown tool');
   if(!args||typeof args!=='object'||Array.isArray(args))throw new Error('Arguments must be an object');
   const props=tool.inputSchema.properties;
-  for(const key of Object.keys(args))if(!(key in props))throw new Error('Unknown argument: '+key);
+  for(const key of Object.keys(args))if(!Object.hasOwn(props,key))throw new Error('Unknown argument: '+key);
   for(const key of tool.inputSchema.required||[])if(args[key]===undefined)throw new Error('Missing '+key);
   for(const [key,value] of Object.entries(args)){
     validateValue(props[key], value, key);
