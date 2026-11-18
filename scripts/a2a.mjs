@@ -4,7 +4,7 @@ import pkg from '../package.json' with {type:'json'};
 import {
   allowlistPath,settingsPath,getA2AMode,setA2AMode,getCompactMode,setCompactMode,
   getAutoTrustMode,setAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces,
-  authorizeWorkspace,revokeWorkspace,dataDir,requireAuthorizedWorkspace
+  authorizeWorkspace,revokeWorkspace,dataDir,requireAuthorizedWorkspace,localAntigravityRpcUrl
 } from '../src/security.mjs';
 import {readOfficialAgyUsageFile} from '../src/tokens.mjs';
 import {scanConversationHistory,attachReportSize,formatConversationReport} from '../src/conversations.mjs';
@@ -87,7 +87,7 @@ try{
     if(!addr||!csrf){
       print({status:'skipped',serverName,reason:'ANTIGRAVITY_LS_ADDRESS or ANTIGRAVITY_CSRF_TOKEN not set'});
     }else{
-      const url=`http://${addr}/exa.language_server_pb.LanguageServerService/RefreshMcpServers`;
+      const url=localAntigravityRpcUrl(addr);
       const res=await fetch(url,{
         method:'POST',
         headers:{'Content-Type':'application/json','x-codeium-csrf-token':csrf},
@@ -95,7 +95,7 @@ try{
         signal:AbortSignal.timeout(5000),
       });
       const body=await res.text();
-      if(!res.ok) throw new Error(`RefreshMcpServers failed (${res.status}): ${body.slice(0,200)}`);
+      if(!res.ok) throw new Error(`RefreshMcpServers failed (${res.status}); inspect Antigravity local diagnostics`);
       let parsed=null;try{parsed=body?JSON.parse(body):{}}catch{parsed=body}
       print({status:'refreshed',serverName,response:parsed});
     }
