@@ -74,3 +74,26 @@ test('untrusted evidence references and unexpected scenario names are not echoed
  assert.equal(JSON.stringify(r).includes('secret-value'),false);
  assert.equal(JSON.stringify(r).includes('/home/alif'),false);
 });
+
+test('F01 a cashier login without forbidden mutation testing does not prove RBAC',()=>{
+ const r=evaluateSemanticClaims(report('role-matrix',{forbidden_roles:[],forbidden_statuses:[],forbidden_db_mutation_count:0,no_protected_data_leaked:true}));
+ assert.ok(r.claims[0].missing.includes('forbidden_roles_tested'));
+});
+test('F03 foreign entity IDs must be denied and never create cross-org relations',()=>{
+ const r=evaluateSemanticClaims(report('relational-ownership',{foreign_store_id_sent:true,foreign_supplier_id_sent:true,relational_constraint_rejected:false,cross_org_relations_created:1}));
+ assert.ok(r.claims[0].missing.includes('foreign_ids_rejected'));
+});
+test('F15 production build cannot include working demo accounts',()=>{
+ const r=evaluateSemanticClaims(report('production-credentials',{production_build_tested:true,demo_credentials_rendered:false,known_demo_login_accepted:true}));
+ assert.ok(r.claims[0].missing.includes('no_usable_demo_credentials'));
+});
+test('F16 raw exception leakage fails even when operation returns an error',()=>{
+ const r=evaluateSemanticClaims(report('error-sanitization',{server_error_injected:true,private_message_hidden:false,correlation_id_present:true}));
+ assert.ok(r.claims[0].missing.includes('private_exception_hidden'));
+});
+test('invitation token and brute force outcomes need negative evidence',()=>{
+ const invite=evaluateSemanticClaims(report('invitation-flow',{recipient_acceptance_tested:true,expired_token_rejected:false,cross_tenant_store_invite_rejected:true,unauthorized_invite_rejected:true}));
+ assert.ok(invite.claims[0].missing.includes('expiration_and_acceptance'));
+ const rate=evaluateSemanticClaims(report('login-throttling',{invalid_login_attempts:6,throttle_returned:false,no_credentials_disclosed:true}));
+ assert.ok(rate.claims[0].missing.includes('rate_limited'));
+});
