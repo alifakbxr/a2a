@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import { dataDir, getA2AMode, getCompactMode, requireAuthorizedWorkspace } from '../src/security.mjs';
-import { sanitizeConversationId } from '../src/tokens.mjs';
+import { sanitizeConversationId, vettedTranscript } from '../src/tokens.mjs';
 import { Store } from '../src/storage.mjs';
 import {gitChanges} from '../src/scanner.mjs';
 import {CANDIDATE_ARTIFACTS} from '../src/verification.mjs';
@@ -12,13 +12,18 @@ import {safeFile,sha256} from '../src/security.mjs';
 function writeJsonSecure(filePath, obj) {
   const dir = path.dirname(filePath);
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  const flags = fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC | (fs.constants.O_NOFOLLOW || 0);
-  const fd = fs.openSync(filePath, flags, 0o600);
-  try {
-    fs.fchmodSync(fd, 0o600);
-    fs.writeFileSync(fd, JSON.stringify(obj, null, 2) + '\n');
-  } finally {
-    fs.closeSync(fd);
+  // Atomic replacement avoids a torn active-session record after interruption.
+  const temp=filePath+'.'+process.pid+'.'+globalThis.crypto.randomUUID()+'.tmp';
+  const flags=fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|(fs.constants.O_NOFOLLOW||0);
+  let fd=null;
+  try{
+    fd=fs.openSync(temp,flags,0o600);
+    fs.writeFileSync(fd,JSON.stringify(obj,null,2)+'\n');
+    fs.closeSync(fd);fd=null;
+    fs.renameSync(temp,filePath);
+  }finally{
+    if(fd!==null)fs.closeSync(fd);
+    try{fs.unlinkSync(temp)}catch{}
   }
 }
 
@@ -29,9 +34,10 @@ export function detectSideQuestionInfo(payload, transcriptPath) {
   const currentConvId = sanitizeConversationId(payload?.conversationId);
 
   // Internal transcripts are diagnostic only; never read arbitrarily large logs in a hook.
-  if (transcriptPath && fs.existsSync(transcriptPath) && fs.statSync(transcriptPath).size <= 64 * 1024) {
+  const vetted=vettedTranscript(transcriptPath,currentConvId);
+  if (vetted && fs.statSync(vetted.logFile).size <= 64 * 1024) {
     try {
-      const stream = fs.readFileSync(transcriptPath, 'utf8');
+      const stream = fs.readFileSync(vetted.logFile, 'utf8');
       if (stream.includes('<side_question>') || stream.includes('side question (/btw)')) {
         isSideQuestion = true;
       }
@@ -83,17 +89,17 @@ export function detectSideQuestionInfo(payload, transcriptPath) {
 
 function recordActiveSession(payload, baseDir) {
   const convId = sanitizeConversationId(payload?.conversationId);
-  const transcriptPath = typeof payload?.transcriptPath === 'string' ? payload.transcriptPath : null;
+  const transcriptPath = vettedTranscript(payload?.transcriptPath,convId)?.logFile||null;
   const workspacePaths = Array.isArray(payload?.workspacePaths)
-    ? payload.workspacePaths.filter(w => typeof w === 'string' && path.isAbsolute(w))
+    ? payload.workspacePaths.filter(w => typeof w === 'string' && w.length<=1024 && path.isAbsolute(w)).slice(0,32)
     : [];
-  const cwd = typeof payload?.cwd === 'string' && path.isAbsolute(payload.cwd) ? payload.cwd : null;
-  if (!convId && !transcriptPath) return;
+  const cwd = typeof payload?.cwd === 'string' && payload.cwd.length<=1024 && path.isAbsolute(payload.cwd) ? payload.cwd : null;
+  if (!convId) return;
 
   const sessionFile = path.join(baseDir, 'active-session.json');
   let existing = {};
   try {
-    if (fs.existsSync(sessionFile)) {
+    if (fs.lstatSync(sessionFile).isFile() && fs.statSync(sessionFile).size<=128*1024) {
       existing = JSON.parse(fs.readFileSync(sessionFile, 'utf8')) || {};
     }
   } catch {}
@@ -114,7 +120,7 @@ function recordActiveSession(payload, baseDir) {
     transcriptPath,
     workspacePaths,
     cwd,
-    modelName: typeof payload?.modelName === 'string' ? payload.modelName : null,
+    modelName: typeof payload?.modelName === 'string' ? payload.modelName.slice(0,100) : null,
     updatedAt: now,
     ...(sideQ.isSideQuestion ? {
       sideQuestion: {
@@ -155,7 +161,9 @@ function recordActiveSession(payload, baseDir) {
     byWorkspace[cwd] = { conversationId: convId, transcriptPath, updatedAt: now };
   }
 
-  writeJsonSecure(sessionFile, { updatedAt: now, latest: entry, byWorkspace });
+  // Cap retained workspace metadata; the current session is stored separately.
+  const recent=Object.entries(byWorkspace).sort((a,b)=>Date.parse(b[1]?.updatedAt||0)-Date.parse(a[1]?.updatedAt||0)).slice(0,100);
+  writeJsonSecure(sessionFile, { updatedAt: now, latest: entry, byWorkspace:Object.fromEntries(recent) });
 
   // Do not bulk-copy conversation artifacts when a session starts. Only snapshot
   // explicit edit events or direct user requests; avoids needless I/O and retention.
