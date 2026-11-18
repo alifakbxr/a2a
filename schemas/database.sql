@@ -26,3 +26,30 @@ CREATE INDEX IF NOT EXISTS artifact_v_lookup ON artifact_versions(conversation_i
 CREATE INDEX IF NOT EXISTS artifact_v_conv ON artifact_versions(conversation_id);
 CREATE INDEX IF NOT EXISTS artifact_v_ws ON artifact_versions(workspace_id);
 
+
+-- A2A model recovery: only sanitized model/category metadata, never raw errors.
+CREATE TABLE IF NOT EXISTS model_recovery_state (
+  workspace_id TEXT NOT NULL,
+  conversation_id TEXT NOT NULL,
+  model_name TEXT,
+  incident_category TEXT,
+  incident_confidence TEXT,
+  incident_at TEXT,
+  notice_signature TEXT,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(workspace_id, conversation_id)
+);
+CREATE INDEX IF NOT EXISTS model_recovery_recent ON model_recovery_state(workspace_id,updated_at DESC);
+-- Checkpoints are explicit opt-in summaries, not automatic transcript copies.
+CREATE TABLE IF NOT EXISTS recovery_checkpoints (
+  workspace_id TEXT NOT NULL,
+  conversation_id TEXT NOT NULL,
+  revision_id TEXT,
+  task_summary TEXT NOT NULL,
+  completed_json TEXT NOT NULL,
+  next_steps_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(workspace_id, conversation_id)
+);
+CREATE INDEX IF NOT EXISTS recovery_recent ON recovery_checkpoints(workspace_id,updated_at DESC);
