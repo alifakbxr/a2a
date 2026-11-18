@@ -2,7 +2,7 @@
 
 This is an **execution checklist**, not a report claiming these tests were run.
 Never modify the four original STOCKROOM benchmark ZIPs. Copy to disposable test workspaces.
-PR #29 is a CI-only integration draft; #16–#27 remain draft and main is frozen.
+PR #29 was merged into the dedicated `v2.0.1` branch at commit `049a5297fbd4c542918f4a23e9676d5e2b0530ce`; #16–#27 remain Draft and `main` is unchanged. This is a version-branch merge, not a published or independently validated release.
 
 ## 1. Reproducible installed-plugin environment
 - Antigravity with documented native CLI/MCP/browser access, explicitly authorized **temporary** workspace.
@@ -51,6 +51,6 @@ No unit-test name, human prose or custom JSON witness list may be accepted as pr
 - Before sharing results, use the opt-in `scripts/export-benchmark.mjs` allowlist output, inspect it manually, and do not upload raw brain ZIPs, cookies or database secrets.
 
 ## 6. Merge policy
-- Keep all 12 feature PRs and integration PR #29 **Draft and Open**.
-- Keep main unchanged; do not create/merge benchmark/a2a-vNext until real external acceptance cases and actual Antigravity install/browser smoke checks have independently passed.
+- Keep all 12 original feature PRs **Draft and Open**. Integration PR #29 has been merged **only** into `v2.0.1` with the user's approval.
+- Keep `main` unchanged. The `v2.0.1` branch contains the combined implementation; do not publish an npm/GitHub release or promote the version branch to `main` until real external acceptance and Antigravity install/browser smoke checks have passed.
 - Once passed, merge only reviewed feature commits to a dedicated versioned benchmark branch, run combined CI again and compare against frozen main. Production merge into main requires explicit user authorization.
