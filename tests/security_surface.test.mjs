@@ -6,7 +6,7 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {validateArgs} from '../src/tools.mjs';
 import {getSessionTokenUsage} from '../src/tokens.mjs';
-import {localAntigravityRpcUrl,authorizeWorkspace,invalidateWorkspaceCache,safeArtifactPath} from '../src/security.mjs';
+import {localAntigravityRpcUrl,authorizeWorkspace,revokeWorkspace,isWorkspaceAuthorized,loadRevokedWorkspaces,invalidateWorkspaceCache,safeArtifactPath} from '../src/security.mjs';
 import {Store} from '../src/storage.mjs';
 
 test('strict MCP parameter schemas reject inherited Object prototype keys at every depth',()=>{
@@ -188,4 +188,43 @@ test('storage denies an existing world-writable data directory',()=>{
     assert.throws(()=>new Store(base),/world-writable/);
     assert.equal(fs.statSync(base).mode&0o777,0o777);
   }finally{fs.rmSync(base,{recursive:true,force:true})}
+});
+
+
+test('explicit revoke stays enforced even when Antigravity still trusts that workspace',()=>{
+  const base=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-revoke-autotrust-'));
+  const envKeys=['HOME','USERPROFILE','APPDATA'];
+  const old=Object.fromEntries(envKeys.map(k=>[k,process.env[k]]));
+  try{
+    const home=path.join(base,'home');
+    const ws=path.join(base,'trusted-project');
+    const child=path.join(ws,'child');
+    fs.mkdirSync(home);fs.mkdirSync(child,{recursive:true});
+    fs.writeFileSync(path.join(ws,'package.json'),JSON.stringify({name:'trusted'}));
+    process.env.HOME=home;process.env.USERPROFILE=home;process.env.APPDATA=path.join(home,'AppData','Roaming');
+    const ag=path.join(home,'.gemini','antigravity');
+    fs.mkdirSync(ag,{recursive:true});
+    fs.writeFileSync(path.join(ag,'settings.json'),JSON.stringify({trustedWorkspaces:[ws]}));
+    invalidateWorkspaceCache();
+    assert.equal(isWorkspaceAuthorized(ws),true);
+    revokeWorkspace(ws);
+    assert.equal(isWorkspaceAuthorized(ws),false);
+    assert.equal(isWorkspaceAuthorized(child),false);
+    assert.deepEqual(loadRevokedWorkspaces(),[fs.realpathSync(ws)]);
+    authorizeWorkspace(ws);
+    assert.equal(isWorkspaceAuthorized(ws),true);
+    assert.deepEqual(loadRevokedWorkspaces(),[]);
+    const grantsDir=path.join(home,'.config','a2a');
+    assert.deepEqual(fs.readdirSync(grantsDir).filter(x=>x.endsWith('.tmp')),[]);
+    // An invalid grants file must fail closed, not restore automatic trust.
+    fs.writeFileSync(path.join(grantsDir,'allowed-workspaces.json'),'{broken');
+    assert.equal(isWorkspaceAuthorized(ws),false);
+    assert.throws(()=>authorizeWorkspace(ws),/invalid/i);
+  }finally{
+    for(const [key,value] of Object.entries(old)){
+      if(value===undefined)delete process.env[key];else process.env[key]=value;
+    }
+    invalidateWorkspaceCache();
+    fs.rmSync(base,{recursive:true,force:true});
+  }
 });
