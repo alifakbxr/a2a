@@ -287,7 +287,9 @@
               "record_side_question",
               "artifact_versions",
               "artifact_diff",
-              "snapshot_artifact"
+              "snapshot_artifact",
+              "save_checkpoint",
+              "model_recovery"
             ]
           },
           "id": {
@@ -358,6 +360,29 @@
           "status": {
             "type": "string",
             "maxLength": 40
+          },
+          "task_summary": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "For save_checkpoint: explicit short task summary, not raw conversation text."
+          },
+          "completed": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "For save_checkpoint: user-reviewed completed work notes; unverified."
+          },
+          "next_steps": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "For save_checkpoint: next steps after a manual model change."
           },
           "artifact_name": {
             "type": "string",
