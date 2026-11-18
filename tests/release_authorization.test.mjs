@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import path from 'node:path';
 import {assertPublishAuthorized,releaseApprovalPayload} from '../scripts/release-authorization.mjs';
 import {attestationPayload} from '../scripts/evaluate-acceptance.mjs';
 
@@ -109,4 +111,25 @@ test('all package workflows run the release gate before publishing',()=>{
     assert.ok(txt.indexOf('node scripts/release-authorization.mjs')<txt.indexOf('npm publish'));
     assert.ok(!txt.includes('force_publish'));
   }
+});
+
+
+test('publish CLI refuses missing authorization and emits no secret contents',()=>{
+  const proc=spawnSync(process.execPath,['scripts/release-authorization.mjs'],{
+    cwd:path.resolve('.'),
+    env:{
+      ...process.env,
+      GITHUB_REPOSITORY:'alifakbxr/a2a',
+      GITHUB_EVENT_NAME:'workflow_dispatch',
+      GITHUB_REF:'refs/heads/v2.0.1',
+      A2A_RELEASE_APPROVED_SHA:'',
+      A2A_RELEASE_EVIDENCE_B64:'',
+      A2A_RELEASE_TRUST_KEYS_B64:'',
+      A2A_RELEASE_REGISTRY_B64:''
+    },
+    encoding:'utf8',timeout:10000
+  });
+  assert.equal(proc.status,1);
+  assert.equal(proc.stdout.trim(),'');
+  assert.match(proc.stderr,/Release authorization DENIED/);
 });
