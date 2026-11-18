@@ -6,6 +6,8 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {validateArgs} from '../src/tools.mjs';
 import {getSessionTokenUsage} from '../src/tokens.mjs';
+import {localAntigravityRpcUrl} from '../src/security.mjs';
+import {Store} from '../src/storage.mjs';
 
 test('strict MCP parameter schemas reject inherited Object prototype keys at every depth',()=>{
   for(const key of ['constructor','toString','__proto__']){
@@ -70,4 +72,30 @@ test('untrusted hook transcript paths cannot cross the brain directory boundary'
     if(old===undefined)delete process.env.ANTIGRAVITY_APP_DATA_DIR;else process.env.ANTIGRAVITY_APP_DATA_DIR=old;
     fs.rmSync(base,{recursive:true,force:true});
   }
+});
+
+test('refresh RPC cannot forward a local CSRF token off loopback',()=>{
+  assert.equal(localAntigravityRpcUrl('127.0.0.1:12345'),'http://127.0.0.1:12345/exa.language_server_pb.LanguageServerService/RefreshMcpServers');
+  assert.match(localAntigravityRpcUrl('[::1]:4321'),/^http:\/\/\[::1\]:4321\//);
+  for(const address of ['evil.example:443','0.0.0.0:2000','192.168.1.1:3000','127.0.0.1:0','127.0.0.1:65536','localhost:9999@evil.example','localhost:8000/path','http://127.0.0.1:8000']){
+    assert.throws(()=>localAntigravityRpcUrl(address),/loopback|Invalid/,address);
+  }
+});
+
+test('SQLite state rejects symlinked database and WAL files',()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-sqlite-safety-'));
+  try{
+    const outside=path.join(dir,'private.txt');fs.writeFileSync(outside,'do not touch');
+    const base=path.join(dir,'data');fs.mkdirSync(base);
+    for(const filename of ['a2a.sqlite','a2a.sqlite-wal','a2a.sqlite-shm']){
+      const target=path.join(base,filename);
+      try{
+        fs.symlinkSync(outside,target);
+      }catch(e){if(e.code==='EPERM'||e.code==='EACCES')return;throw e;}
+      assert.throws(()=>new Store(base),/Unsafe A2A database/);
+      fs.unlinkSync(target);
+    }
+    assert.equal(fs.readFileSync(outside,'utf8'),'do not touch');
+    const store=new Store(base);store.close();
+  }finally{fs.rmSync(dir,{recursive:true,force:true})}
 });
