@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Offline, read-only A/B evaluation. Does not execute Antigravity or export transcripts.
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 const MAX=8*1024*1024;
@@ -43,15 +44,20 @@ export function evaluateManifest(manifest,readCapture,{minRepetitions=5}={}){
   for(const k of ['task_id','snapshot_sha','model','effort','antigravity_version','permissions','evaluation_version'])check(typeof manifest.setup[k]==='string'&&manifest.setup[k].length>0,'Missing setup.'+k);
   check(Array.isArray(manifest.scenarios)&&manifest.scenarios.length>0&&new Set(manifest.scenarios).size===manifest.scenarios.length,'Unique scenario IDs required');
   check(Array.isArray(manifest.runs)&&manifest.runs.length>0&&manifest.runs.length<=300,'Expected 1-300 runs');
-  const seen=new Set(),runs=[];
+  const seen=new Set(),capturesSeen=new Set(),runs=[];
   for(const item of manifest.runs){
     check(object(item)&&VARIANTS.has(item.variant),'Unknown variant');
     check(nat(item.repeat)&&item.repeat>0,'Invalid repeat');
     const key=item.variant+':'+item.repeat;check(!seen.has(key),'Duplicate variant/repeat');seen.add(key);
     check(typeof item.capture==='string'&&item.capture.length>0,'Missing capture');
     check(object(item.acceptance)&&Object.keys(item.acceptance).length===manifest.scenarios.length&&manifest.scenarios.every(s=>VERDICTS.has(item.acceptance[s])),'Provide every independent acceptance verdict');
-    const p=parseCapture(readCapture(item.capture));
-    runs.push({variant:item.variant,repeat:item.repeat,status:p.status,usage:p.usage,duration_seconds:p.duration_seconds,num_turns:p.num_turns,tool_calls:p.tool_calls,tool_errors:p.tool_errors,acceptance_passed:manifest.scenarios.filter(s=>item.acceptance[s]==='passed').length,acceptance_total:manifest.scenarios.length});
+    if(item.setup&&Object.entries(item.setup).some(([k,v])=>k in manifest.setup&&manifest.setup[k]!==v))throw Error('Per-run environment differs from fixed setup');
+    const raw=readCapture(item.capture);
+    const captureSha=crypto.createHash('sha256').update(raw).digest('hex');
+    check(!capturesSeen.has(captureSha),'Duplicated capture bytes across supposed independent runs');
+    capturesSeen.add(captureSha);
+    const p=parseCapture(raw);
+    runs.push({variant:item.variant,repeat:item.repeat,status:p.status,capture_sha256:captureSha,usage:p.usage,duration_seconds:p.duration_seconds,num_turns:p.num_turns,tool_calls:p.tool_calls,tool_errors:p.tool_errors,acceptance_passed:manifest.scenarios.filter(s=>item.acceptance[s]==='passed').length,acceptance_total:manifest.scenarios.length});
   }
   const grouped={};for(const r of runs)(grouped[r.variant]??=[]).push(r);
   const variants={};
@@ -59,8 +65,8 @@ export function evaluateManifest(manifest,readCapture,{minRepetitions=5}={}){
     const stats=items.map(r=>({tokens:r.usage.total_tokens,seconds:r.duration_seconds,turns:r.num_turns,tools:r.tool_calls,accepted:r.acceptance_passed}));
     variants[name]={runs:items.length,successful_runs:items.filter(r=>r.status==='SUCCESS').length,ready_for_comparison:items.length>=minRepetitions,official_tokens:summary(stats,'tokens'),duration_seconds:summary(stats,'seconds'),model_turns:summary(stats,'turns'),tool_calls:summary(stats,'tools'),acceptance_passed:summary(stats,'accepted')};
   }
-  const ready=Object.keys(grouped).length>=2&&Object.values(variants).every(x=>x.ready_for_comparison);
-  return {schema:'a2a-ab-evaluation-v1',setup:manifest.setup,scenarios:manifest.scenarios,variants,runs,comparability:{ready,minimum_repetitions:minRepetitions,quota_comparable:false,reason:ready?'Repeated captures present, but independent runtime/evidence comparability still requires review.':'Insufficient repetitions or variants; no causal A/B savings claim supported.'},caveats:['Only independently verified acceptance verdicts count','Free Tier percentages are not fixed token budgets','Cache-read/thinking must not be added to official total_tokens','No causal benefit or cost savings inferred']};
+  const repeated=Object.keys(grouped).length>=2&&Object.values(variants).every(x=>x.ready_for_comparison);
+  return {schema:'a2a-ab-evaluation-v1',setup:manifest.setup,scenarios:manifest.scenarios,variants,runs,comparability:{ready:false,capture_repetitions_ready:repeated,independent_acceptance_verified:false,minimum_repetitions:minRepetitions,quota_comparable:false,reason:repeated?'Repeated distinct captures are present, but independent evaluator and runtime equivalence have not been attested; no causal conclusion.':'Insufficient repetitions or variants; no causal A/B savings claim supported.'},caveats:['Only independently verified acceptance verdicts count','Free Tier percentages are not fixed token budgets','Cache-read/thinking must not be added to official total_tokens','No causal benefit or cost savings inferred']};
 }
 function safeCapture(root,name){
   const file=path.resolve(root,name),rel=path.relative(root,file);
