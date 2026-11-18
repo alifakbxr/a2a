@@ -1,1 +1,14 @@
-Privacy-safe A2A benchmark export (#14). Run locally: node scripts/export-benchmark.mjs aggregated.json > public-candidate.json . Only accepts a2a-ab-evaluation-v1 output (#3). Export uses a strict field allowlist: numeric metrics, known variant and status values; excludes all setup, workspace paths, raw prompts, logs, user IDs, cookies, network credentials and source content. The export does NOT upload or share anything; user review is still required and cannot be replaced by automatic redaction. Never commit original brain ZIPs or application source without manual sensitive-data review. See official Antigravity privacy and local MCP docs: https://antigravity.google/docs/mcp/ .
+# Private Benchmark Report Export
+
+The **opt-in**, source-checkout-only exporter from [issue #14](https://github.com/alifakbxr/a2a/issues/14) minimizes content before manual release of an A/B aggregate. It does **not** upload or publish anything.
+
+```bash
+node benchmarks/ab-evaluate.mjs manifest.json > aggregated.json
+node scripts/export-benchmark.mjs aggregated.json > public-candidate.json
+```
+
+Only supported `a2a-ab-evaluation-v1` input can be exported. Output uses an explicit allowlist of recognized variant/status metadata and aggregate numeric measures. Setup prompts, paths, logs, conversation text, user IDs, cookies, credentials and source content are not intentionally emitted.
+
+**Manually inspect every proposed public artifact anyway.** Redaction is not an authorization to share private Antigravity brain ZIPs, original STOCKROOM application snapshots, customer data or model transcripts. Compare actual native/A2A quality and usage under controlled trials; an exported aggregate is **not** independent acceptance evidence.
+
+Related: [A/B evaluation](AB_EVALUATION.md), [Token efficiency](TOKEN_EFFICIENCY.md), [Security](SECURITY.md), [Open release blocker](https://github.com/alifakbxr/a2a/issues/15).
