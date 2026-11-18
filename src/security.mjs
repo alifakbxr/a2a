@@ -297,7 +297,16 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
   if (autoTrust === 'off') return [];
 
   const home = getHomeDir();
-  const cacheKey = `${home}|${autoTrust}|${settingsPath()}`;
+  // The active SessionStart record is a cache input in active-only mode.
+  // A workspace switch must invalidate permissions without waiting for TTL.
+  let activeVersion='';
+  if(autoTrust==='active-only'){
+    try{
+      const stat=fs.lstatSync(path.join(dataDir(),'active-session.json'));
+      activeVersion=stat.isFile()&&!stat.isSymbolicLink()?`${stat.mtimeMs}:${stat.size}`:'unsafe';
+    }catch{activeVersion='missing'}
+  }
+  const cacheKey = `${home}|${autoTrust}|${settingsPath()}|${activeVersion}`;
   const now = Date.now();
   if (!bypassCache && workspaceCache && workspaceCache.key === cacheKey && (now - workspaceCache.ts) < WORKSPACE_CACHE_TTL_MS) {
     return workspaceCache.dirs;
