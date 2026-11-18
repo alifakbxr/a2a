@@ -42,6 +42,10 @@ export class Store {
     this.#ensureColumn('files','mtime_ms','REAL');
     this.#ensureColumn('artifact_versions','workspace_id','TEXT');
     this.db.exec(DDL);
+    // Existing v2.0.1 SQLite databases must upgrade in place, without
+    // deleting prior user checkpoints or requiring a new major DB schema.
+    this.#ensureColumn('recovery_checkpoints','decisions_json',"TEXT NOT NULL DEFAULT '[]'");
+    this.#ensureColumn('recovery_checkpoints','pending_tests_json',"TEXT NOT NULL DEFAULT '[]'");
     try{fs.chmodSync(this.file,0o600)}catch{}
     this.db.prepare("INSERT OR IGNORE INTO meta(key,value) VALUES('schema_version','1')").run();
     const actual=this.db.prepare("SELECT value FROM meta WHERE key='schema_version'").get()?.value;
