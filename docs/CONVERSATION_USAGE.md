@@ -41,3 +41,7 @@ Inside the agent, call `a2a_context(action="tokens", history_scope="current")` f
 Cached context can be read repeatedly over hundreds of model steps, creating a large *cumulative* counter even when the *current* context window is much smaller. Cached reads may already be included within input usage depending on source schema. We therefore show input/cache/output separately, do not combine internal counters with official reports, and do not assign a dollar value from guessed model rates.
 
 If a conversation has no readable usage counters, the report says so instead of making up an estimate from source code size.
+
+## Behavioral-audit privacy boundary
+
+The user-provided private Antigravity history used for [behavioral analysis](BEHAVIORAL_5_WHYS_V2_0_1.md) contained at least one plaintext login detail; **none of the raw archives or those credentials belongs in this public repository**. This account of past usage is separate from any agent-generated completion evidence. A2A's optional `save_checkpoint` accepts explicit notes, not entire transcripts, and rejects common credential assignments while always marking them **unverified**. For source-aware recovery see [Checkpoint recovery](CHECKPOINT_RECOVERY.md).
