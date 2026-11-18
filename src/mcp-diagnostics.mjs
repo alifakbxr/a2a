@@ -12,7 +12,7 @@ export function classifyMcpFailure(toolName,error){
  }
  if(/Workspace is not authorized/i.test(msg)){
   return {status:'error',code:'workspace_authorization_required',
-   message:'Workspace authorization is required.',
+   message:'Workspace is not authorized for A2A.',
    next_step:'Ask the user to trust the intended workspace in Antigravity or explicitly run a2a allow <workspace>. Never bypass authorization.'};
  }
  if(/protected root|system directory|Symlink access denied|sensitive file denied|escapes authorized|Path escapes|outside workspace|Permission denied/i.test(msg)){
