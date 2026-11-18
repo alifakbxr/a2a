@@ -1,4 +1,5 @@
 // Browser Evidence v1 contract: read-only and conservative.
+import {isDeepStrictEqual} from 'node:util';
 // A local artifact hash verifies unchanged bytes, NOT browser execution authenticity.
 const object=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 const bounded=x=>typeof x==='string'&&x.length>0&&x.length<=160;
@@ -15,10 +16,12 @@ export function assessBrowserEvidence(report,{expectedRevision,artifactChecks=[]
  if(!bounded(report.environment.browser)||!bounded(report.environment.version))problems.push('browser-environment-incomplete');
  if(!bounded(report.runner?.name)||!bounded(report.runner?.version))problems.push('runner-missing');
  if(!report.started_at||!report.finished_at||!Number.isFinite(Date.parse(report.started_at))||!Number.isFinite(Date.parse(report.finished_at))||Date.parse(report.started_at)>Date.parse(report.finished_at))problems.push('timing-invalid');
- const cases=[];
+ const cases=[],seenAssertions=new Set();
  for(const a of report.assertions){
   if(!object(a)||!id(a.id)||!['passed','failed','skipped','not-run'].includes(a.status)){problems.push('invalid-assertion');continue}
-  const outcome=a.status==='passed'&&a.executed===true&&a.observed!==undefined&&a.expected!==undefined&&JSON.stringify(a.observed)===JSON.stringify(a.expected)?'reported-passed':a.status==='failed'?'reported-failed':'insufficient';
+  if(seenAssertions.has(a.id)){problems.push('duplicate-assertion');continue}
+  seenAssertions.add(a.id);
+  const outcome=a.status==='passed'&&a.executed===true&&a.observed!==undefined&&a.expected!==undefined&&isDeepStrictEqual(a.observed,a.expected)?'reported-passed':a.status==='failed'?'reported-failed':'insufficient';
   cases.push({id:a.id,outcome});
  }
  if(!cases.length)problems.push('no-machine-assertions');
