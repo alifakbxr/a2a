@@ -130,7 +130,8 @@
             "enum": [
               "plan",
               "assess",
-              "verify_handoff"
+              "verify_handoff",
+              "assess_release"
             ]
           },
           "changed": {
