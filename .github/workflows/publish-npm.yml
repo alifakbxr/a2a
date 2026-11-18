@@ -7,11 +7,6 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      force_publish:
-        description: 'Force publish even if version tag check is bypassed'
-        type: boolean
-        default: false
 
 concurrency:
   group: npm-publish
@@ -43,6 +38,16 @@ jobs:
       - name: Release Contract & Schema Drift Check
         run: node scripts/check-release.mjs
 
+      - name: Verify independently authorized release candidate
+        env:
+          A2A_RELEASE_APPROVED_SHA: ${{ vars.A2A_RELEASE_APPROVED_SHA }}
+          A2A_RELEASE_EVIDENCE_B64: ${{ secrets.A2A_RELEASE_EVIDENCE_B64 }}
+          A2A_RELEASE_TRUST_KEYS_B64: ${{ secrets.A2A_RELEASE_TRUST_KEYS_B64 }}
+          A2A_RELEASE_REGISTRY_B64: ${{ secrets.A2A_RELEASE_REGISTRY_B64 }}
+        run: |
+          git fetch origin main --no-tags
+          node scripts/release-authorization.mjs
+
       - name: Verify Package Contents Hygiene
         run: |
           npm pack --dry-run
@@ -66,6 +71,16 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Verify independently authorized release candidate
+        env:
+          A2A_RELEASE_APPROVED_SHA: ${{ vars.A2A_RELEASE_APPROVED_SHA }}
+          A2A_RELEASE_EVIDENCE_B64: ${{ secrets.A2A_RELEASE_EVIDENCE_B64 }}
+          A2A_RELEASE_TRUST_KEYS_B64: ${{ secrets.A2A_RELEASE_TRUST_KEYS_B64 }}
+          A2A_RELEASE_REGISTRY_B64: ${{ secrets.A2A_RELEASE_REGISTRY_B64 }}
+        run: |
+          git fetch origin main --no-tags
+          node scripts/release-authorization.mjs
+
       - name: Check Current Version vs npm Registry
         id: version_check
         run: |
@@ -86,13 +101,13 @@ jobs:
           fi
 
       - name: Publish to npmjs.com
-        if: steps.version_check.outputs.already_published == 'false' || inputs.force_publish == true
+        if: steps.version_check.outputs.already_published == 'false'
         run: |
           npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Verification & Publication Summary
-        if: steps.version_check.outputs.already_published == 'false' || inputs.force_publish == true
+        if: steps.version_check.outputs.already_published == 'false'
         run: |
           echo "🎉 Successfully published ${{ steps.version_check.outputs.pkg_name }}@${{ steps.version_check.outputs.pkg_ver }} to npmjs.com with SLSA provenance!"
