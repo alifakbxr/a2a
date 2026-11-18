@@ -14,6 +14,39 @@ const isObject=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 const EXPECTED_REPO='alifakbxr/a2a';
 const REQUIRED_SCENARIOS=Array.from({length:18},(_,i)=>'F'+String(i+1).padStart(2,'0'));
 
+export function releaseApprovalPayload({release_target,revision,approved_at}){
+ return JSON.stringify({
+   schema:'a2a-release-approval-v1',
+   repository:release_target.repository,commit_sha:release_target.commit_sha,
+   version:release_target.version,revision,
+   acceptance_registry_sha256:release_target.acceptance_registry_sha256,
+   real_antigravity_validation:release_target.real_antigravity_validation,
+   privacy_reviewed:release_target.privacy_reviewed,
+   repeated_benchmark_verified:release_target.repeated_benchmark_verified,
+   approved_at
+ });
+}
+function validReleaseApproval(manifest,trustKeys){
+ const approval=manifest.release_approval,keys=trustKeys;
+ if(!isObject(approval)||typeof approval.key_id!=='string'||
+    typeof approval.signature!=='string'||!/^[a-zA-Z0-9+/]{85,86}==$/.test(approval.signature)||
+    typeof approval.approved_at!=='string'||!Number.isFinite(Date.parse(approval.approved_at)))return false;
+ const key=keys[approval.key_id];
+ if(typeof key!=='string')return false;
+ const approvedAt=Date.parse(approval.approved_at);
+ if(approvedAt>Date.now()+5*60_000||approvedAt<Date.now()-90*24*60*60_000)return false;
+ try{
+   const publicKey=crypto.createPublicKey(key);
+   if(publicKey.asymmetricKeyType!=='ed25519')return false;
+   const signature=Buffer.from(approval.signature,'base64');
+   return signature.length===64&&crypto.verify(
+     null,Buffer.from(releaseApprovalPayload({
+       release_target:manifest.release_target,revision:manifest.revision,
+       approved_at:approval.approved_at
+     })),publicKey,signature);
+ }catch{return false}
+}
+
 export function assertPublishAuthorized({
  repository,eventName,ref,checkoutSha,mainSha,approvedSha,packageVersion,
  manifest,trustKeys,registry
@@ -50,6 +83,8 @@ export function assertPublishAuthorized({
        manifest.release_target.privacy_reviewed===true &&
        manifest.release_target.repeated_benchmark_verified===true,
    'Release lacks externally approved Antigravity, privacy or repeated benchmark gates');
+ check(validReleaseApproval(manifest,trustKeys),
+   'Missing, expired or invalid independent Ed25519 release approval for this exact candidate');
  return {status:'authorized',release_commit:checkoutSha,package_version:packageVersion,
    verified_scenarios:assessment.scenarios.passed,registry_sha256:registryDigest,
    note:'This verifies externally supplied attestations, not the honesty of test execution.'};
