@@ -448,14 +448,25 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
   return sorted;
 }
 
-export function loadAllowlist(){
-  try {
-    const stat = fs.lstatSync(allowlistPath());
-    if(!stat.isFile() || stat.isSymbolicLink()) return [];
-    const data = JSON.parse(fs.readFileSync(allowlistPath(),'utf8'));
-    return Array.isArray(data.allowed) ? data.allowed.filter(s=>typeof s==='string') : [];
-  } catch {return []}
+function readWorkspaceGrants(){
+  const file=allowlistPath();
+  try{
+    const stat=fs.lstatSync(file);
+    if(!stat.isFile()||stat.isSymbolicLink()||stat.size>128*1024)throw Error('Unsafe workspace grants file');
+    const data=JSON.parse(fs.readFileSync(file,'utf8'));
+    if(!data||!Array.isArray(data.allowed)||!Array.isArray(data.revoked??[]))throw Error('Malformed workspace grants');
+    const validList=xs=>xs.every(x=>typeof x==='string'&&x.length<=1024&&path.isAbsolute(x));
+    const revoked=data.revoked??[];
+    if(!validList(data.allowed)||!validList(revoked))throw Error('Invalid workspace grants');
+    return {allowed:data.allowed,revoked,valid:true};
+  }catch(e){
+    if(e.code==='ENOENT')return {allowed:[],revoked:[],valid:true};
+    // A damaged grants file must never silently reactivate auto-trusted paths.
+    return {allowed:[],revoked:[],valid:false};
+  }
 }
+export function loadAllowlist(){return readWorkspaceGrants().allowed}
+export function loadRevokedWorkspaces(){return readWorkspaceGrants().revoked}
 
 export function isSameOrDescendantPath(parent, child) {
   if (!parent || !child) return false;
@@ -493,7 +504,10 @@ export function isSameOrDescendantPath(parent, child) {
 export function isWorkspaceAuthorized(ws){
   if (isProtectedRoot(ws)) return false;
   const canonical = realpathIfExists(ws);
-  const allowed = loadAllowlist();
+  const grants=readWorkspaceGrants();
+  if(!grants.valid)return false;
+  if(grants.revoked.some(p=>isSameOrDescendantPath(p,canonical)||isSameOrDescendantPath(p,ws)))return false;
+  const allowed = grants.allowed;
   for (const a of allowed) {
     if (isProtectedRoot(a)) continue;
     if (isSameOrDescendantPath(a, canonical) || isSameOrDescendantPath(a, ws)) {
@@ -515,23 +529,41 @@ export function requireAuthorizedWorkspace(input){
   if (!isWorkspaceAuthorized(ws)) throw new Error('Workspace is not authorized. Run: node scripts/a2a.mjs allow "'+ws+'" (local user approval).');
   return ws;
 }
-function writeAllowlist(allowed){
+function writeAllowlist(allowed,revoked=[]){
   const target=path.join(getHomeDir(), '.config', 'a2a', 'allowed-workspaces.json');
   const parent=path.dirname(target);fs.mkdirSync(parent,{recursive:true,mode:0o700});
-  const flags=fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_TRUNC|(fs.constants.O_NOFOLLOW||0);
-  const fd=fs.openSync(target,flags,0o600);
-  try{fs.fchmodSync(fd,0o600);fs.writeFileSync(fd,JSON.stringify({version:1,allowed},null,2)+'\n')}finally{fs.closeSync(fd)}
+  // A replace prevents partial/truncated grant files on interruption and never
+  // follows a symlink at the target pathname.
+  const temp=target+'.'+process.pid+'.'+crypto.randomUUID()+'.tmp';
+  const flags=fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|(fs.constants.O_NOFOLLOW||0);
+  let fd=null;
+  try{
+    fd=fs.openSync(temp,flags,0o600);
+    fs.writeFileSync(fd,JSON.stringify({version:1,allowed,revoked},null,2)+'\n');
+    fs.closeSync(fd);fd=null;
+    fs.renameSync(temp,target);
+  }finally{
+    if(fd!==null)fs.closeSync(fd);
+    try{fs.unlinkSync(temp)}catch{}
+  }
 }
 export function authorizeWorkspace(input) {
   const ws=normalizeWorkspace(input);
   if(isProtectedRoot(ws)) throw new Error('Refusing to authorize a protected root or system directory');
-  const allowed=[...new Set([...loadAllowlist(),ws])].sort();
-  writeAllowlist(allowed);
+  const current=readWorkspaceGrants();
+  if(!current.valid)throw new Error('Workspace grants file is invalid; repair it before allowing access');
+  const allowed=[...new Set([...current.allowed,ws])].sort();
+  const revoked=current.revoked.filter(x=>x!==ws);
+  writeAllowlist(allowed,revoked);
   return ws;
 }
 export function revokeWorkspace(input){
-  const ws=normalizeWorkspace(input);const allowed=loadAllowlist().filter(x=>x!==ws);
-  writeAllowlist(allowed);
+  const ws=normalizeWorkspace(input);
+  const current=readWorkspaceGrants();
+  if(!current.valid)throw new Error('Workspace grants file is invalid; cannot safely revoke access');
+  const allowed=current.allowed.filter(x=>x!==ws);
+  const revoked=[...new Set([...current.revoked,ws])].sort();
+  writeAllowlist(allowed,revoked);
   return allowed;
 }
 export function safeFile(root,rel,{mustExist=true}={}) {
