@@ -46,7 +46,7 @@ const SCOPE=[
  ['authorization-and-tenant-isolation',/(?:\b(auth|role|permission|middleware|tenant|organisation|organization|membership|access|policy|guard)\b|routes\/(?:web|api)\.php|controllers?\/|\bstore[_ -]?id\b|\bsupplier[_ -]?id\b)/i],
  ['financial-integrity',/(?:checkout|poscontroller|poscheckout|payment|invoice|discount|tax|price|ledger|settlement|paid|billing)/i],
  ['refund-and-inventory-invariants',/(?:refund|stock|inventory|transfer|receiv|restock|adjustment)/i],
- ['concurrency-and-idempotency',/(?:checkout|refund|transfer|inventory|operation[_ -]?id|idempoten|concurren|stock)/i],
+ ['concurrency-and-idempotency',/(?:checkout|poscontroller|poscheckout|refund|transfer|inventory|operation[_ -]?id|idempoten|concurren|stock)/i],
  ['offline-security-and-recovery',/(?:offline|service[-_]?worker|\bsw\.js\b|indexeddb|sync|queue|pwa|replay|cache)/i],
  ['identity-and-production-safety',/(?:\b(login|register|auth|invite|invitation|seeder|seeders|exception|errorhandler|authcontroller)\b|routes\/(?:web|api)\.php)/i],
  ['web-usability-and-operations',/(?:\.(?:vue|tsx|jsx|css|scss)\b|pages\/|components\/|accessib|performance|responsive)/i]
@@ -69,6 +69,6 @@ export function proposeRiskTests({paths=[],criteria=[]}={}){
   coverage_assurance:'none',
   limitations:['Path and criteria classification is a heuristic, not a discovered security vulnerability',
    'Suggested tests have not been executed and do not change any passing verification verdict by themselves',
-   'No domain match does not prove absence of risk or complete route and service coverage',
+   'No domain match does not mean the application is secure or that route/service coverage is complete',
    'Independent test artifacts with explicit scenario assertions are required before claiming release readiness']};
 }
