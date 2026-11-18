@@ -37,4 +37,8 @@
 
 ## Honest status
 
-The repository includes a **working local MCP runtime and Antigravity plugin bundle** validated with `agy plugin validate --strict .`, unit/integration tests, and stdio MCP probes. Cross-OS validation on macOS and Windows remains external to Linux CI.
+The repository includes a **working local MCP runtime and Antigravity plugin bundle** validated with `agy plugin validate --strict .`, unit/integration tests, and stdio MCP probes. The repository CI matrix tests Node 22 on Ubuntu, macOS and Windows and Node 24 on Ubuntu. This does not replace live Antigravity plugin installation and browser/HTTP/database verification.
+
+## v2.0.1 branch and promotion
+
+The audited changes from Draft PRs #16–#27 were integrated through [PR #29](https://github.com/alifakbxr/a2a/pull/29) into the dedicated `v2.0.1` branch. See [source PR traceability and the frozen benchmark/release gate](./V2_0_1_TRACEABILITY.md). Do not re-merge the same feature heads; retain the unmodified main baseline until the external validation gates pass. Only then open one `v2.0.1` → `main` PR with explicit human approval. A green repository CI does not imply a public npm/GitHub release.
