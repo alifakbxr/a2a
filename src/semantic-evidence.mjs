@@ -10,7 +10,13 @@ const BUILTIN={
  'refund-duplicate-lines':['duplicate_detected','bounded_refund_and_restock'],
  'refund-amount-only':['partial_refund','no_implicit_restock'],
  'transfer-race':['parallel_transitions','single_final_state'],
- 'offline-account-switch':['different_accounts','no_cross_account_cache']
+ 'offline-account-switch':['different_accounts','no_cross_account_cache'],
+ 'role-matrix':['forbidden_roles_tested','denials_observed','db_unchanged'],
+ 'relational-ownership':['cross_org_ids_tested','foreign_ids_rejected'],
+ 'production-credentials':['production_build_observed','no_usable_demo_credentials'],
+ 'error-sanitization':['failure_injected','private_exception_hidden'],
+ 'invitation-flow':['expiration_and_acceptance','tenant_scope_enforced'],
+ 'login-throttling':['invalid_attempts_repeated','rate_limited']
 };
 const valid=x=>typeof x==='string'&&/^[a-z][a-z0-9_-]{2,80}$/.test(x);
 const object=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
@@ -76,6 +82,31 @@ export function inspectScenarioFacts(name,facts){
   'transfer-race':{
     parallel_transitions:intervalPair(f.requests),
     single_final_state:Array.isArray(f.requests)&&f.requests.filter(x=>x.outcome==='success').length===1&&f.stock_movements===1&&['received','cancelled'].includes(f.final_state)
+  },
+  'role-matrix':{
+    forbidden_roles_tested:Array.isArray(f.forbidden_roles)&&['cashier','auditor','no-member'].every(x=>f.forbidden_roles.includes(x)),
+    denials_observed:Array.isArray(f.forbidden_statuses)&&f.forbidden_statuses.length>=3&&f.forbidden_statuses.every(x=>[401,403,404].includes(x)),
+    db_unchanged:f.forbidden_db_mutation_count===0&&eq(f.no_protected_data_leaked)
+  },
+  'relational-ownership':{
+    cross_org_ids_tested:eq(f.foreign_store_id_sent)&&eq(f.foreign_supplier_id_sent),
+    foreign_ids_rejected:eq(f.relational_constraint_rejected)&&f.cross_org_relations_created===0
+  },
+  'production-credentials':{
+    production_build_observed:eq(f.production_build_tested),
+    no_usable_demo_credentials:f.demo_credentials_rendered===false&&f.known_demo_login_accepted===false
+  },
+  'error-sanitization':{
+    failure_injected:eq(f.server_error_injected),
+    private_exception_hidden:eq(f.private_message_hidden)&&eq(f.correlation_id_present)
+  },
+  'invitation-flow':{
+    expiration_and_acceptance:eq(f.recipient_acceptance_tested)&&eq(f.expired_token_rejected),
+    tenant_scope_enforced:eq(f.cross_tenant_store_invite_rejected)&&eq(f.unauthorized_invite_rejected)
+  },
+  'login-throttling':{
+    invalid_attempts_repeated:Number.isInteger(f.invalid_login_attempts)&&f.invalid_login_attempts>=6,
+    rate_limited:eq(f.throttle_returned)&&eq(f.no_credentials_disclosed)
   },
   'offline-account-switch':{
     different_accounts:typeof f.user_before==='string'&&typeof f.user_after==='string'&&f.user_before.length>0&&f.user_after.length>0&&f.user_before!==f.user_after,
