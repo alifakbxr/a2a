@@ -230,7 +230,10 @@ export class Engine {
       ...(isLargeScope?{
         teamwork_advisory:{
           large_scope:true,
-          recommendation:'Use /teamwork to orchestrate parallel discovery, worker implementation, and independent verification on this multi-module task.',
+          recommendation:'Consider native parallel assistance only if available and approved by the user. Do not assume /teamwork, /swarm, /boost or @subagent is enabled.',
+          capability_confirmed:false,
+          user_approval_required:true,
+          automatic_worker_launch:false,
           affected_count:res.affected.length,
           risk:res.risk,
         }
