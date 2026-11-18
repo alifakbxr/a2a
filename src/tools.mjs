@@ -44,7 +44,7 @@ const BASE_SPECS = [
       required:['workspace','operation'],
       properties:{
         workspace:ws,
-        operation:{type:'string',enum:['list','runs','incidents','record_incident','add_hypothesis','hypotheses','side_questions','record_side_question','artifact_versions','artifact_diff','snapshot_artifact']},
+        operation:{type:'string',enum:['list','runs','incidents','record_incident','add_hypothesis','hypotheses','side_questions','record_side_question','artifact_versions','artifact_diff','snapshot_artifact','save_checkpoint','model_recovery']},
         id:string,
         limit:{type:'integer',minimum:1,maximum:50},
         title:{type:'string',maxLength:240},
@@ -60,6 +60,9 @@ const BASE_SPECS = [
         question:{type:'string',maxLength:4000},
         summary:{type:'string',maxLength:4000},
         status:{type:'string',maxLength:40},
+        task_summary:{type:'string',maxLength:500,description:'For save_checkpoint: explicit short task summary, not raw conversation text.'},
+        completed:{type:'array',maxItems:8,items:{type:'string',maxLength:200},description:'For save_checkpoint: user-reviewed completed work notes; unverified.'},
+        next_steps:{type:'array',maxItems:8,items:{type:'string',maxLength:200},description:'For save_checkpoint: next steps after a manual model change.'},
         artifact_name:{type:'string',maxLength:240},
         artifact_path:{type:'string',maxLength:500},
         version_number:{type:'integer',minimum:1},
