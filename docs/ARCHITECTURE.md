@@ -9,7 +9,7 @@ A2A is a local-first, native-first **engineering intelligence support layer** fo
 3. **Source freshness:** SHA-256 source revision including uncommitted edits and separately hashed evidence artifacts. Cached static metadata is never a license to present stale proof.
 4. **Evidence scope:** local JUnit/TAP/JSON assertions are NOT independent confirmation of browser UI, hardware, security, or production readiness. `completion.fully_verified` is deliberately false for local reports.
 5. **Adaptive, bounded workflow:** On-Demand is the default; Always-On is opt-in and injects one small policy at `SessionStart`. Native trivial work needs no A2A call.
-6. **No network service or arbitrary project execution:** only an explicitly requested loopback-only `refresh` talks to Antigravity's local RPC. A2A does not run a browser, model call, subagent, or arbitrary project script.
+6. **No automatic network service or arbitrary project execution:** the explicit `refresh` command only uses loopback Antigravity RPC; separately, the **opt-in** `stats` CLI uses the external `gh api` command to fetch GitHub traffic metrics. Core MCP, hooks, graph and verification do not make outbound network calls. A2A does not run project scripts, browsers, model calls or subagents.
 
 ## Modules and responsibilities
 
