@@ -97,3 +97,20 @@ test('invitation token and brute force outcomes need negative evidence',()=>{
  const rate=evaluateSemanticClaims(report('login-throttling',{invalid_login_attempts:6,throttle_returned:false,no_credentials_disclosed:true}));
  assert.ok(rate.claims[0].missing.includes('rate_limited'));
 });
+
+test('built-in checks cannot be bypassed with a smaller caller-selected capability list',()=>{
+ const f={requests:[{connection_id:'a',resource_id:'stock-1',started_at_ms:0,completed_at_ms:4,outcome:'success'},{connection_id:'b',resource_id:'stock-1',started_at_ms:5,completed_at_ms:9,outcome:'failed'}],database_transactions_observed:true,database_dialect:'postgres',orders_created:1,stock_after:0};
+ const x=report('true-concurrency',f);
+ x.claims[0].required_capabilities=['one_winner_asserted'];
+ const result=evaluateSemanticClaims(x);
+ assert.ok(result.claims[0].missing.includes('parallel_clients'));
+ assert.equal(result.structurally_supported,0);
+ assert.equal(result.release_verified,false);
+});
+test('built-in checks remain mandatory when callers add custom checks',()=>{
+ const x=report('offline-restart',{});
+ x.claims[0].required_capabilities=['custom-extra'];
+ const result=evaluateSemanticClaims(x);
+ assert.ok(result.claims[0].missing.includes('network_disconnected'));
+ assert.ok(result.claims[0].missing.includes('custom-extra'));
+});
