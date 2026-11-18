@@ -1,6 +1,6 @@
 {
   "name": "@aliip/a2a",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A2A (Agent to Alif): Smart local-first engineering intelligence, impact analysis, token telemetry & verification for Antigravity.",
   "type": "module",
   "main": "src/engine.mjs",
@@ -19,7 +19,9 @@
   },
   "homepage": "https://github.com/alifakbxr/a2a#readme",
   "license": "MIT",
-  "engines": { "node": ">=22.13.0" },
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "check": "node --check src/mcp.mjs && node --check scripts/a2a.mjs && npm test",
