@@ -36,7 +36,7 @@ test('all local Markdown links resolve and no machine-local file URLs leak into 
      const target=decodeURIComponent(href.split('#')[0].split('?')[0]);
      if(!target)continue;
      const resolved=path.resolve(root,path.dirname(file),target);
-     assert.ok(resolved.startsWith(root+path.sep),file+': link escapes repo: '+href);
+     assert.ok(resolved===root||resolved.startsWith(root+path.sep),file+': link escapes repo: '+href);
      assert.ok(fs.existsSync(resolved),file+': link target missing: '+href);
    }
  }
