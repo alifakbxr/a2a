@@ -55,9 +55,10 @@ export const settingsPath = () => {
 
 function readSettings() {
   try {
-    const file = settingsPath();
-    if (fs.existsSync(file)) {
-      return JSON.parse(fs.readFileSync(file, 'utf8')) || {};
+    const file=settingsPath(),stat=fs.lstatSync(file);
+    if(stat.isFile()&&!stat.isSymbolicLink()&&stat.size<=64*1024){
+      const result=JSON.parse(fs.readFileSync(file,'utf8'));
+      return result&&typeof result==='object'&&!Array.isArray(result)?result:{};
     }
   } catch {}
   return {};
@@ -68,13 +69,19 @@ function writeSettings(patch) {
   const parent = path.dirname(target);
   fs.mkdirSync(parent, { recursive: true, mode: 0o700 });
   const data = { ...readSettings(), ...patch, updatedAt: new Date().toISOString() };
-  const flags = fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC | (fs.constants.O_NOFOLLOW || 0);
-  const fd = fs.openSync(target, flags, 0o600);
-  try {
-    fs.fchmodSync(fd, 0o600);
-    fs.writeFileSync(fd, JSON.stringify(data, null, 2) + '\n');
-  } finally {
-    fs.closeSync(fd);
+  // Atomic replacement, unlike O_TRUNC, keeps a complete previous settings
+  // file if a process is interrupted midway through a write.
+  const temp=target+'.'+process.pid+'.'+crypto.randomUUID()+'.tmp';
+  const flags=fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|(fs.constants.O_NOFOLLOW||0);
+  let fd=null;
+  try{
+    fd=fs.openSync(temp,flags,0o600);
+    fs.writeFileSync(fd,JSON.stringify(data,null,2)+'\n');
+    fs.closeSync(fd);fd=null;
+    fs.renameSync(temp,target);
+  }finally{
+    if(fd!==null)fs.closeSync(fd);
+    try{fs.unlinkSync(temp)}catch{}
   }
   return data;
 }
