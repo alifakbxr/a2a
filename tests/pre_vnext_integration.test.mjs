@@ -72,7 +72,7 @@ test('browser report with stale build or tab-only reopen cannot claim independen
 });
 
 test('orchestration advice remains opt-in and cannot spawn paid workers on Free Tier',()=>{
-  const r=adviseOrchestration({tier:'free',available_commands:['/swarm','/teamwork','@subagent'],workstreams:['api','ui'],dependencies:'low'});
+  const r=adviseOrchestration({tier:'free',available_commands:['/swarm','/teamwork','@subagent'],workstreams:['api','ui'],dependencies:'low',file_ownership:'independent'});
   assert.equal(r.recommended,'@subagent');
   assert.equal(r.automatic_worker_launch,false);
   assert.equal(r.user_approval_required,true);
