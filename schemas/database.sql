@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS recovery_checkpoints (
   task_summary TEXT NOT NULL,
   completed_json TEXT NOT NULL,
   next_steps_json TEXT NOT NULL,
+  decisions_json TEXT NOT NULL DEFAULT '[]',
+  pending_tests_json TEXT NOT NULL DEFAULT '[]',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   PRIMARY KEY(workspace_id, conversation_id)
