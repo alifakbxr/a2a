@@ -1,17 +1,82 @@
-# Interrupted verification checkpoints (issue #9)
+# A2A Checkpoints and Recovery — current v2.0.1 contract
 
-Run `node scripts/checkpoint.mjs agy-stream.jsonl scenario-evidence.json` to create a **local, read-only** checklist from official Antigravity headless event streams and independently assigned scenario statuses. Pipe output to a private local file if persistence is needed. The script does not start, resume, or invoke a model.
+A2A has **two separate recovery mechanisms**. Neither automatically resumes a model, selects a quota group, launches a native tool or proves task completion.
 
-`scenario-evidence.json` example:
+## 1. Explicit workspace checkpoint via MCP
+
+Use `a2a_evidence(operation="save_checkpoint")` with an authorized workspace and a concrete conversation ID. This stores bounded explicit notes in private local SQLite.
 
 ```json
-{"scenarios":[{"id":"online-checkout","status":"passed","evidence_ref":"ci/run-2"},{"id":"offline-restart","status":"not-tested"},{"id":"inventory-cross-tenant","status":"blocked","reason_code":"missing-harness"}]}
+{
+  "workspace": "/authorized/project",
+  "operation": "save_checkpoint",
+  "conversation_id": "conv-test-1234",
+  "task_summary": "Fix duplicate QR printing",
+  "completed": ["Changed the QR handler, not yet accepted"],
+  "decisions": ["Second scan must not create a second print job"],
+  "pending_tests": ["All features enabled", "Selfie only", "Verification only"],
+  "next_steps": ["Run actual repeat-scan tests on the target printer"]
+}
 ```
 
-Statuses: passed, failed, blocked, partial, running, not-tested. Only externally verified achievements should be marked passed. Event status ERROR is **not equivalent** to a weekly quota limit; provider 503 and quota errors require separate provider evidence. A missing result means unknown/incomplete, not automatically exhausted.
+`task_summary` is <=500 characters. Each of the four arrays has up to eight nonempty statements of <=200 characters. These are **user/agent-supplied notes**, not attested results; `verified` remains `false`. Recognizable plaintext password/API key/token/cookie assignments are rejected, but the filter is a defense-in-depth heuristic, **not a guarantee** that every secret format will be detected. Never store credentials.
 
-The output includes a suggested `agy --conversation ID` command ONLY when the ID is validated; using it requires user approval and may be impossible if the conversation is unavailable. It never resumes automatically. Browser cookies, raw prompts, model text and verbose error bodies are discarded. The checkpoint does not prove source revision freshness.
+Call `a2a_evidence(operation="model_recovery",conversation_id="conv-test-1234")` to inspect an existing checkpoint. The response includes `source_revision`, `source_revision_matches` and `source_freshness`. If code changes, old notes remain readable but become **stale**; re-read code and rerun tests before continuing.
 
-Official sources: https://antigravity.google/docs/cli/headless/ and https://antigravity.google/docs/cli/commands/resume/ ; related user reports: https://github.com/google-antigravity/antigravity-cli/issues/163 .
+When Antigravity provides model invocation/stop metadata through supported hooks, A2A records only sanitized failure category and bounded model name, **not** raw provider errors or credentials. Error classifications are heuristic, not a quota API.
 
-**Pre-vNext trust note:** The checkpoint summarizes **reported** states, not independent test results. The output explicitly records `summary.reported_passed` and `summary.verified_passed:0` unless a separate verifier establishes actual evidence. Caller-supplied source and served-build revisions are not authenticated; a mismatch is flagged but matching strings are not proof of served build identity. No browser or model is resumed automatically.
+## 2. Native tool recovery guidance (no interception)
+
+Use `a2a_evidence(operation="tool_recovery")` after a native browser, MCP, filesystem or terminal error *only when useful*:
+
+```json
+{
+  "workspace": "/authorized/project",
+  "operation": "tool_recovery",
+  "tool_family": "browser",
+  "error_class": "context_lost",
+  "retry_count": 2
+}
+```
+
+Optional `error_hint` (max 400 chars) is classified heuristically but **never stored or echoed**. Prefer an `error_class` rather than including a potentially private raw message. Categories:
+
+| Category | Safe next step |
+| --- | --- |
+| `invalid_arguments` | Inspect exact tool schema and required argument names |
+| `context_lost` | Refresh browser page list/current execution context and selectors |
+| `timeout` | Verify whether the previous action already took effect, respect backoff |
+| `permission_denied` | Stop and obtain explicit authorized access; never bypass |
+| `missing_file` | Inspect current project tree and confirm the authorized path exists |
+| `edit_conflict` | Reopen changed file, recompute patch and rerun related tests |
+| `unknown` | Inspect native diagnostics; do not retry blindly |
+
+A2A returns `automatic_execution:false` and `retry_same_input:false`; repeated attempts trigger escalation guidance. The agent is free to ignore advice, and A2A is **not** a native tool proxy.
+
+## 3. Read-only checkpoint from an Antigravity CLI event stream
+
+For an already captured, local headless stream:
+
+```bash
+node scripts/checkpoint.mjs agy-stream.jsonl scenario-evidence.json
+```
+
+Input status example:
+
+```json
+{"scenarios":[
+  {"id":"online-checkout","status":"passed","evidence_ref":"ci/run-2"},
+  {"id":"offline-restart","status":"not-tested"},
+  {"id":"inventory-cross-tenant","status":"blocked","reason_code":"missing-harness"}
+]}
+```
+
+The utility classifies incomplete steps and reported scenario statuses, but does **not** verify caller-provided source or served-build revisions. It distinguishes `reported_passed` from `verified_passed` (default **0** without an external verifier). Missing results are unknown/incomplete, not proof of quota exhaustion. A validated `agy --conversation ID` may be **suggested**, never run automatically.
+
+Store raw headless event streams only in a private location. Do not publish cookies, prompts, authentication details, complete user logs or internal browser profiles.
+
+## What this does not prove
+
+An opt-in checkpoint, a locally passing named test, and a stream-derived reported pass are different evidence classes. None establishes independent HTTP/browser/DB behavior, end-user visual parity, F01–F18 STOCKROOM acceptance, or publication eligibility.
+
+See [MCP contracts](CONTRACTS.md), [workflow](NATIVE_FIRST_WORKFLOW.md), [behavioral root causes](BEHAVIORAL_5_WHYS_V2_0_1.md), and [release #15](https://github.com/alifakbxr/a2a/issues/15).
