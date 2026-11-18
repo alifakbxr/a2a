@@ -687,3 +687,17 @@ test('multi-criterion assessment rolls back previously inserted evidence when la
   assert.equal(valid.verdict,'passed');
   assert.equal(e.evidence({workspace:root,operation:'list'}).items.length,1);
 }));
+
+
+test('inspection never trusts file stat metadata alone for revision freshness',()=>withEngine((e,root,write)=>{
+  const first=e.context({workspace:root,action:'inspect'});
+  const file=path.join(root,'src/auth.js');
+  const stat=fs.statSync(file);
+  const old=fs.readFileSync(file,'utf8');
+  const next=old.replace('true','null');
+  assert.equal(old.length,next.length);
+  fs.writeFileSync(file,next);
+  fs.utimesSync(file,stat.atime,stat.mtime);
+  const refreshed=e.context({workspace:root,action:'inspect'});
+  assert.notEqual(refreshed.revision,first.revision);
+}));
