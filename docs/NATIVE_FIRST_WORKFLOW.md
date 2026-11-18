@@ -31,16 +31,19 @@ The intended change is **when and how to use existing capabilities**, not adding
 6. **Challenge failure modes.** For risky work, deliberately test forbidden routes and background replay, altered IDs, partial payments/refunds, overlapping transactions, persisted offline queue and backend reconciliation, stale builds and no-data cases. If the independent test cannot be run, mark **not-tested**, not passed.
 7. **Give a concise human handoff.** State `passed / failed / partial / not-tested / stale` for the **specific tested scope**, unresolved blockers and exact follow-up. Do not infer token savings or causal impact from one run, native worker count, weekly allowance percentage or locally summed cache categories.
 
-## Hard blockers discovered in v2.0.1 audit
+## Follow-up fixes on v2.0.1
 
-These are **code defects**, not fixed by writing a workflow:
-- **AUD-01 P0:** Evidence `.json` can change the workspace fingerprint when it contains that fingerprint. Until repaired with an executable Engine regression, do not claim release readiness from self-referential JSON artifacts.
-- **AUD-02 P1:** MCP and CLI display version `2.0.0` while manifest/package state `2.0.1`. Release contract tests must enforce version consistency.
-- **AUD-03 P1:** Built-in semantic capabilities can be overridden by caller. Mandatory built-ins must form a non-removable minimum before structural semantic support is trusted.
-- **AUD-04 P2:** npm tarball excludes the documented benchmark evaluator. Decide whether evaluator is source-checkout-only or distributed; test package contents.
-- **AUD-05 P2:** Intervention ledger performs repeated forward searches. Replace with a linear index; performance-test long transcripts.
+The five code-level findings from the follow-up audit have now been addressed directly on `v2.0.1`, with regression coverage and **no new third-party dependencies**:
 
-**Consequently, `v2.0.1 → main` is blocked.** The frozen STOCKROOM F01–F18 acceptance scenarios still require *actual* isolated HTTP/browser/database execution, plus real installed Antigravity MCP/browser smoke testing and comparable repeated A/B trials. Track these externally in [issue #15](https://github.com/alifakbxr/a2a/issues/15).
+- **AUD-01 P0:** Recognized generated A2A JSON evidence under `report/`, `reports/`, or `test-results/` no longer enters the source fingerprint; report bytes are separately hashed. Ordinary JSON source still changes the revision. Other report locations remain source-indexed.
+- **AUD-02 P1:** CLI and MCP expose the version from `package.json`, with a live protocol/CLI version contract test against `plugin.json`.
+- **AUD-03 P1:** Built-in semantic capabilities are mandatory minimum checks; caller-selected checks are additive.
+- **AUD-04 P2:** Benchmark evaluator is explicitly source-checkout-only, with a package distribution contract.
+- **AUD-05 P2:** Intervention ledger associates events through precomputed indices instead of repeated linear tail searches; results after a new planner turn are not misattributed to the previous turn.
+
+These fixes close **local code-level gaps only**. They do not establish independent execution provenance, release readiness, or a causal token/performance improvement. Observe the latest cross-platform CI at the current branch head before treating them as validated.
+
+**The `v2.0.1 → main` release gate remains blocked** until the frozen STOCKROOM F01–F18 scenarios undergo actual isolated HTTP/browser/database execution, real Antigravity MCP/browser smoke testing, and comparable repeated A/B trials. External acceptance is tracked in [issue #15](https://github.com/alifakbxr/a2a/issues/15).
 
 ## External research is only reference material
 
@@ -57,7 +60,7 @@ For a future validation run, confirm:
 - User approval is required before paid/parallel workers and any external integration installation.
 - All four public MCP tools remain present; native permissions and errors remain unchanged.
 - Sequential checkout tests cannot count as real concurrency; tab refresh cannot count as full process restart; signed but incomplete acceptance scope cannot qualify for release.
-- JSON evidence does not change the **source** revision, while real source changes invalidate evidence, **after AUD-01 is actually fixed**.
+- JSON evidence does not change the **source** revision, while real source changes invalidate evidence, **using recognized generated-report paths and confirmed independent evidence integrity**.
 - Official usage, local counters, worker overlap and A2A report size remain distinguished, and unfinished runs stay unfinished.
 - Native vs. A2A comparisons use matched environments and independent acceptance: optimizing prompt/tool call counts alone is **not** success.
 
