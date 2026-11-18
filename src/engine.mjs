@@ -272,7 +272,17 @@ export class Engine {
           trustKeys=JSON.parse(fs.readFileSync(trustFile,'utf8'));
         }
       }catch{}
-      const evaluation=assessRelease(document,{trustKeys});
+      // Frozen user-controlled scope; never read acceptance definitions from generated app.
+      let requiredScenarios=null;
+      const scopeFile=path.join(os.homedir(),'.config','a2a','acceptance-registry.json');
+      try{
+        const info=fs.lstatSync(scopeFile);
+        if(info.isFile()&&info.size<=65536&&(process.platform==='win32'||(info.mode&0o022)===0)){
+          const pinned=JSON.parse(fs.readFileSync(scopeFile,'utf8'));
+          if(pinned?.schema==='a2a-acceptance-registry-v1'&&Array.isArray(pinned.scenarios))requiredScenarios=pinned.scenarios;
+        }
+      }catch{}
+      const evaluation=assessRelease(document,{trustKeys,requiredScenarios});
       if(document.revision!==s.revision){
         evaluation.verdict='blocked';evaluation.release_ready=false;
         evaluation.blockers.push({reason:'Current workspace snapshot differs from submitted release manifest'});
