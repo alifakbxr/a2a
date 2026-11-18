@@ -122,8 +122,12 @@ export function evaluateSemanticClaims(data){
  for(const c of data.claims){
   if(!object(c)||!valid(c.id)||ids.has(c.id)||!Array.isArray(c.evidence)||c.evidence.length>30)throw Error('Invalid or duplicate claim');
   ids.add(c.id);
-  const required=c.required_capabilities??BUILTIN[c.scenario];
-  if(!Array.isArray(required)||required.length<1||required.length>20||required.some(x=>!valid(x)))throw Error('Required capabilities must be explicit');
+  // Callers may demand MORE checks but cannot remove mandatory scenario checks.
+  const builtin=BUILTIN[c.scenario];
+  const extra=c.required_capabilities;
+  if(extra!==undefined && (!Array.isArray(extra)||extra.length>20||extra.some(x=>!valid(x))))throw Error('Required capabilities must be explicit');
+  const required=builtin?uniq([...builtin,...(extra||[])]):extra;
+  if(!Array.isArray(required)||required.length<1||required.length>20)throw Error('Required capabilities must be explicit');
   const validReports=c.evidence.filter(e=>object(e)&&e.revision===data.revision&&e.verdict==='passed'&&e.origin==='external-test-harness'&&typeof e.reference==='string'&&/^(?:ci|test|trace|run|evidence)[:/-][A-Za-z0-9._-]{1,100}$/.test(e.reference)&&!e.reference.includes('..')&&typeof e.checked_at==='string'&&!Number.isNaN(Date.parse(e.checked_at)));
   const proven=new Set(),sources=[];
   for(const e of validReports){
