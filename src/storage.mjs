@@ -7,20 +7,27 @@ const DDL=fs.readFileSync(new URL('../schemas/database.sql',import.meta.url),'ut
 export class Store {
   constructor(base=dataDir()) {
     this.base=path.resolve(base);fs.mkdirSync(this.base,{recursive:true,mode:0o700});
+    if(fs.lstatSync(this.base).isSymbolicLink())throw new Error('A2A data directory cannot be a symlink');
     try{fs.chmodSync(this.base,0o700)}catch{}
     const a2aFile=path.join(this.base,'a2a.sqlite');
     const legacyFile=path.join(this.base,'verifykit.sqlite');
+    const rejectUnsafeDbPath=(file)=>{
+      let st;try{st=fs.lstatSync(file)}catch(e){if(e.code==='ENOENT')return;throw e}
+      if(st.isSymbolicLink()||!st.isFile())throw new Error('Unsafe A2A database file type');
+    };
+    for(const file of [a2aFile,a2aFile+'-wal',a2aFile+'-shm',legacyFile])rejectUnsafeDbPath(file);
     if(!fs.existsSync(a2aFile) && fs.existsSync(legacyFile)){
       try{
         const src=new DatabaseSync(legacyFile,{readOnly:true});
         try{src.prepare('VACUUM INTO ?').run(a2aFile)}finally{src.close()}
-      }catch{
-        try{fs.copyFileSync(legacyFile,a2aFile)}catch{}
+      }catch(e){
+        // Raw copies are not WAL-consistent; never silently migrate a partial DB.
+        throw new Error('Legacy A2A database migration failed; original database left unchanged');
       }
     }
     this.file=a2aFile;
     this.db=new DatabaseSync(this.file);
-    this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=4000;');
+    this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=4000; PRAGMA trusted_schema=OFF;');
     this.#ensureColumn('workspaces','current_revision_id','TEXT');
     this.#ensureColumn('files','mtime_ms','REAL');
     this.#ensureColumn('artifact_versions','workspace_id','TEXT');
