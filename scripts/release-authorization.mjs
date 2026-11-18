@@ -98,7 +98,8 @@ function readExternalJson(name,{maxBytes=64*1024}={}){
    'Invalid base64 secret: '+name);
  const raw=Buffer.from(encoded,'base64');
  check(raw.length<=maxBytes,'External JSON secret too large: '+name);
- return JSON.parse(raw.toString('utf8'));
+ try{return JSON.parse(raw.toString('utf8'))}
+ catch{throw new Error('Malformed external JSON secret: '+name)}
 }
 
 export function authorizeFromEnvironment(){
