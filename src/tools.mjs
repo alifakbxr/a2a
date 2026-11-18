@@ -13,7 +13,7 @@ const BASE_SPECS = [
       properties:{
         workspace:ws,
         action:{type:'string',enum:['inspect','query','freshness','tokens','skeleton','orchestration'],default:'inspect'},
-        task:{type:'object',description:'For action=orchestration: user-declared available native commands, tier, workstreams, milestones; no workers launched.',additionalProperties:false,properties:{tier:{type:'string',enum:['free','pro','ultra','paid-other','unknown']},available_commands:{type:'array',items:{type:'string',enum:['/swarm','/teamwork','/boost','@subagent']},maxItems:4},workstreams:{type:'array',items:{type:'string',maxLength:120},maxItems:30},dependencies:{type:'string',enum:['low','high','unknown']},milestones:{type:'integer',minimum:0,maximum:100},long_horizon:{type:'boolean'},hard_reasoning:{type:'boolean'}}},
+        task:{type:'object',description:'For action=orchestration: user-declared available native commands, tier, workstreams, milestones; no workers launched.',additionalProperties:false,properties:{tier:{type:'string',enum:['free','pro','ultra','paid-other','unknown']},available_commands:{type:'array',items:{type:'string',enum:['/swarm','/teamwork','/boost','@subagent']},maxItems:4},workstreams:{type:'array',items:{type:'string',maxLength:120},maxItems:30},dependencies:{type:'string',enum:['low','high','unknown']},milestones:{type:'integer',minimum:0,maximum:100},long_horizon:{type:'boolean'},hard_reasoning:{type:'boolean'},file_ownership:{type:'string',enum:['independent','shared','unknown']}}},
         query:{type:'string',maxLength:160},
         limit:{type:'integer',minimum:1,maximum:40},
         conversation_id:{type:'string',maxLength:128,description:'Optional Antigravity conversation ID for exact session token lookup.'},
@@ -33,7 +33,7 @@ const BASE_SPECS = [
   {
     name:'verify',
     description:'A2A native test planning and JUnit/TAP/JSON evidence assessment.',
-    inputSchema:{type:'object',additionalProperties:false,required:['workspace','operation'],properties:{workspace:ws,operation:{type:'string',enum:['plan','assess','verify_handoff','assess_release','assess_semantic','assess_browser']},changed:paths,worker_name:{type:'string',maxLength:128,description:'Optional subagent name for verify_handoff.'},artifact:{type:'string',maxLength:500,description:'Relative machine report path for verify_handoff.'},allow_stale:{type:'boolean',description:'Explicitly bypass source freshness (not recommended).'},criteria:{type:'array',maxItems:40,items:{oneOf:[string,{type:'object',additionalProperties:false,required:['id'],properties:{id:{type:'string',maxLength:160},artifact:{type:'string',maxLength:500},test_name:{type:'string',maxLength:160,description:'Exact testcase name to bind to criterion, or * for entire report.'},blocked:{type:'boolean'},reason:{type:'string',maxLength:240}}}]}}}}
+    inputSchema:{type:'object',additionalProperties:false,required:['workspace','operation'],properties:{workspace:ws,operation:{type:'string',enum:['plan','assess','verify_handoff','assess_release','assess_semantic','assess_browser']},changed:paths,worker_name:{type:'string',maxLength:128,description:'Optional subagent name for verify_handoff.'},artifact:{type:'string',maxLength:500,description:'Relative machine report path for verify_handoff.'},allow_stale:{type:'boolean',description:'Explicitly bypass source freshness (not recommended).'},criteria:{type:'array',maxItems:40,items:{oneOf:[string,{type:'object',additionalProperties:false,required:['id'],properties:{id:{type:'string',maxLength:160},description:{type:'string',maxLength:160},given:{type:'string',maxLength:200},when:{type:'string',maxLength:200},then:{type:'string',maxLength:200},evidence_type:{type:'string',enum:['build','unit','integration','browser','visual','hardware','security','independent']},viewport:{type:'string',maxLength:160},ui_state:{type:'string',maxLength:160},reference:{type:'string',maxLength:160},negative:{type:'boolean'},source_revision:{type:'string',maxLength:160},artifact:{type:'string',maxLength:500},test_name:{type:'string',maxLength:160,description:'Exact testcase name to bind criterion; * only scopes legacy suite results.'},blocked:{type:'boolean'},reason:{type:'string',maxLength:240}}}]}}}}
   },
   {
     name:'evidence',
@@ -44,7 +44,7 @@ const BASE_SPECS = [
       required:['workspace','operation'],
       properties:{
         workspace:ws,
-        operation:{type:'string',enum:['list','runs','incidents','record_incident','add_hypothesis','hypotheses','side_questions','record_side_question','artifact_versions','artifact_diff','snapshot_artifact','save_checkpoint','model_recovery']},
+        operation:{type:'string',enum:['list','runs','incidents','record_incident','add_hypothesis','hypotheses','side_questions','record_side_question','artifact_versions','artifact_diff','snapshot_artifact','save_checkpoint','model_recovery','tool_recovery']},
         id:string,
         limit:{type:'integer',minimum:1,maximum:50},
         title:{type:'string',maxLength:240},
@@ -63,6 +63,12 @@ const BASE_SPECS = [
         task_summary:{type:'string',maxLength:500,description:'For save_checkpoint: explicit short task summary, not raw conversation text.'},
         completed:{type:'array',maxItems:8,items:{type:'string',maxLength:200},description:'For save_checkpoint: user-reviewed completed work notes; unverified.'},
         next_steps:{type:'array',maxItems:8,items:{type:'string',maxLength:200},description:'For save_checkpoint: next steps after a manual model change.'},
+        decisions:{type:'array',maxItems:8,items:{type:'string',maxLength:200},description:'For save_checkpoint: concise user-reviewed decisions, not secrets.'},
+        pending_tests:{type:'array',maxItems:8,items:{type:'string',maxLength:200},description:'For save_checkpoint: specific untested acceptance scenarios.'},
+        tool_family:{type:'string',enum:['mcp','browser','filesystem','terminal','other']},
+        error_hint:{type:'string',maxLength:400,description:'Optional brief native error code/message. Never stored or echoed. Omit credentials.'},
+        error_class:{type:'string',enum:['invalid_arguments','context_lost','timeout','permission_denied','missing_file','edit_conflict','unknown']},
+        retry_count:{type:'integer',minimum:0,maximum:20},
         artifact_name:{type:'string',maxLength:240},
         artifact_path:{type:'string',maxLength:500},
         version_number:{type:'integer',minimum:1},
