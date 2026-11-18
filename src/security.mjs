@@ -570,6 +570,19 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
     // Never allow .system_generated or nested internal conversation content.
     if (path.dirname(resolved) === brainDir && path.extname(resolved).toLowerCase()==='.md'
         && !path.basename(resolved).startsWith('.')) {
+      // The special brain exception does not rely on workspace approval.
+      // Every directory segment below HOME must therefore be a real directory,
+      // never a symlink that redirects private reads elsewhere.
+      let safeBrain=true;
+      let segment=getHomeDir();
+      for (const part of ['.gemini','antigravity','brain',conversationId]) {
+        segment=path.join(segment,part);
+        try {
+          const st=fs.lstatSync(segment);
+          if(st.isSymbolicLink()||!st.isDirectory()){safeBrain=false;break}
+        } catch {safeBrain=false;break}
+      }
+      if (!safeBrain)throw new Error('Symlink access denied for brain artifact');
       authorizedBoundary = brainDir;
       trustedBrainArtifact=true;
     }
