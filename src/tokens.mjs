@@ -380,7 +380,7 @@ function isSubagentTranscript(filePath) {
 
 // A transcript reference is metadata supplied by a hook or caller, not permission
 // to read arbitrary local files. Require the exact Antigravity brain layout.
-function vettedTranscript(candidate,expectedId=null){
+export function vettedTranscript(candidate,expectedId=null){
   if(typeof candidate!=='string'||!candidate)return null;
   const requested=path.resolve(candidate);
   for(const brain of getBrainRoots()){
