@@ -1,22 +1,21 @@
-# Pre-vNext Integration Candidate — INTERNAL CI ONLY
+# Historical Integration Audit — Merged into v2.0.1
 
-Source: main b622110d0feabf469390a41f3c93338053b3c7b6
+The original pre-vNext audit from `main` at `b622110d0feabf469390a41f3c93338053b3c7b6` was superseded by an explicit request to integrate directly into the `v2.0.1` branch, **not vNext**.
 
-Feature branches: PR #16 to #27 (all are still Draft).
-All changed blobs come from the latest corresponding PR heads, except three
-overlapping tool contracts manually reconciled into this branch:
-- src/engine.mjs: #17 release assessment, #21 semantic/browser evidence, #24 orchestration
-- src/tools.mjs: combined a2a_verify operations + orchestration context
-- schemas/mcp-tools.json: corresponding generated MCP input contract
+- Source draft PRs: #16–#27, still open and unmerged individually.
+- Integration PR: #29, merged to `v2.0.1` on 2026-11-18.
+- Merge commit: `049a5297fbd4c542918f4a23e9676d5e2b0530ce`.
+- `package.json` and `plugin.json` both identify version `2.0.1`.
+- Default `main` remains unchanged.
+- CI for the integrated source (before version-branch merge and docs-only updates): https://github.com/alifakbxr/a2a/actions/runs/44239699931 — success.
+- This branch merge is **not** an npm publish, GitHub version tag, GitHub Release, or proof that A2A is production-ready.
 
-This is a temporary candidate for combined CI and manual assessment.
-It is NOT the vNext benchmark branch, not published as an npm release,
-and not evidence that STOCKROOM's real PHP/browser scenarios were independently executed.
+## Remaining independent release gates
 
-Latest combined regression: https://github.com/alifakbxr/a2a/actions/runs/44239276797 (Node 22/24, Linux/macOS/Windows, tests and contract checks). The release gate now requires an external pinned acceptance registry. This does not attest actual browser or database execution.
+1. Execute all 18 frozen STOCKROOM negative-control scenarios against both generated applications using isolated real HTTP, browser and database test harnesses. The fixtures in tests/fixtures are specifications, not a substitute for executions.
+2. Validate a real installed Antigravity plugin with MCP tools, workspace authorization, browser workflow and source/build evidence freshness.
+3. Compare independent model usage, worker overlap, failure recovery and actual application quality against frozen controls.
+4. Confirm the external frozen acceptance registry and trusted evaluator keys are protected from the coding agent.
+5. Obtain separate authorization before publishing packages, creating a public release, or promoting to `main`.
 
-Remaining gates:
-- real external negative-control tests against running generated applications
-- actual Antigravity plugin installation and live MCP/Browser smoke tests
-- end-to-end token/provider usage and repeatable 4-arm benchmark
-- human authorization before any PR is merged to main
+See [Independent Acceptance Runbook](./INDEPENDENT_ACCEPTANCE_RUNBOOK.md).
