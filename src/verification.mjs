@@ -5,6 +5,8 @@ import {safeFile,sha256} from './security.mjs';
 import {uniqueId} from './storage.mjs';
 import {discoverTestCommands,gitChanges} from './scanner.mjs';
 
+import {proposeRiskTests} from './risk-guidance.mjs';
+
 export function parseArtifact(text, filename){
   const ext=filename.toLowerCase().split('.').at(-1), sample=text.slice(0,1200000);
   if(ext==='xml' && /<(?:testsuite|testsuites)\b/.test(sample)){
@@ -73,7 +75,7 @@ export function planVerification({index,impact,criteria=[]}){
     return {id,description:c,status:'not_run',evidence_required:true};
   });
   const checks=discoverTestCommands(index);
-  return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,checks,execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
+  return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,risk_guidance:proposeRiskTests({paths:impact?.changed??[],criteria}),checks,execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
 }
 function aggregate(results){if(results.some(r=>r.status==='failed'))return 'failed';if(results.some(r=>r.status==='blocked'))return 'blocked';if(results.length&&results.every(r=>r.status==='passed'))return 'passed';return 'inconclusive'}
 export function assessVerification(store,wsId,root,rev,criteria){
@@ -103,7 +105,7 @@ export function assessVerification(store,wsId,root,rev,criteria){
     results.push(result);
   }
   const verdict=aggregate(results),runId=uniqueId('run');store.run('INSERT INTO runs VALUES(?,?,?,?,?,?)',runId,wsId,rev,verdict,JSON.stringify(results),new Date().toISOString());
-  return {run_id:runId,revision:rev,verdict,criteria:results,limits:['Report parsing does not cryptographically attest the origin of artifacts.','PASSED means supplied machine-readable assertions passed in this revision; untested behaviors remain out of scope.']};
+  return {run_id:runId,revision:rev,verdict,criteria:results,proof_scope:'named-machine-test-assertions-only',release_ready:false,semantic_requirements_proven:false,limits:['A passing JUnit/TAP/JSON suite is NOT a release-readiness or semantic concurrency/offline/security verdict.','Only independently signed acceptance evidence via assess_release can report release eligibility.','Report parsing does not attest origin or test execution authenticity.']};
 }
 export function listEvidence(store,wsId,root,currentRevision,{limit=20,id}={}){
   const check=x=>{let artifact_intact=false;try{const p=safeFile(root,x.artifact_path);artifact_intact=sha256(fs.readFileSync(p))===x.artifact_sha}catch{};return {fresh:x.revision_id===currentRevision&&artifact_intact,artifact_intact}};
