@@ -14,6 +14,7 @@ import {assessBrowserEvidence} from './browser-evidence.mjs';
 import {assessRelease} from '../scripts/evaluate-acceptance.mjs';
 
 import {adviseOrchestration} from './orchestration-advisor.mjs';
+import {saveRecoveryCheckpoint,recoveryStatus} from './model-recovery.mjs';
 
 export class Engine {
   constructor({store}={}) {this.store=store||new Store();this.owned=!store;}
@@ -354,14 +355,28 @@ export class Engine {
     }catch{}
     return process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
   }
-  evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id,conversation_id,parent_conversation_id,question,summary,status,artifact_name,artifact_path,v1,v2}={}){
+  evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id,conversation_id,parent_conversation_id,question,summary,status,artifact_name,artifact_path,v1,v2,task_summary,completed=[],next_steps=[]}={}){
     const compact=getCompactMode();
-    const isReadOnly=operation==='list'||operation==='runs'||operation==='incidents'||operation==='hypotheses'||operation==='side_questions'||operation==='side-questions'||operation==='artifact_versions'||operation==='artifact-versions'||operation==='artifact_diff'||operation==='artifact-diff';
+    const isReadOnly=operation==='model_recovery'||operation==='list'||operation==='runs'||operation==='incidents'||operation==='hypotheses'||operation==='side_questions'||operation==='side-questions'||operation==='artifact_versions'||operation==='artifact-versions'||operation==='artifact_diff'||operation==='artifact-diff';
     // Freshness is a security-relevant claim: never reuse cached revision metadata
     // when presenting test evidence or historical run freshness.
-    const needsLiveRevision=operation==='list'||operation==='runs';
+    const needsLiveRevision=['list','runs','model_recovery','save_checkpoint'].includes(operation);
     const s=needsLiveRevision?this.sync(workspace,{verifyIntegrity:true}):(isReadOnly?this.resolveMeta(workspace):this.sync(workspace));
     const wsId=s.wsId;
+    if(operation==='save_checkpoint'){
+      const conv=conversation_id||this.#resolveActiveConversationId();
+      if(conv==='default')throw new Error('An active conversation or explicit conversation_id is required');
+      const saved=saveRecoveryCheckpoint(this.store,wsId,{
+        conversationId:conv,revision:s.revision,taskSummary:task_summary,
+        completed,nextSteps:next_steps
+      });
+      return {...saved,warning:'Notes are locally stored, not verified task completion; do not put secrets in checkpoints.'};
+    }
+    if(operation==='model_recovery'){
+      return {...recoveryStatus(this.store,wsId,{
+        conversationId:conversation_id||null,currentRevision:s.revision
+      }),current_revision:s.revision};
+    }
     if(operation==='list')return {revision:s.revision,...listEvidence(this.store,wsId,s.root,s.revision,{limit,id}),...(compact?{compact:true}:{})};
     if(operation==='runs')return {revision:s.revision,runs:this.store.all('SELECT id,revision_id,verdict,criteria_json,created_at FROM runs WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20))).map(x=>({...x,fresh:x.revision_id===s.revision,criteria:JSON.parse(x.criteria_json),criteria_json:undefined})),...(compact?{compact:true}:{})};
     if(operation==='incidents')return {items:this.store.all('SELECT * FROM incidents WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20))).map(x=>({...x,paths:JSON.parse(x.related_paths_json),criteria:JSON.parse(x.criteria_json),evidence_ids:JSON.parse(x.evidence_ids_json),related_paths_json:undefined,criteria_json:undefined,evidence_ids_json:undefined})),...(compact?{compact:true}:{})};
