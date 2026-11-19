@@ -25,12 +25,8 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Syntax & Lint Check
-        run: |
-          node --check src/engine.mjs
-          node --check src/mcp.mjs
-          node --check src/verification.mjs
-          node --check scripts/a2a.mjs
+      - name: Syntax Check (all src/scripts ESM)
+        run: npm run syntax
 
       - name: Run Full Test Suite (100% Pass Required)
         run: npm test
