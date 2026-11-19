@@ -98,6 +98,18 @@
 
 **Important limitations:** local Node/MCP E2E is *not* a real Antigravity installation, Figma screenshot comparison, printer/QR hardware test, Laravel backend, independent STOCKROOM F01–F18 browser/DB acceptance or repeated model benchmark. The live evidence for those remains **open in #15**. A2A cannot force the upstream native agent to follow its advice, guarantee all bugs disappear, or assert token savings from repeated-read counts.
 
+## Re-audit: five subsequent failure modes (19 November 2026)
+
+The subsequent source review opened [#38–#42](https://github.com/alifakbxr/a2a/pull/43). These are **code-confirmed gaps with isolated function reproductions**, not proof of errors in a live installed IDE:
+
+1. **#38 / P0 — Handoff could certify the wrong evidence kind.** Why? Positive named test plus local hook record → handoff omitted evidence-type restrictions → two verification paths diverged → regression only tested ordinary `assess` → no shared local evidence policy. **Remediation:** central `localEvidencePolicy` and positive-provenance restricted-type negative controls.
+2. **#39 / P0 — Failed native command could look successful.** Why? PostToolUse lacked a top-level error → command exit code ignored → completion conflated with success → existing report hashes could be reattached → no fail-closed exit contract. **Remediation:** explicit numeric zero exit code required; nonzero/missing/conflicting exit clears positive provenance.
+3. **#40 / P1 — Authorization denial could be hidden by a page ID.** Why? Broad `pageid` matched → first regex branch won → caller-specified deny lost → permission guidance suppressed → no severity-aware classification. **Remediation:** denial-first detection, user authorization required.
+4. **#41 / P1 — Planned acceptance cases could disappear.** Why? `plan` was transient → `assess` rebuilt scope from its own input → missing cases absent from total → no plan ID → no source-bound immutable manifest. **Remediation:** optional persisted `plan_id`, complete-scope assessment with omissions and stale/tamper detection; opt-in local retention.
+5. **#42 / P2 — Full brain Markdown could be stored without explicit consent.** Why? edit-event hook called snapshot → artifact versioner stored full content → retention was optimized for history → user settings did not distinguish metadata from content → docs were unclear. **Remediation:** automatic content snapshots off by default, opt-in CLI and transparent persistent-data disclosure.
+
+This hardening is tested with synthetic fixtures and local MCP JSON-RPC/SQLite E2E; full Antigravity/browser/QR-printer and external STOCKROOM evaluation remains in [issue #15](https://github.com/alifakbxr/a2a/issues/15). Do not import private transcript archives into public fixtures.
+
 ## Release and merge policy
 
 This behavioral work **merged only into `v2.0.1`** via [PR #36](https://github.com/alifakbxr/a2a/pull/36), commit `67ea5888caf61751952c8a7daa1eb222d738d4b6`, and all six code-level issues #30–#35 were closed as **implemented**. Post-merge [GitHub CI](https://github.com/alifakbxr/a2a/actions/runs/44325007116) passed 4/4 OS/runtime jobs with 213/213 tests on Ubuntu Node 22. External #15 remains open. Do not merge to `main`, create a tag, publish an npm package or declare production-readiness without independent acceptance and explicit approval.
