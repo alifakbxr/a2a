@@ -246,7 +246,7 @@ export class Engine {
     this.store.recordTelemetry(s.wsId,{toolName:'a2a_impact',action:'impact',rawScopeTokens:estimateTokens(rawScopeBytes),responseTokens:estimateTokens(JSON.stringify(payload))});
     return payload;
   }
-  verify({workspace,operation='plan',criteria=[],changed=[],worker_name,artifact,allow_stale}={}){
+  verify({workspace,operation='plan',criteria=[],changed=[],worker_name,artifact,allow_stale,persist_plan=false,plan_id=null}={}){
     const compact=getCompactMode();
     const s=this.sync(workspace,{verifyIntegrity:true});
     if(operation==='plan'){
@@ -258,10 +258,21 @@ export class Engine {
         }
         if(plan.checks) delete plan.checks.note;
       }
+      // Persist acceptance scope only on explicit opt-in; plans may contain
+      // user-authored requirements and are therefore private local content.
+      if(persist_plan===true){
+        if(plan.criteria.length===0)throw new Error('Cannot persist an empty acceptance plan');
+        const id=uniqueId('apl');
+        const manifest=JSON.stringify(plan.criteria);
+        this.store.run('INSERT INTO acceptance_plans(id,workspace_id,revision_id,manifest_sha,criteria_json,created_at) VALUES(?,?,?,?,?,?)',
+          id,s.wsId,s.revision,sha256(manifest),manifest,new Date().toISOString());
+        this.store.run('DELETE FROM acceptance_plans WHERE workspace_id=? AND id NOT IN (SELECT id FROM acceptance_plans WHERE workspace_id=? ORDER BY created_at DESC LIMIT 30)',s.wsId,s.wsId);
+        plan.plan_id=id;plan.scope_bound=true;plan.scope_persisted=true;
+      }else{plan.plan_id=null;plan.scope_bound=false;plan.scope_persisted=false;}
       return {revision:s.revision,...plan,...(compact?{compact:true}:{})};
     }
     if(operation==='assess'){
-      const res=assessVerification(this.store,s.wsId,s.root,s.revision,criteria);
+      const res=assessVerification(this.store,s.wsId,s.root,s.revision,criteria,{planId:plan_id});
       if(compact){
         if(res.limits){
           res.limits=['Report origin unverified','Untested behaviors out of scope'];
