@@ -87,3 +87,5 @@ In default Compact, `a2a_evidence(operation="incidents"|"hypotheses")` returns u
 
 For explicit local cleanup, `a2a_evidence(operation="delete_incident",incident_id="...",persist_rca=true,confirm_deletion=true)` logically removes **one** incident and its attached hypotheses, leaving independent test artifacts, acceptance plans and other incidents untouched. Require user approval: deletion cannot be undone through A2A, but SQLite WAL/backups may retain old bytes, so it is **not cryptographic erasure**. Do not claim this deletes all related personal data.
 
+Each assessment also appends a local immutable-in-application **experiment history entry** (observation, outcome, exact criterion, evidence IDs, revision and time). The `hypotheses` response returns up to three recent outcomes and the `experiments_total` count; it never upgrades those user-reported interpretations to independent proof. Deleting an incident logically deletes its hypotheses **and this experimental history**, leaving unrelated reports intact.
+
