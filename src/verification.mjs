@@ -94,13 +94,43 @@ export function planVerification({index,impact,criteria=[]}){
   return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,risk_guidance:riskGuidance,...(maintainerReview?{maintainer_review:maintainerReview}:{}),checks,completion:acceptanceCompletion(plan,[],{planning:true}),execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
 }
 function aggregate(results){if(results.some(r=>r.status==='failed'))return 'failed';if(results.some(r=>r.status==='blocked'))return 'blocked';if(results.length&&results.every(r=>r.status==='passed'))return 'passed';return 'inconclusive'}
-export function assessVerification(store,wsId,root,rev,criteria){
+export function assessVerification(store,wsId,root,rev,criteria,{planId=null}={}){
   // Either the entire verification run and its evidence records are committed,
   // or none are. Invalid later criteria must never leave orphaned passed evidence.
   return store.transaction(()=>{
-  if(!Array.isArray(criteria)||criteria.length===0||criteria.length>40)throw new Error('Provide 1–40 criteria including artifact paths');
+  if(!Array.isArray(criteria)||criteria.length>40||(!planId&&criteria.length===0))
+    throw new Error('Provide 1–40 criteria, or a persisted plan_id with optional evidence bindings');
+  let boundRevision=null,requested=criteria;
+  if(planId!==null){
+    if(typeof planId!=='string'||!/^apl_[A-Za-z0-9_-]{8,100}$/.test(planId))throw new Error('Invalid plan_id');
+    const saved=store.get('SELECT * FROM acceptance_plans WHERE workspace_id=? AND id=?',wsId,planId);
+    if(!saved)throw new Error('Unknown or unauthorized acceptance plan');
+    if(sha256(saved.criteria_json)!==saved.manifest_sha)throw new Error('Acceptance plan integrity mismatch');
+    const authoritative=JSON.parse(saved.criteria_json);
+    if(!Array.isArray(authoritative)||authoritative.length===0||authoritative.length>40)throw new Error('Invalid persisted acceptance plan');
+    boundRevision=saved.revision_id;
+    const indexed=new Map();
+    for(const item of criteria){
+      if(!item||typeof item!=='object'||Array.isArray(item)||typeof item.id!=='string'||indexed.has(item.id))throw new Error('Invalid or duplicate plan evidence binding');
+      indexed.set(item.id,item);
+    }
+    const expected=new Set(authoritative.map(c=>c.id));
+    if([...indexed.keys()].some(id=>!expected.has(id)))throw new Error('Assessment criterion is not part of the persisted plan');
+    requested=authoritative.map(original=>{
+      const binding=indexed.get(original.id)||{};
+      // The persisted plan controls the meaning of acceptance. Caller may
+      // attach evidence but may not silently change its expected behavior.
+      for(const key of ['description','given','when','then','evidence_type','viewport','ui_state','reference','source_revision','negative']){
+        if(Object.hasOwn(binding,key)&&JSON.stringify(binding[key])!==JSON.stringify(original[key]))
+          throw new Error('Acceptance contract changed: '+key);
+      }
+      return {...original,...(typeof binding.artifact==='string'?{artifact:binding.artifact}:{}),
+        ...(typeof binding.test_name==='string'?{test_name:binding.test_name}:{}),
+        ...(binding.blocked===true?{blocked:true}:{})};
+    });
+  }
   const ids=new Set(),results=[],plan=[];
-  for(const c of criteria){
+  for(const c of requested){
     if(typeof c==='string')throw new Error('Assessment criteria require an explicit id and named test evidence');
     const criterion=normalizeAcceptanceCriterion(c);
     if(ids.has(criterion.id))throw new Error('Invalid or duplicate criterion ID');
@@ -123,8 +153,8 @@ export function assessVerification(store,wsId,root,rev,criteria){
         else if(parsed.status==='failed'){derivedStatus='failed';reason='The same test suite contains failures';}
         else {derivedStatus='passed';reason=null;}
       }
-      if(criterion.source_revision&&criterion.source_revision!==rev){
-        derivedStatus='stale';reason='Explicit source revision differs from current workspace revision';
+      if((criterion.source_revision&&criterion.source_revision!==rev)||(boundRevision&&boundRevision!==rev)){
+        derivedStatus='stale';reason='Acceptance plan or explicit source revision differs from current workspace revision';
       }
       if(derivedStatus==='passed'&&!localEvidencePolicy(criterion).locally_attestable){
         derivedStatus='inconclusive';reason=localEvidencePolicy(criterion).reason;
@@ -133,10 +163,11 @@ export function assessVerification(store,wsId,root,rev,criteria){
       store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',evidenceId,wsId,rev,criterion.id,derivedStatus==='stale'?'inconclusive':derivedStatus,parsed.format||'unknown',c.artifact,hash,JSON.stringify({assertions:parsed.assertions||0,failed:parsed.failed||0,skipped:parsed.skipped||0,reason,test_name:matchName,requested_evidence_type:criterion.evidence_type||'unspecified',trust:'local-report-not-cryptographically-attested'}),new Date().toISOString());
       result={id:criterion.id,status:derivedStatus,evidence_id:evidenceId,assertions:parsed.assertions||0,...(reason?{reason}:{})};
     }else if(c.blocked===true){result={id:criterion.id,status:'blocked',reason:'Required environment unavailable; no runnable evidence supplied'}}
+    if(boundRevision&&boundRevision!==rev){result={id:criterion.id,status:'stale',reason:'Persisted acceptance plan revision differs from current workspace source'};}
     results.push(result);
   }
   const verdict=aggregate(results),runId=uniqueId('run');store.run('INSERT INTO runs VALUES(?,?,?,?,?,?)',runId,wsId,rev,verdict,JSON.stringify(results),new Date().toISOString());
-  return {run_id:runId,revision:rev,verdict,criteria:results,completion:acceptanceCompletion(plan,results),proof_scope:'named-machine-test-assertions-only',release_ready:false,semantic_requirements_proven:false,limits:['A passing JUnit/TAP/JSON suite is NOT a release-readiness or semantic concurrency/offline/security verdict.','Only independently signed acceptance evidence via assess_release can report release eligibility.','Report parsing does not attest origin or test execution authenticity.']};
+  return {run_id:runId,revision:rev,verdict,criteria:results,plan_id:planId||null,scope_bound:Boolean(planId),scope_source_revision:boundRevision,completion:acceptanceCompletion(plan,results),proof_scope:'named-machine-test-assertions-only',release_ready:false,semantic_requirements_proven:false,limits:['A passing JUnit/TAP/JSON suite is NOT a release-readiness or semantic concurrency/offline/security verdict.','Only independently signed acceptance evidence via assess_release can report release eligibility.','Report parsing does not attest origin or test execution authenticity.',...(!planId?['Acceptance scope is unbound: omitted planned scenarios cannot be detected without plan_id.']:[])]};
   });
 }
 export function listEvidence(store,wsId,root,currentRevision,{limit=20,id}={}){
