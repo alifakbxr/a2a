@@ -305,7 +305,7 @@ test('settings writes atomically replace files and never follow an existing sett
     fs.writeFileSync(outside,'{"compact":false}');
     fs.unlinkSync(cfg);
     try{fs.symlinkSync(outside,cfg)}catch(e){if(['EPERM','EACCES','ENOTSUP'].includes(e.code))return;throw e}
-    assert.equal(getCompactMode(),false); // The symlink is not trusted.
+    assert.equal(getCompactMode(),true); // Untrusted symlink ignored; safe default is now Compact on.
     setCompactMode(true);
     assert.equal(fs.readFileSync(outside,'utf8'),'{"compact":false}');
     assert.equal(fs.lstatSync(cfg).isSymbolicLink(),false);
