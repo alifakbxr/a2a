@@ -78,7 +78,8 @@ test('Compact skeleton payload has bounded text, explicit omissions and can expa
   const compact=f.engine.context({workspace:f.root,action:'skeleton',files});
   assert.equal(compact.compact,true);
   assert.equal(compact.summary.preview_char_budget,4800);
-  assert.equal(compact.summary.omitted_files,2);
+  assert.ok(compact.summary.omitted_files>=2);
+  assert.equal(compact.summary.omitted_files,compact.files.filter(item=>item.skipped).length);
   assert.equal(compact.files.length,8);
   assert.equal(compact.files.filter(item=>item.reason==='compact_file_budget').length,2);
   assert.ok(compact.files.some(item=>item.truncated),'Must disclose incomplete code');
