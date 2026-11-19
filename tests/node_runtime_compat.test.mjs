@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import * as sqlite from 'node:sqlite';
 import {Database} from '../src/sqlite-compat.mjs';
@@ -67,7 +68,7 @@ test('Older verifykit.sqlite migrates with VACUUM INTO on supported Node LTS run
 test('CLI doctor reports running Node version on all supported runtimes',()=>withTemp(root=>{
   const data=path.join(root,'doctor-store');
   const subprocess=spawnSync(process.execPath,['scripts/a2a.mjs','doctor'],{
-    cwd:new URL('../',import.meta.url).pathname,
+    cwd:fileURLToPath(new URL('../',import.meta.url)),
     env:{...process.env,A2A_DATA_DIR:data},
     timeout:15000,encoding:'utf8',windowsHide:true
   });
