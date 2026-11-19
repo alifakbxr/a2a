@@ -92,3 +92,7 @@ For a release eligibility decision, a separate independent runner freezes F01–
 The repository CI executed **213/213 Node tests on Ubuntu Node 22** and succeeded on four OS/runtime jobs after behavioral PR #36 merged to `v2.0.1`. The E2E component starts a **real local MCP subprocess and SQLite** to exercise authorization, planning, false-PASS cases, checkpoint freshness and recovery. It does **not** test live Antigravity UI/Figma, printer hardware, Laravel HTTP/database invariants or the 18-case external STOCKROOM run.
 
 See [contracts](CONTRACTS.md), [security](SECURITY.md), [behavioral Five Whys](BEHAVIORAL_5_WHYS_V2_0_1.md), [acceptance runbook](INDEPENDENT_ACCEPTANCE_RUNBOOK.md) and [release engineering](RELEASE.md).
+
+## 19 November 2026 integrated reliability update
+
+The historical 213/213 test reference above describes an earlier milestone only. Newer branch CI uses nine Node 22/24/26.13.1 × Linux/macOS/Windows jobs, exhaustive source/script syntax discovery and real local MCP/SQLite regression suites. File and workspace origin use bounded descriptor-pinned readers and cross-platform paths; acceptance plans and RCA notes remain source-bound, conservative and opt-in. No external production acceptance can be inferred from these checks; [issue #15](https://github.com/alifakbxr/a2a/issues/15) stays open.
