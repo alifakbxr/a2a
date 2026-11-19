@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
-import { dataDir } from './security.mjs';
+import { dataDir,getHomeDir } from './security.mjs';
 
 export const estimateTokens = (textOrBytes) => {
   if (typeof textOrBytes === 'string') {
@@ -359,7 +358,7 @@ function getBrainRoots() {
   if (process.env.ANTIGRAVITY_APP_DATA_DIR) {
     return [path.join(path.resolve(process.env.ANTIGRAVITY_APP_DATA_DIR), 'brain')];
   }
-  const home = os.homedir();
+  const home = getHomeDir();
   return ['antigravity', 'antigravity-cli', 'antigravity-ide'].map(d => path.join(home, '.gemini', d, 'brain'));
 }
 
