@@ -251,7 +251,19 @@ export class Engine {
     const s=this.sync(workspace,{verifyIntegrity:true});
     if(operation==='plan'){
       validateChangedPaths(changed);
-      const plan=planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria});
+      let plannedCriteria=criteria;
+      if(plan_id!==null){
+        if(persist_plan!==true||!Array.isArray(criteria)||criteria.length!==0)throw new Error('Reissue plan requires persist_plan=true and no replacement criteria');
+        const saved=this.store.get('SELECT * FROM acceptance_plans WHERE workspace_id=? AND id=?',s.wsId,plan_id);
+        if(!saved||sha256(saved.criteria_json)!==saved.manifest_sha)throw new Error('Unknown or invalid prior acceptance plan');
+        plannedCriteria=JSON.parse(saved.criteria_json);
+        if(!Array.isArray(plannedCriteria)||plannedCriteria.length===0||plannedCriteria.length>40)throw new Error('Invalid prior plan');
+      }
+      const plan=planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria:plannedCriteria});
+      if(plan_id!==null){
+        plan.reissued_from=plan_id;
+        plan.warning='A reissued plan retains the prior required scenarios but does not prove they were executed on current code. Rerun native tests and review new evidence.';
+      }
       if(compact){
         if(plan.impact&&plan.impact.unknowns){
           plan.impact.unknowns=plan.impact.unknowns.map(u=>u.length>60?u.slice(0,57)+'...':u);
