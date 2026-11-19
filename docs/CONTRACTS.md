@@ -11,7 +11,7 @@ Four public, JSON-RPC 2.0 **stdio** tools. Every tool requires an **authorized a
 | `a2a_context` | `inspect`, `query`, `freshness`, `tokens`, `skeleton`, `orchestration` | Code inventory, static graph, tokens, declared native teamwork advisor |
 | `a2a_impact` | `changed`, `depth` (1–4), `summary` | Bounded static change-impact analysis; uncertainty remains |
 | `a2a_verify` | `plan`, `assess`, `verify_handoff`, `assess_release`, `assess_semantic`, `assess_browser` | Test planning, scoped local machine results, independent signed release assessment |
-| `a2a_evidence` | `list`, `runs`, `incidents`, `record_incident`, `add_hypothesis`, `assess_hypothesis`, `hypotheses`, `side_questions`, `record_side_question`, `artifact_versions`, `artifact_diff`, `snapshot_artifact`, `save_checkpoint`, `model_recovery`, `tool_recovery` | Revision-bound evidence, incident hypotheses, explicit checkpoints, bounded recovery guidance |
+| `a2a_evidence` | `list`, `runs`, `incidents`, `record_incident`, `add_hypothesis`, `assess_hypothesis`, `hypotheses`, `delete_incident`, `side_questions`, `record_side_question`, `artifact_versions`, `artifact_diff`, `snapshot_artifact`, `save_checkpoint`, `model_recovery`, `tool_recovery` | Revision-bound evidence, incident hypotheses, explicit checkpoints, bounded recovery guidance |
 
 The public operation enums above reflect current `src/tools.mjs`. Additional engine-internal compatibility aliases may exist but are not guaranteed as public input enums. A2A cannot launch native commands, edit project source, run browsers, force model selection or guarantee upstream agent obedience.
 
