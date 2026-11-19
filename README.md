@@ -149,3 +149,10 @@ Default Compact limits `a2a_context(action="skeleton")` to **4,800 preview chara
 ### Node 26 + NVM on Linux
 
 If `which node` resolves to `~/.nvm/versions/node/v26.13.1/bin/node`, the Node runtime is suitable for A2A's tested core. Check the *actual* binary and SQLite API with `node scripts/a2a.mjs doctor` (look for `node_binary`, `sqlite_api`, `sqlite_version`). The plugin's MCP launcher invokes `node` via `PATH`, which might be different in Antigravity launched from the desktop. Check the IDE's environment when the plugin fails to start; do not assume the NVM binary visible in your terminal is also visible to the GUI. See [compatibility and validation](docs/COMPATIBILITY.md).
+
+## Adaptive 5 Whys for difficult bugs
+
+For recurring regressions, concurrency/permission failures and ambiguous causes, A2A's lean skill recommends **native, evidence-guided 5 Whys** rather than asking exactly five questions or issuing five tool calls. Antigravity records symptoms, competing explanations, a falsifying experiment and negative controls. RCA-lite can run with **zero additional A2A calls**; opt-in RCA-deep uses `a2a_evidence(record_incident|add_hypothesis|assess_hypothesis)` with `persist_rca:true` and exact source-fresh named-test evidence. Outcomes `locally_supported`, `refuted`, and `inconclusive` are not independent causal proof; an incident's `root_cause` remains **candidate-only**. View the [RCA workflow and examples](docs/ADAPTIVE_RCA_WORKFLOW.md). Release acceptance #15 remains open.
+
+**RCA history privacy:** Compact lists show at most eight entries and disclose additional records. To logically remove a saved RCA incident with its hypotheses, explicitly invoke `a2a_evidence(operation="delete_incident",persist_rca=true,confirm_deletion=true,incident_id="...")`; this does **not** delete independently stored test artifacts or securely erase database backups. [Details](docs/ADAPTIVE_RCA_WORKFLOW.md).
+

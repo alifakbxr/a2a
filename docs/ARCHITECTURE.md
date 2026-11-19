@@ -31,6 +31,7 @@ A2A is a local-first, native-first **engineering intelligence support layer** fo
 | [`src/tokens.mjs`](../src/tokens.mjs), [`src/conversations.mjs`](../src/conversations.mjs) | Lexer-safe previews, local conversation provenance, source-response size estimates | Local counters are not provider-billed token usage |
 | [`src/verification.mjs`](../src/verification.mjs), [`src/acceptance-matrix.mjs`](../src/acceptance-matrix.mjs) | Given/When/Then plans, exact-test checks, scoped completion | Local PASS never becomes independent E2E approval |
 | [`src/semantic-evidence.mjs`](../src/semantic-evidence.mjs), [`src/browser-evidence.mjs`](../src/browser-evidence.mjs) | Structural evaluation of supplied evidence | Caller-supplied execution remains unattested |
+| [`src/rca.mjs`](../src/rca.mjs) | Opt-in incident candidates, 2–8 Why branches and source-bound named-test hypothesis outcomes | Local assertions are **not** independent causal proof |
 | [`src/model-recovery.mjs`](../src/model-recovery.mjs) | Categorized model errors and explicit source-fresh checkpoints | No model switch, quota query, or automatic resume |
 | [`src/native-tool-recovery.mjs`](../src/native-tool-recovery.mjs) | Deterministic, bounded remediation classes | No native interception, automatic retry, or permission bypass |
 | [`src/orchestration-advisor.mjs`](../src/orchestration-advisor.mjs) | Opt-in native worker-mode recommendation | Needs declared capabilities, low coupling and independent file ownership |

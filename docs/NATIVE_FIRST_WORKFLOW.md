@@ -85,3 +85,8 @@ The user-history behavioral audit produced issues [#30–#35](https://github.com
 3. For behavioral risk, use scoped `a2a_verify` only when Given/When/Then and real native tests are needed; `persist_plan:true` stores user-authored scenarios only with explicit permission. Source changes invalidate earlier evidence.
 4. Default **Compact** caps skeleton to 4,800 total characters/1,600 per file/six previews and query graph relations to 12 with explicit truncation. Use native source reads or `compact off` for complete evidence as needed, rather than treating previews as a substitute.
 5. Report **what was tested** and remaining unknowns, without repeated token footers. Static prompt/payload reductions do not measure true model usage. Benchmark with official usage and independent quality gates.
+
+## Adaptive RCA branch — no mandatory five-tool chain
+
+For a **simple/known** bug, use native debugging and regression with **zero RCA tool calls**. For unclear symptoms, perform RCA-lite in native reasoning: expected versus actual, 1–2 competing causal explanations, a falsifier for each, and one discriminating experiment. Escalate to RCA-deep for recurrent/regressed, high-risk, multi-module or user-disputed completion cases; one A2A context OR impact call is optional when it reduces uncertainty. Native Antigravity performs experiments, source edits and browser/database/hardware testing. Opt-in `a2a_evidence` saves hypotheses and outcomes only on explicit `persist_rca:true`; bind each conclusion to the exact named test/source revision, never to a build or unrelated evidence ID. Use a fresh acceptance plan and rerun native tests after source changes. Do **not** require five Why questions or proxy any agent action. [Detailed protocol](ADAPTIVE_RCA_WORKFLOW.md).
+

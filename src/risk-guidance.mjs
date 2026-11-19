@@ -53,22 +53,43 @@ const SCOPE=[
 ];
 const safe=(a,max)=>Array.isArray(a)?a.filter(x=>typeof x==='string'&&x.length<1000).slice(0,max):[];
 export const RISK_DOMAINS=Object.freeze(Object.keys(CASES));
-export function proposeRiskTests({paths=[],criteria=[]}={}){
+export function proposeRiskTests({paths=[],criteria=[],compact=false}={}){
  const sources=[...safe(paths,80),...safe(criteria,40)];
  const q=sources.join(' ').slice(0,12000);
  const riskDomains=SCOPE.filter(([,re])=>re.test(q)).map(([name])=>name);
- const findings=riskDomains.map(domain=>({
+ const all=riskDomains.flatMap(domain=>CASES[domain].map(([id,requirement],order)=>({
   domain,priority:domain==='web-usability-and-operations'?'medium':'critical',
-  negative_test_scenarios:CASES[domain].map(([id,requirement])=>({
+  id,requirement,order
+ })));
+ // Rank by specific symptoms/criterion words instead of returning every
+ // generic test template. Existing full output can still be requested by
+ // turning Compact off; none of these suggestions are mandatory acceptance.
+ const words=new Set(q.toLowerCase().match(/[a-z][a-z0-9_-]{3,}/g)||[]);
+ const ranked=all.map(x=>{
+  const terms=(x.id+' '+x.requirement).toLowerCase().match(/[a-z][a-z0-9_-]{3,}/g)||[];
+  return {...x,match_score:terms.filter(t=>words.has(t)).length};
+ }).sort((a,b)=>b.match_score-a.match_score||(a.priority==='critical'?-1:1)-(b.priority==='critical'?-1:1)||a.order-b.order);
+ const selected=new Set((compact?ranked.slice(0,3):ranked).map(x=>x.id));
+ const findings=riskDomains.map(domain=>{
+  const scenarios=CASES[domain].filter(([id])=>selected.has(id)).map(([id,requirement])=>({
    id,requirement,status:'not-run',evidence_required:true,
    minimum_evidence:domain==='web-usability-and-operations'?'browser-or-accessibility-report':'named-machine-assertion-plus-domain-invariant'
-  }))
- }));
+  }));
+  return {domain,priority:domain==='web-usability-and-operations'?'medium':'critical',
+    negative_test_scenarios:scenarios,suggested_total:CASES[domain].length,
+    suggestions_omitted:CASES[domain].length-scenarios.length};
+ });
+ const suggestedIds=findings.flatMap(x=>x.negative_test_scenarios.map(y=>y.id));
  return {status:findings.length?'suggestions-only':'no-domain-signals-detected',
-  findings,required_test_ids:findings.flatMap(x=>x.negative_test_scenarios.map(y=>y.id)),
-  coverage_assurance:'none',
-  limitations:['Path and criteria classification is a heuristic, not a discovered security vulnerability',
-   'Suggested tests have not been executed and do not change any passing verification verdict by themselves',
+  findings,
+  // Historical required_test_ids was a misleading label: suggestions are not
+  // acceptance requirements until explicitly adopted in a verification plan.
+  required_test_ids:[],suggested_test_ids:suggestedIds,
+  suggested_total:all.length,suggested_visible:suggestedIds.length,
+  more_available:suggestedIds.length<all.length,
+  coverage_assurance:'none',adopted_as_mandatory:false,
+  limitations:['Static paths/criteria only suggest risks; they are not discovered vulnerabilities',
+   'No suggested scenario was run or added to mandatory acceptance criteria',
    'No domain match does not mean the application is secure or that route/service coverage is complete',
-   'Independent test artifacts with explicit scenario assertions are required before claiming release readiness']};
+   'Use a user-reviewed a2a_verify plan and independent evidence for release claims']};
 }

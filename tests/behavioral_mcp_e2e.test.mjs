@@ -201,3 +201,78 @@ test('re-audit real MCP stdio: immutable acceptance coverage, permission precede
   assert.equal(reissued.body.completion.counts.not_tested,2);
  }finally{await io.close()}
 });
+
+
+test('adaptive RCA through real MCP stdio: consent, competing causes, strict evidence and stale state',async()=>{
+ const io=start();
+ try{
+  const init=await io.request('initialize',{protocolVersion:'2025-03-26',capabilities:{}});
+  assert.equal(init.result.serverInfo.name,'a2a');
+  const tools=await io.request('tools/list');
+  assert.equal(tools.result.tools.length,4);
+  const folder=path.join(io.home,'.config','a2a');
+  fs.mkdirSync(folder,{recursive:true});
+  fs.writeFileSync(path.join(folder,'allowed-workspaces.json'),JSON.stringify({
+   version:1,allowed:[fs.realpathSync(io.work)]
+  }));
+  const failedConsent=await io.call('a2a_evidence',{workspace:io.work,operation:'record_incident',
+   title:'Double-print observed after second QR scan'});
+  assert.equal(failedConsent.isError,true);
+  const report='reports/rca-synthetic.json';
+  fs.mkdirSync(path.join(io.work,'reports'),{recursive:true});
+  fs.writeFileSync(path.join(io.work,report),JSON.stringify({
+   format:'a2a-test-report-v1',completed:true,
+   cases:[{name:'repeated QR print guard',state:'passed'}]
+  }));
+  const check={id:'qr-guard',given:'Guest has checked in',
+   when:'Same QR code is scanned again',then:'Only the first scan causes printing',
+   evidence_type:'integration',negative:true,artifact:report,test_name:'repeated QR print guard'};
+  const verification=await io.call('a2a_verify',{workspace:io.work,operation:'assess',criteria:[check]});
+  assert.equal(verification.isError,false);
+  assert.equal(verification.body.criteria[0].status,'passed');
+  const evidence=verification.body.criteria[0].evidence_id;
+  const inc=await io.call('a2a_evidence',{workspace:io.work,operation:'record_incident',
+   title:'Second QR scan prints twice',root_cause:'Maybe frontend sends duplicate events',
+   paths:['src/checkin.js'],persist_rca:true,evidence_ids:[evidence]});
+  assert.equal(inc.isError,false);
+  assert.equal(inc.body.root_cause_verified,false);
+  assert.equal(inc.body.state,'investigating');
+  assert.ok(inc.body.warning);
+  const hypArgs={workspace:io.work,operation:'add_hypothesis',persist_rca:true,
+   incident_id:inc.body.id,hypothesis:'The UI handler submits check-in twice for the same guest',
+   experiment:'Disable the UI event then compare backend print invocations',
+   predicted_observation:'The duplicate print stops when the UI event is disabled',
+   disconfirming_test:'Observe two queue print events with the UI event disabled',
+   expected_criterion_id:'qr-guard'};
+  const hypothesis=await io.call('a2a_evidence',hypArgs);
+  assert.equal(hypothesis.isError,false);
+  assert.equal(hypothesis.body.status,'untested');
+  const alternative=await io.call('a2a_evidence',{...hypArgs,
+   parent_hypothesis_id:hypothesis.body.id,
+   hypothesis:'Backend print queue retries an already completed check-in'});
+  assert.equal(alternative.body.why_depth,2);
+  const unsupported=await io.call('a2a_evidence',{workspace:io.work,operation:'assess_hypothesis',
+   hypothesis_id:hypothesis.body.id,persist_rca:true,experiment_outcome:'supports',
+   observation:'Observed duplicate print with UI handler enabled',evidence_ids:[]});
+  assert.equal(unsupported.isError,true);
+  const supported=await io.call('a2a_evidence',{workspace:io.work,operation:'assess_hypothesis',
+   hypothesis_id:hypothesis.body.id,persist_rca:true,experiment_outcome:'supports',
+   observation:'Named backend assertion was observed while toggling the handler',
+   evidence_ids:[evidence]});
+  assert.equal(supported.isError,false);
+  assert.equal(supported.body.status,'locally_supported');
+  assert.equal(supported.body.root_cause_verified,false);
+  const list=await io.call('a2a_evidence',{workspace:io.work,operation:'hypotheses',
+   incident_id:inc.body.id});
+  assert.equal(list.body.items.length,2);
+  assert.ok(list.body.items.some(x=>x.status==='locally_supported'));
+  fs.writeFileSync(path.join(io.work,'src','checkin.js'),'export function shouldPrint(isRepeat){return true}');
+  const stale=await io.call('a2a_evidence',{workspace:io.work,operation:'hypotheses',
+   incident_id:inc.body.id});
+  assert.equal(stale.body.items.find(x=>x.id===hypothesis.body.id).status,'stale');
+  const wrong=await io.call('a2a_evidence',{workspace:io.work,operation:'assess_hypothesis',
+   hypothesis_id:hypothesis.body.id,persist_rca:true,experiment_outcome:'refutes',
+   observation:'Old test no longer applies after changing source',evidence_ids:[evidence]});
+  assert.equal(wrong.isError,true);
+ }finally{await io.close()}
+});

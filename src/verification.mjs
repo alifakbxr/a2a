@@ -68,7 +68,7 @@ export function parseArtifact(text, filename){
   return {status:'inconclusive',assertions:0,reason:'Unsupported artifact type; require JUnit, TAP, or a2a-test-report-v1',cases:[]};
 }
 
-export function planVerification({index,impact,criteria=[]}){
+export function planVerification({index,impact,criteria=[],compact=false}){
   if(!Array.isArray(criteria)||criteria.length>40)throw new Error('criteria must be an array of at most 40 items');
   const seen=new Set();const plan=criteria.map(c=>{
     const item=normalizeAcceptanceCriterion(c);
@@ -77,7 +77,7 @@ export function planVerification({index,impact,criteria=[]}){
     return item;
   });
   const checks=discoverTestCommands(index);
-  const riskGuidance=proposeRiskTests({paths:impact?.changed??[],criteria:plan.map(x=>[x.description,x.given,x.when,x.then].filter(Boolean).join(' '))});
+  const riskGuidance=proposeRiskTests({paths:impact?.changed??[],criteria:plan.map(x=>[x.description,x.given,x.when,x.then].filter(Boolean).join(' ')),compact});
   const highRisk=impact?.risk==='high'||riskGuidance.findings.some(x=>x.priority==='critical');
   // Maintainer discipline is a bounded NOT-REVIEWED checklist, never a quality verdict.
   // It costs no extra tool call and is omitted for unrelated/trivial tasks.

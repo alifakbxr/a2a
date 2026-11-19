@@ -123,9 +123,18 @@ test('record incident, hypothesis, and evidence listing scoped to workspace',()=
   write('reports/results.tap','TAP version 13\n1..1\nok 1 - works\n');
   const v=e.verify({workspace:root,operation:'assess',criteria:[{id:'login',artifact:'reports/results.tap',test_name:'works'}]});
   const ev=v.criteria[0].evidence_id;
-  const inc=e.evidence({workspace:root,operation:'record_incident',title:'Login session was not persisted',root_cause:'Session store was reset on refresh',paths:['src/auth.js'],criteria:['refresh persists'],evidence_ids:[ev]});
-  assert.equal(inc.state,'evidence-linked');
-  const h=e.evidence({workspace:root,operation:'add_hypothesis',incident_id:inc.id,hypothesis:'State is recreated after reload',experiment:'Reproduce with a refresh'});assert.equal(h.status,'untested');
+  const inc=e.evidence({workspace:root,operation:'record_incident',persist_rca:true,
+    title:'Login session was not persisted',root_cause:'Session store was reset on refresh',
+    paths:['src/auth.js'],criteria:['refresh persists'],evidence_ids:[ev]});
+  assert.equal(inc.state,'investigating');
+  assert.equal(inc.root_cause_verified,false);
+  assert.match(inc.warning,/not independently prove/);
+  const h=e.evidence({workspace:root,operation:'add_hypothesis',persist_rca:true,
+    incident_id:inc.id,hypothesis:'State is recreated after reload',
+    experiment:'Reproduce with a complete browser refresh',
+    predicted_observation:'The session key is lost immediately after reload',
+    disconfirming_test:'Reload the browser while preserving its session cookie',
+    expected_criterion_id:'login'});assert.equal(h.status,'untested');
   const list=e.evidence({workspace:root,operation:'incidents'});assert.equal(list.items.length,1);
 }));
 test('input schema validation blocks unknown, invalid and oversized arguments',()=>{
