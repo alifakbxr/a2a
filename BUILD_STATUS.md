@@ -61,7 +61,7 @@ Documentation: [index](docs/README.md), [security](docs/SECURITY.md), [release](
 
 Post-merge code fixes on `v2.0.1`: PR #62 (CLI, hooks and evidence false-PASS), #63 (exhaustive syntax coverage), #64 (MCP resource privacy), #65 (Node SQLite consistency and runtime diagnostics), #66 (bounded 6.5KB MCP schema). Each was tested through 9-job Node 22/24/26.13.1 CI before merge. Subsequent source changes require their own checks; historical test counts above are **not** current test totals.
 
-PR #67 added bounded safe I/O and release trust diagnostics, #68 added Node version-manager desktop PATH advice, and #69 integrated cross-platform HOME/path normalization and IDE-trust metadata safeguards. `main` stays frozen, external independent STOCKROOM acceptance F01–F18, live installed Antigravity validation and repeated A/B token trials remain open in issue #15; passing local CI is not equivalent to release certification.
+PR #67 added bounded safe I/O and release trust diagnostics, #68 added Node version-manager desktop PATH advice, and PR #69 integrated cross-platform HOME/path normalization and IDE-trust metadata safeguards. `main` stays frozen, external independent STOCKROOM acceptance F01–F18, live installed Antigravity validation and repeated A/B token trials remain open in issue #15; passing local CI is not equivalent to release certification.
 
 ## Final code-level audit reconciliation — 19 November 2026
 
