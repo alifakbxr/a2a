@@ -42,6 +42,10 @@ For Linux/NVM diagnosis, check both `command -v node` and `node scripts/a2a.mjs 
 
 The CI test does not have access to the user's Pop!_OS GUI session; a live Antigravity plugin validation and MCP smoke remain required by [release gate #15](https://github.com/alifakbxr/a2a/issues/15).
 
+### Non-login PATH advisory
+
+`a2a doctor` reports `node_version_manager_path` and `path_advisory` when `process.execPath` is under common user-scoped NVM, fnm, Volta, asdf or nodenv layouts. This is a read-only warning: an interactive terminal's PATH does **not** prove a desktop-launched Antigravity process can spawn the same binary, and no shell probe, installation or config mutation is performed. Node 22.13+ remains required.
+
 ### Cross-platform HOME and path boundaries
 
 `getHomeDir()` is the shared resolver for user-scoped Antigravity brain, token history, release config, snapshots, and CLI/hook paths, supporting Windows `USERPROFILE` when `HOME` is unset. Storage protects both the OS account home and an overridden `HOME` from permission changes. Relative project snapshots resolve against the authorized workspace root rather than the MCP process CWD. `isSamePath` and `isSameOrDescendantPath` consistently handle Windows/macOS case defaults and macOS `/private/var`, `/private/tmp`, `/private/etc` aliases. The benchmark capture reader canonicalizes the manifest root. These guards do not replace real native IDE/browser tests on each OS.
