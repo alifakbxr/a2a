@@ -3,7 +3,7 @@ import {Engine} from '../src/engine.mjs';
 import pkg from '../package.json' with {type:'json'};
 import {
   allowlistPath,settingsPath,getA2AMode,setA2AMode,getCompactMode,setCompactMode,
-  getAutoTrustMode,setAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces,
+  getAutoTrustMode,setAutoTrustMode,getArtifactAutoSnapshotMode,setArtifactAutoSnapshotMode,loadAllowlist,loadAntigravityWorkspaces,
   authorizeWorkspace,revokeWorkspace,dataDir,requireAuthorizedWorkspace,localAntigravityRpcUrl
 } from '../src/security.mjs';
 import {readOfficialAgyUsageFile} from '../src/tokens.mjs';
@@ -31,6 +31,7 @@ Commands:\n  doctor                     show runtime, workspace permissions, act
   evidence <workspace>       list verified evidence and regression history
   side-questions [workspace] [--conv <id>] [--parent <id>] list recorded Antigravity side questions (/btw)
   artifacts [list|diff|show|snapshot] [file] [--conv <id>] [--v1 N] [--v2 M] version & diff brain artifacts
+  artifact-autosnapshot [status|on|off]  explicit opt-in for retaining full brain Markdown on edit events
   refresh [serverName]       hot-reload A2A MCP server via Antigravity Language Server RPC
   stats                      view install metrics, clone traffic & unique users from GitHub
   mcp                        start A2A stdio server via src/mcp.mjs`);process.exit(0);
@@ -46,6 +47,7 @@ try{
       sqlite:'node:sqlite',
       mode:getA2AMode(),
       compact_mode:getCompactMode()?'enabled':'disabled',
+      artifact_auto_snapshot:getArtifactAutoSnapshotMode()?'enabled':'disabled',
       auto_trust:getAutoTrustMode(),
       settings:settingsPath(),
       data_dir:dataDir(),
@@ -72,6 +74,11 @@ try{
     if(!target||target==='status'){print({compact:getCompactMode()?'enabled':'disabled'});}
     else if(target==='toggle'){print({compact:setCompactMode('toggle')?'enabled':'disabled'});}
     else {print({compact:setCompactMode(target)?'enabled':'disabled'});}
+  }
+  else if(cmd==='artifact-autosnapshot'){
+    const setting=argv[0]||'status';
+    if(setting==='status')print({artifact_auto_snapshot:getArtifactAutoSnapshotMode()?'enabled':'disabled',note:'Automatic full-content brain Markdown retention is opt-in; default off.'});
+    else print({artifact_auto_snapshot:setArtifactAutoSnapshotMode(setting)?'enabled':'disabled',note:'Stored snapshots are private local content; existing history is not deleted when disabled.'});
   }
   else if(cmd==='autotrust'){
     const target=argv[0];
