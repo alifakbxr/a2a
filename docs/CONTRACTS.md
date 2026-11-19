@@ -124,3 +124,11 @@ Privacy caveat: explicitly saved artifact versions and checkpoints **can contain
 - No third-party browser, runtime model API, prompt content upload or remote A2A telemetry.
 
 For actual error behavior and constraints, consult the executable [MCP server](../src/mcp.mjs), [verification](../src/verification.mjs), [acceptance matrix](../src/acceptance-matrix.mjs), [model recovery](../src/model-recovery.mjs), and [native recovery](../src/native-tool-recovery.mjs).
+
+## Compact output and prompt-budget contract (issue #44)
+
+New installations default to `On-Demand` (**no automatic A2A calls or SessionStart injection**) and `Compact` (**bounded result payloads**). `node scripts/a2a.mjs compact off` explicitly restores fuller responses and persists until changed. Existing explicit user settings have precedence.
+
+In Compact, `a2a_context(action="skeleton")` limits previews to 4,800 characters total, 1,600 per file, and six previewed files out of up to 20 requested. Requested-but-omitted paths are returned with `skipped:true` and reason `compact_file_budget`; partial previews carry `truncated:true`, and summary counters disclose omissions. `action="query"` caps static relation rows at 12 and sets `relations_truncated:true` plus `relations_before_compaction` when necessary. This count refers to the query response *before compaction*, not total possible project edges. Impact `summary:true` retains its existing risk/uncertainty/coverage semantics.
+
+Only local payload bytes/characters and heuristic estimates are measurable by these APIs; neither the skill nor the `a2a tokens` CLI can prove provider billing or net token savings. Tool outputs that are truncated must not be presented as complete analysis. See [token efficiency](TOKEN_EFFICIENCY.md).
