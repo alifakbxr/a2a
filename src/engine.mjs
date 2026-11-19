@@ -16,6 +16,7 @@ import {assessRelease} from '../scripts/evaluate-acceptance.mjs';
 import {adviseOrchestration} from './orchestration-advisor.mjs';
 import {saveRecoveryCheckpoint,recoveryStatus} from './model-recovery.mjs';
 import {classifyNativeToolFailure} from './native-tool-recovery.mjs';
+import {recordRcaIncident,addRcaHypothesis,assessRcaHypothesis,listRcaIncidents,listRcaHypotheses} from './rca.mjs';
 
 export class Engine {
   constructor({store}={}) {this.store=store||new Store();this.owned=!store;}
@@ -393,12 +394,12 @@ export class Engine {
     }catch{}
     return process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
   }
-  evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id,conversation_id,parent_conversation_id,question,summary,status,artifact_name,artifact_path,v1,v2,task_summary,completed=[],next_steps=[],decisions=[],pending_tests=[],tool_family='other',error_hint='',error_class,retry_count=0}={}){
+  evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id,conversation_id,parent_conversation_id,question,summary,status,artifact_name,artifact_path,v1,v2,task_summary,completed=[],next_steps=[],decisions=[],pending_tests=[],tool_family='other',error_hint='',error_class,retry_count=0,persist_rca=false,hypothesis_id,parent_hypothesis_id=null,predicted_observation,disconfirming_test,expected_criterion_id,plan_id=null,experiment_outcome,observation}={}){
     const compact=getCompactMode();
     const isReadOnly=operation==='tool_recovery'||operation==='model_recovery'||operation==='list'||operation==='runs'||operation==='incidents'||operation==='hypotheses'||operation==='side_questions'||operation==='side-questions'||operation==='artifact_versions'||operation==='artifact-versions'||operation==='artifact_diff'||operation==='artifact-diff';
     // Freshness is a security-relevant claim: never reuse cached revision metadata
     // when presenting test evidence or historical run freshness.
-    const needsLiveRevision=['list','runs','model_recovery','save_checkpoint'].includes(operation);
+    const needsLiveRevision=['list','runs','model_recovery','save_checkpoint','incidents','record_incident','add_hypothesis','assess_hypothesis','hypotheses'].includes(operation);
     const s=needsLiveRevision?this.sync(workspace,{verifyIntegrity:true}):(isReadOnly?this.resolveMeta(workspace):this.sync(workspace));
     const wsId=s.wsId;
     if(operation==='tool_recovery')return classifyNativeToolFailure({error_class,error_hint,tool_family,retry_count});
@@ -418,22 +419,15 @@ export class Engine {
     }
     if(operation==='list')return {revision:s.revision,...listEvidence(this.store,wsId,s.root,s.revision,{limit,id}),...(compact?{compact:true}:{})};
     if(operation==='runs')return {revision:s.revision,runs:this.store.all('SELECT id,revision_id,verdict,criteria_json,created_at FROM runs WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20))).map(x=>({...x,fresh:x.revision_id===s.revision,criteria:JSON.parse(x.criteria_json),criteria_json:undefined})),...(compact?{compact:true}:{})};
-    if(operation==='incidents')return {items:this.store.all('SELECT * FROM incidents WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20))).map(x=>({...x,paths:JSON.parse(x.related_paths_json),criteria:JSON.parse(x.criteria_json),evidence_ids:JSON.parse(x.evidence_ids_json),related_paths_json:undefined,criteria_json:undefined,evidence_ids_json:undefined})),...(compact?{compact:true}:{})};
-    if(operation==='record_incident'){
-      if(typeof title!=='string'||title.trim().length<5||title.length>240||typeof root_cause!=='string'||root_cause.length>1400)throw new Error('Invalid incident title/root cause');
-      validateChangedPaths(paths);if(!Array.isArray(criteria)||criteria.length>40||criteria.some(v=>typeof v!=='string'||v.length>160))throw new Error('Invalid criteria');
-      if(!Array.isArray(evidence_ids)||evidence_ids.length>20)throw new Error('Invalid evidence IDs');
-      for(const eid of evidence_ids)if(!this.store.get('SELECT id FROM evidence WHERE id=? AND workspace_id=?',eid,wsId))throw new Error('Evidence ID outside workspace or unknown');
-      const state=evidence_ids.length?'evidence-linked':'hypothesized',inc=uniqueId('inc');
-      this.store.run('INSERT INTO incidents VALUES(?,?,?,?,?,?,?,?,?,?)',inc,wsId,title,root_cause,state,s.revision,JSON.stringify(paths),JSON.stringify(criteria),JSON.stringify(evidence_ids),new Date().toISOString());
-      return {id:inc,state,revision:s.revision,...(compact?{compact:true}:{warning:'Evidence-linked is not synonymous with proven root cause.'})};
-    }
-    if(operation==='add_hypothesis'){
-      if(typeof hypothesis!=='string'||hypothesis.length<8||hypothesis.length>1000||typeof experiment!=='string'||experiment.length>1000)throw new Error('Invalid hypothesis/experiment');
-      if(incident_id && !this.store.get('SELECT id FROM incidents WHERE id=? AND workspace_id=?',incident_id,wsId))throw new Error('Invalid incident');
-      const hid=uniqueId('hyp');this.store.run('INSERT INTO hypotheses VALUES(?,?,?,?,?,?,?,?)',hid,wsId,incident_id||null,hypothesis,'untested',experiment,JSON.stringify([]),new Date().toISOString());return {id:hid,status:'untested'};
-    }
-    if(operation==='hypotheses')return {items:this.store.all('SELECT id,incident_id,description,status,experiment,created_at FROM hypotheses WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20))),...(compact?{compact:true}:{})};
+    if(operation==='incidents')return {...listRcaIncidents(this.store,wsId,s.revision,limit),...(compact?{compact:true}:{})};
+    if(operation==='record_incident')return {...recordRcaIncident(this.store,wsId,s.root,s.revision,{title,root_cause,paths,criteria,evidence_ids,persist_rca}),...(compact?{compact:true}:{})};
+    if(operation==='add_hypothesis')return {...addRcaHypothesis(this.store,wsId,s.revision,{
+      hypothesis,experiment,incident_id,parent_hypothesis_id,predicted_observation,disconfirming_test,expected_criterion_id,plan_id,persist_rca
+    }),...(compact?{compact:true}:{})};
+    if(operation==='assess_hypothesis')return {...assessRcaHypothesis(this.store,wsId,s.root,s.revision,{
+      hypothesis_id,experiment_outcome,observation,evidence_ids,persist_rca
+    }),...(compact?{compact:true}:{})};
+    if(operation==='hypotheses')return {...listRcaHypotheses(this.store,wsId,s.revision,limit,incident_id||null),...(compact?{compact:true}:{})};
     if(operation==='side_questions'||operation==='side-questions'){
       const items=this.store.listSideQuestions({workspaceId:wsId,parentConversationId:parent_conversation_id,conversationId:conversation_id||id,limit});
       return {workspace:s.root,count:items.length,items,...(compact?{compact:true}:{})};
