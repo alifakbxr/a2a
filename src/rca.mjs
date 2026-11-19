@@ -102,8 +102,13 @@ export function assessRcaHypothesis(store,ws,root,revision,args){
   const assessment={outcome:args.experiment_outcome,observation,evidence_ids:evidence.map(x=>x.id),
     criterion_id:h.expected_criterion_id,plan_id:h.plan_id||null,source_revision:revision,
     independent_causal_proof:false,updated_at:now};
-  store.run('UPDATE hypotheses SET status=?,evidence_ids_json=?,assessment_json=?,assessed_revision_id=?,updated_at=? WHERE workspace_id=? AND id=?',
-    status,JSON.stringify(assessment.evidence_ids),JSON.stringify(assessment),revision,now,ws,h.id);
+  store.transaction(()=>{
+    store.run('INSERT INTO rca_experiments(id,workspace_id,hypothesis_id,revision_id,outcome,observation,criterion_id,evidence_ids_json,created_at) VALUES(?,?,?,?,?,?,?,?,?)',
+      uniqueId('rex'),ws,h.id,revision,args.experiment_outcome,observation,h.expected_criterion_id,
+      JSON.stringify(assessment.evidence_ids),now);
+    store.run('UPDATE hypotheses SET status=?,evidence_ids_json=?,assessment_json=?,assessed_revision_id=?,updated_at=? WHERE workspace_id=? AND id=?',
+      status,JSON.stringify(assessment.evidence_ids),JSON.stringify(assessment),revision,now,ws,h.id);
+  });
   return {id:h.id,incident_id:h.incident_id,status,why_depth:h.why_depth,source_freshness:'current',
     linked_local_evidence:evidence,independently_attested:false,root_cause_verified:false,warning:RCA_WARNING};
 }
@@ -127,7 +132,10 @@ export function listRcaHypotheses(store,ws,root,revision,limit=20,incidentId=nul
       }catch{evidenceIntact=false}
     }
     const status=!fresh||(h.status!=='untested'&&!assessedFresh)||!evidenceIntact?'stale':h.status;
+    const history=store.all('SELECT outcome,revision_id,criterion_id,created_at FROM rca_experiments WHERE workspace_id=? AND hypothesis_id=? ORDER BY created_at DESC LIMIT 3',ws,h.id);
+    const assessmentCount=store.get('SELECT count(*) AS n FROM rca_experiments WHERE workspace_id=? AND hypothesis_id=?',ws,h.id).n;
     return {id:h.id,incident_id:h.incident_id,description:h.description,status,
+      recent_experiments:history,experiments_total:assessmentCount,more_experiments_available:assessmentCount>history.length,
       recorded_status:h.status,source_freshness:fresh?'current':'stale_or_unbound',
       linked_evidence_intact:evidenceIntact,
       experiment:h.experiment,parent_hypothesis_id:h.parent_hypothesis_id||null,
@@ -157,6 +165,7 @@ export function deleteRcaIncident(store,ws,{incident_id,persist_rca,confirm_dele
     const exists=store.get('SELECT id FROM incidents WHERE workspace_id=? AND id=?',ws,incident_id);
     if(!exists)throw Error('RCA incident not found in authorized workspace');
     const count=store.get('SELECT count(*) AS n FROM hypotheses WHERE workspace_id=? AND incident_id=?',ws,incident_id).n;
+    store.run('DELETE FROM rca_experiments WHERE workspace_id=? AND hypothesis_id IN (SELECT id FROM hypotheses WHERE workspace_id=? AND incident_id=?)',ws,ws,incident_id);
     store.run('DELETE FROM hypotheses WHERE workspace_id=? AND incident_id=?',ws,incident_id);
     store.run('DELETE FROM incidents WHERE workspace_id=? AND id=?',ws,incident_id);
     return {deleted:true,incident_id,hypotheses_deleted:count,other_evidence_preserved:true,
