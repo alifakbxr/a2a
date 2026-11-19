@@ -560,37 +560,22 @@ function readWorkspaceGrants(){
 export function loadAllowlist(){return readWorkspaceGrants().allowed}
 export function loadRevokedWorkspaces(){return readWorkspaceGrants().revoked}
 
+// Normalize only documented macOS /private aliases (never arbitrary paths)
+// and the default case-insensitive OS families before comparing boundaries.
+function normalizedComparablePath(input){
+  let resolved=path.resolve(input);
+  if(process.platform==='darwin')
+    resolved=resolved.replace(/^\/private(?=\/(?:var|tmp|etc)(?:\/|$))/,'');
+  return process.platform==='win32'||process.platform==='darwin'?resolved.toLowerCase():resolved;
+}
+export function isSamePath(a,b){
+  return typeof a==='string'&&a.length>0&&typeof b==='string'&&b.length>0&&
+    normalizedComparablePath(a)===normalizedComparablePath(b);
+}
 export function isSameOrDescendantPath(parent, child) {
-  if (!parent || !child) return false;
-  const p = path.resolve(parent);
-  const c = path.resolve(child);
-  if (p === c) return true;
-
-  const pWithSep = p.endsWith(path.sep) ? p : p + path.sep;
-  if (c.startsWith(pWithSep)) return true;
-
-  // Case-insensitive check (Windows and macOS default filesystems)
-  if (process.platform === 'win32' || process.platform === 'darwin') {
-    const pLower = p.toLowerCase();
-    const cLower = c.toLowerCase();
-    const pLowerWithSep = pLower.endsWith(path.sep) ? pLower : pLower + path.sep;
-    if (cLower === pLower || cLower.startsWith(pLowerWithSep)) return true;
-  }
-
-  // macOS /private symlink alias check (/var -> /private/var, /tmp -> /private/tmp)
-  if (process.platform === 'darwin') {
-    const pPriv = p.startsWith('/private/') ? p : '/private' + p;
-    const cPriv = c.startsWith('/private/') ? c : '/private' + c;
-    const pPrivWithSep = pPriv.endsWith('/') ? pPriv : pPriv + '/';
-    if (cPriv === pPriv || cPriv.startsWith(pPrivWithSep)) return true;
-
-    const pNoPriv = p.startsWith('/private/') ? p.slice('/private'.length) : p;
-    const cNoPriv = c.startsWith('/private/') ? c.slice('/private'.length) : c;
-    const pNoPrivWithSep = pNoPriv.endsWith('/') ? pNoPriv : pNoPriv + '/';
-    if (cNoPriv === pNoPriv || cNoPriv.startsWith(pNoPrivWithSep)) return true;
-  }
-
-  return false;
+  if(typeof parent!=='string'||!parent||typeof child!=='string'||!child)return false;
+  const p=normalizedComparablePath(parent),c=normalizedComparablePath(child);
+  return c===p||c.startsWith(p.endsWith(path.sep)?p:p+path.sep);
 }
 
 export function isWorkspaceAuthorized(ws){
@@ -692,7 +677,7 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
     const brainDir = path.resolve(getHomeDir(), '.gemini', 'antigravity', 'brain', conversationId);
     // Only top-level Markdown artifacts can be read from a conversation brain.
     // Never allow .system_generated or nested internal conversation content.
-    if (path.dirname(resolved) === brainDir && path.extname(resolved).toLowerCase()==='.md'
+    if (isSamePath(path.dirname(resolved),brainDir) && path.extname(resolved).toLowerCase()==='.md'
         && !path.basename(resolved).startsWith('.')) {
       // The special brain exception does not rely on workspace approval.
       // Every directory segment below HOME must therefore be a real directory,
@@ -722,7 +707,7 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
   }
 
   const base = path.basename(resolved);
-  const relativeInsideBoundary=path.relative(authorizedBoundary,resolved);
+  const relativeInsideBoundary=trustedBrainArtifact?path.basename(resolved):path.relative(authorizedBoundary,resolved);
   if (shouldIgnore(relativeInsideBoundary) || /(?:^\.env|\.pem$|\.key$|\.sqlite|\.git$)/i.test(base)) {
     throw new Error('Access to sensitive file denied');
   }
