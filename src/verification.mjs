@@ -77,7 +77,7 @@ export function planVerification({index,impact,criteria=[],compact=false}){
     return item;
   });
   const checks=discoverTestCommands(index);
-  const riskGuidance=proposeRiskTests({paths:impact?.changed??[],criteria:plan.map(x=>[x.description,x.given,x.when,x.then].filter(Boolean).join(' '))});
+  const riskGuidance=proposeRiskTests({paths:impact?.changed??[],criteria:plan.map(x=>[x.description,x.given,x.when,x.then].filter(Boolean).join(' ')),compact});
   const highRisk=impact?.risk==='high'||riskGuidance.findings.some(x=>x.priority==='critical');
   // Maintainer discipline is a bounded NOT-REVIEWED checklist, never a quality verdict.
   // It costs no extra tool call and is omitted for unrelated/trivial tasks.
