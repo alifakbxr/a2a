@@ -36,6 +36,16 @@ Core MCP, hooks and local analysis make **no automatic outbound network requests
 
 Package publication is blocked by default unless independently pinned, signed external acceptance evidence and an Ed25519 approval signature bind the exact approved `main` commit, matching tag/package version, frozen F01–F18 registry and human approval variable. See [Release Authorization](./RELEASE_AUTHORIZATION.md). A signed report asserts provenance of a key, not independent truth of the test execution.
 
+## Re-audit privacy and provenance controls (19 November 2026)
+
+- **Edit-triggered Markdown history requires opt-in.** The default setting `artifact_auto_snapshot=false` prevents PostToolUse from copying full Antigravity brain Markdown into local SQLite/shadow files. Explicit `a2a artifact-autosnapshot on|off|status` controls future snapshots; it does not purge existing versions.
+- **Explicit acceptance retention:** `persist_plan:true` stores user-authored Given/When/Then and UI references locally, under the authorized workspace with source revision and manifest hash. Avoid placing customer data, credentials or sensitive text in plans. It is off by default.
+- **Native execution status:** an absent top-level error is *not* success. Local test provenance requires an unambiguous zero numeric exit code; failed/unknown events clear positive report hashes and cannot certify user-visible behavior.
+- **Verification scope:** neither local machine test nor native hook metadata independently authenticates visual/browser/hardware/security acceptance. `verify_handoff` and `assess` use one local evidence-type policy.
+- **Permission safety:** error classifier prioritizes authorization-denied signals even in mixed parameter/page ID messages. No retries or bypass occur automatically.
+
+These are code-level mitigations. Do not claim independent native Antigravity payload compatibility, cryptographic local test provenance, complete secret detection or any guarantee against same-user filesystem interference.
+
 ## Behavioral reliability privacy and trust (PR #36)
 
 The optional checkpoint API `save_checkpoint` rejects recognizable plaintext credential assignments and binds user-authored decisions/pending scenarios to a source revision. It **does not** prove that notes are factual. `model_recovery` warns when source changes; `tool_recovery` never persists or echoes its error hint and only returns bounded advice. An explicit user-approved environment must be maintained for parallel native workers; A2A does not confer new permissions. Only **synthetic, sanitized** behavioral regression fixtures were committed; real Antigravity private brain archives remain outside the public repository. See [5 Whys](BEHAVIORAL_5_WHYS_V2_0_1.md) and [contracts](CONTRACTS.md).
