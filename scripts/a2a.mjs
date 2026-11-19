@@ -1,15 +1,29 @@
 #!/usr/bin/env node
+import fs from 'node:fs';
+import path from 'node:path';
 import {Engine} from '../src/engine.mjs';
 import {sqliteApiName} from '../src/sqlite-compat.mjs';
 import pkg from '../package.json' with {type:'json'};
 import {
   allowlistPath,settingsPath,getA2AMode,setA2AMode,getCompactMode,setCompactMode,
   getAutoTrustMode,setAutoTrustMode,getArtifactAutoSnapshotMode,setArtifactAutoSnapshotMode,loadAllowlist,loadAntigravityWorkspaces,
-  authorizeWorkspace,revokeWorkspace,dataDir,requireAuthorizedWorkspace,localAntigravityRpcUrl
+  authorizeWorkspace,revokeWorkspace,dataDir,getHomeDir,requireAuthorizedWorkspace,localAntigravityRpcUrl
 } from '../src/security.mjs';
 import {readOfficialAgyUsageFile} from '../src/tokens.mjs';
 import {scanConversationHistory,attachReportSize,formatConversationReport} from '../src/conversations.mjs';
 
+// Treat active session metadata as untrusted local input: no symlinks,
+// oversized data or non-object payloads. This may describe a *different*
+// workspace and is never a substitute for workspace authorization.
+function readActiveSession(base){
+  try{
+    const file=path.join(base,'active-session.json');
+    const st=fs.lstatSync(file);
+    if(!st.isFile()||st.isSymbolicLink()||st.size>128*1024)return null;
+    const data=JSON.parse(fs.readFileSync(file,'utf8'));
+    return data&&typeof data==='object'&&!Array.isArray(data)?data.latest||null:null;
+  }catch{return null}
+}
 const [cmd,...argv]=process.argv.slice(2);
 function print(obj){process.stdout.write(JSON.stringify(obj,null,2)+'\n')}
 if(!cmd||['help','--help','-h'].includes(cmd)){
@@ -241,22 +255,9 @@ try{
           else if(restArgs[i].startsWith('--v2=')){v2=Number(restArgs[i].slice(5));}
           else if(!artifactName&&!restArgs[i].startsWith('-')){artifactName=restArgs[i];}
         }
-        if(!convId){
-          try{
-            const sf=path.join(engine.store.base,'active-session.json');
-            if(fs.existsSync(sf)){
-              const d=JSON.parse(fs.readFileSync(sf,'utf8'));
-              convId=d?.latest?.conversationId||null;
-            }
-          }catch{}
-          if(!convId) convId=process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
-        }
-        let activeWorkspace=null;
-        try {
-          const sf=path.join(engine.store.base,'active-session.json');
-          const sess=JSON.parse(fs.readFileSync(sf,'utf8'));
-          activeWorkspace=sess?.latest?.workspacePaths?.[0]||null;
-        }catch{}
+        const active=readActiveSession(engine.store.base);
+        if(!convId)convId=active?.conversationId||process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
+        const activeWorkspace=Array.isArray(active?.workspacePaths)?active.workspacePaths[0]:null;
         const root=requireAuthorizedWorkspace(workspaceArg||activeWorkspace||process.cwd());
         const wsId=engine.store.register(root);
         if(action==='list'){
@@ -272,7 +273,7 @@ try{
           result=row||{status:'not_found'};
         }else if(action==='snapshot'){
           if(!artifactName)throw new Error('artifact name or path required for snapshot');
-          const targetPath=path.isAbsolute(artifactName)?artifactName:path.join(process.env.HOME||'','.gemini/antigravity/brain',convId,artifactName);
+          const targetPath=path.isAbsolute(artifactName)?artifactName:path.join(getHomeDir(),'.gemini/antigravity/brain',convId,artifactName);
           result=engine.evidence({workspace:root,operation:'snapshot_artifact',conversation_id:convId,artifact_path:targetPath});
         }
       }

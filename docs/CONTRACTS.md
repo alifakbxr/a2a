@@ -151,3 +151,11 @@ The **existing** `a2a_evidence` tool now supports `assess_hypothesis`; there is 
 
 **RCA experiment audit trail:** `rca_experiments` is an append-only SQLite table for hypothesis outcomes with source revisions, criterion, observation and linked evidence IDs. A hypothesis keeps its current status and returns `recent_experiments` (max 3), `experiments_total` and `more_experiments_available`; older records are not overwritten by newer interpretations. Explicit `delete_incident` also deletes that incident's experiment history, not unrelated evidence.
 
+## P0 native provenance and parser constraints (issue #50–#53)
+
+The native `PostToolUse` hook accepts current `write_file`/`edit_file` operations as well as older file-edit tool names, and normalizes supported `toolCall.args`, `toolArgs`, `toolInput` and `arguments` shapes. It recognizes only **direct, unmasked test commands** when recording success provenance. A shell command merely mentioning a test name, chained test with `|| true`, or `echo "npm test"` cannot re-attest an old passing report. Unknown or suspicious attempts clear positive local provenance; explicit numeric zero exit remains required. This is not cryptographic proof of native execution.
+
+JUnit parsing refuses commented-out testcases, unsupported DTDs, incomplete structure and spurious failure tags inside system logs/CDATA; both single- and double-quoted attributes are accepted. TAP requires exactly one valid numeric `1..N` plan, in-order assertions, and treats `Bail out!` as failed and TODO/SKIP assertions as non-passing. Unsupported reports return inconclusive, never silently passed. This is a **conservative parser**, not a complete XML/TAP specification implementation; external signed acceptance is separate.
+
+The CLI `tokens` absolute workspace argument and `artifacts snapshot|list|diff|show` now use explicit `fs`/`path` imports and a bounded symlink-safe `active-session.json` reader. Cross-platform artifact root falls back to `getHomeDir()`. These local test/CLI fixes have no effect on the independent release gate [#15](https://github.com/alifakbxr/a2a/issues/15).
+

@@ -52,3 +52,7 @@ Documentation: [index](docs/README.md), [security](docs/SECURITY.md), [release](
 
 [PR #49](https://github.com/alifakbxr/a2a/pull/49) introduces source-fresh, opt-in incident and falsifiable hypothesis lifecycle within the existing four MCP tools, SQLite schema migrations, compact-scope risk suggestions, and real local JSON-RPC/stdio RCA integration tests. **This row describes work pending exact CI and post-merge checks; the historical 232/232 Node test count predates these changes.** [Issue #48](https://github.com/alifakbxr/a2a/issues/48) is the code-level implementation gate. Full installed Antigravity, STOCKROOM F01–F18, hardware/browser, independent causal diagnosis and provider-token A/B evidence remain external release gates in [#15](https://github.com/alifakbxr/a2a/issues/15). No merge to `main` or publication is authorized.
 
+## Additional P0 re-audit fixes — issue #50–#53
+
+[PR #62](https://github.com/alifakbxr/a2a/pull/62) addresses CLI missing imports/session fallback, native file-hook matcher/argument compatibility, spoofed or masked exit-status test commands and JUnit/TAP false-PASS parsing. Synthetic adversarial CLI/hooks/test-report regressions are added. Exact PR and post-merge 9-job CI results must be verified separately. This implementation does **not** close the real Antigravity/STOCKROOM external [release gate #15](https://github.com/alifakbxr/a2a/issues/15); other independently open P1/P2 findings #54–#61 remain tracked.
+

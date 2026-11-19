@@ -60,3 +60,7 @@ RCA cleanup is available through the existing `a2a_evidence(operation="delete_in
 
 RCA assessments additionally preserve a local append-only experimental interpretation history; this contains the user/agent observation text and evidence references, not whole test reports. Deleting an incident also deletes that history logically. Persistent SQLite and backups must still be handled under user-controlled retention policies.
 
+## Native-run and JUnit/TAP P0 hardening
+
+Native test provenance requires an anchored, direct recognized test runner (with narrowly supported optional environment or `cd dir &&` prefix), an explicit successful numeric exit status, and matching local source/report hashes; matching test-runner substrings in unrelated shell commands or exit masking are rejected. This remains local metadata, never independent attestation. JUnit/TAP parsers now reject commented XML, incomplete/aborted TAP reports, malformed assertion numbering and hidden failure states rather than treating them as PASS. Session and optional conversation-metadata reads in CLI/hooks reject symlinked or oversized JSON. Actual Antigravity host payload variants and real user-visible behavior must still be tested externally.
+

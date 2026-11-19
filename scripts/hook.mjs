@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import { dataDir, getA2AMode, getArtifactAutoSnapshotMode, requireAuthorizedWorkspace } from '../src/security.mjs';
+import { dataDir, getA2AMode, getArtifactAutoSnapshotMode, getHomeDir, requireAuthorizedWorkspace } from '../src/security.mjs';
 import { sanitizeConversationId, vettedTranscript } from '../src/tokens.mjs';
 import { Store } from '../src/storage.mjs';
 import {gitChanges} from '../src/scanner.mjs';
@@ -25,6 +25,37 @@ function writeJsonSecure(filePath, obj) {
     if(fd!==null)fs.closeSync(fd);
     try{fs.unlinkSync(temp)}catch{}
   }
+}
+
+function safeLocalJson(file,maxBytes=128*1024){
+  try{
+    const stat=fs.lstatSync(file);
+    if(!stat.isFile()||stat.isSymbolicLink()||stat.size>maxBytes)return null;
+    const value=JSON.parse(fs.readFileSync(file,'utf8'));
+    return value&&typeof value==='object'&&!Array.isArray(value)?value:null;
+  }catch{return null}
+}
+function hookArgs(payload){
+  const input=payload?.toolCall?.args||payload?.toolArgs||payload?.toolInput||payload?.arguments;
+  return input&&typeof input==='object'&&!Array.isArray(input)?input:{};
+}
+export function isDirectTestCommand(value){
+  if(typeof value!=='string'||!value.trim()||value.length>2000)return false;
+  let cmd=value.trim();
+  // Refuse shell chaining, masked exit status, command substitution, pipes,
+  // redirections, comments and multiline invocations. Only an optional cd
+  // prefix is allowed before one direct test runner.
+  if(/[\r\n;|<>\x60]/.test(cmd)||/\$\s*\(|\$\{/.test(cmd)||/\s#/.test(cmd))return false;
+  if(cmd.includes('&&')){
+    const match=cmd.match(/^cd\s+[A-Za-z0-9./_~-]+\s*&&\s*(.+)$/i);
+    if(!match||match[1].includes('&&'))return false;
+    cmd=match[1].trim();
+  }
+  if(/[&]/.test(cmd))return false;
+  cmd=cmd.replace(/^(?:(?:[A-Za-z_][A-Za-z0-9_]*)=[A-Za-z0-9._:/=-]+\s+){0,8}/,'');
+  cmd=cmd.replace(/^(?:npx|bunx|uv\s+run|poetry\s+run)\s+/i,'');
+  const runner=/^(?:npm\s+(?:run\s+)?test(?:\b|:)|pnpm\s+(?:(?:run|exec)\s+)?(?:test|vitest|jest)(?:\b|:)|yarn\s+(?:(?:run)\s+)?(?:test|vitest|jest)(?:\b|:)|bun\s+(?:(?:run)\s+)?test\b|node\s+--test\b|python3?\s+-m\s+(?:pytest|unittest)\b|pytest\b|phpunit\b|pest\b|vitest\b|jest\b|mocha\b|cargo\s+test\b|go\s+test\b|dotnet\s+test\b|flutter\s+test\b|dart\s+test\b|swift\s+test\b|mvn\s+test\b|(?:\.\/)?gradlew\s+test\b|php\s+artisan\s+test\b)/i;
+  return runner.test(cmd);
 }
 
 export function detectSideQuestionInfo(payload, transcriptPath) {
@@ -73,14 +104,9 @@ export function detectSideQuestionInfo(payload, transcriptPath) {
 
   if (!isSideQuestion && currentConvId) {
     try {
-      const metaCache = path.join(process.env.HOME || '', '.gemini/antigravity-cli/cache/conversation_metadata.json');
-      if (fs.existsSync(metaCache)) {
-        const data = JSON.parse(fs.readFileSync(metaCache, 'utf8'));
-        const conv = data?.conversations?.[currentConvId];
-        if (conv?.is_internal) {
-          isSideQuestion = true;
-        }
-      }
+      const metaCache = path.join(getHomeDir(),'.gemini','antigravity-cli','cache','conversation_metadata.json');
+      const data=safeLocalJson(metaCache,64*1024);
+      if(data?.conversations?.[currentConvId]?.is_internal)isSideQuestion=true;
     } catch {}
   }
 
@@ -97,12 +123,7 @@ function recordActiveSession(payload, baseDir) {
   if (!convId) return;
 
   const sessionFile = path.join(baseDir, 'active-session.json');
-  let existing = {};
-  try {
-    if (fs.lstatSync(sessionFile).isFile() && fs.statSync(sessionFile).size<=128*1024) {
-      existing = JSON.parse(fs.readFileSync(sessionFile, 'utf8')) || {};
-    }
-  } catch {}
+  const existing=safeLocalJson(sessionFile)||{};
 
   const prev = existing.latest || {};
   const prevWs = Array.isArray(prev.workspacePaths) ? prev.workspacePaths.join('|') : '';
@@ -175,7 +196,7 @@ function handleArtifactModification(payload, baseDir) {
   if(!getArtifactAutoSnapshotMode() || payload?.error) return;
   const toolName = payload?.toolCall?.name || payload?.toolName || '';
   if (!['write_to_file','replace_file_content','multi_replace_file_content','write_file','edit_file'].includes(toolName)) return;
-  const args = payload?.toolCall?.args || payload?.toolArgs || payload?.toolInput || payload?.arguments || {};
+  const args=hookArgs(payload);
   const filePath = args?.TargetFile || args?.Path || args?.path;
   const convId = sanitizeConversationId(payload?.conversationId);
   if (!convId || typeof filePath !== 'string' || !filePath.endsWith('.md')) return;
@@ -223,15 +244,17 @@ export function nativeProcessExitStatus(payload){
 
 function recordCommandRun(payload, baseDir) {
   handleArtifactModification(payload, baseDir);
-  const cmd = payload?.toolCall?.args?.CommandLine;
-  if (typeof cmd !== 'string' || !cmd.trim()) return;
-  const isTestLike = /\b(?:npm\s+(?:run\s+)?test|node\s+--test|pytest|phpunit|pest|vitest|jest|mocha|cargo\s+test|go\s+test|dotnet\s+test|flutter\s+test|swift\s+test|mvn\s+test|gradlew\s+test|php\s+artisan\s+test)\b/i.test(cmd);
-  if (!isTestLike) return;
-  const candidates = [payload?.toolCall?.args?.Cwd,payload?.cwd,...(payload?.workspacePaths||[])].filter(p=>typeof p==='string');
+  const args=hookArgs(payload);
+  const cmd=args.CommandLine||args.commandLine||args.command;
+  if(typeof cmd!=='string'||!cmd.trim())return;
+  const direct=isDirectTestCommand(cmd);
+  const suspicious=!direct&&/\b(?:npm\s+(?:run\s+)?test|node\s+--test|pytest|phpunit|pest|vitest|jest|mocha|cargo\s+test|go\s+test|dotnet\s+test|flutter\s+test|swift\s+test|mvn\s+test|gradlew\s+test|php\s+artisan\s+test)\b/i.test(cmd);
+  if(!direct&&!suspicious)return;
+  const candidates=[args.Cwd||args.cwd,payload?.cwd,...(payload?.workspacePaths||[])].filter(p=>typeof p==='string');
   let root=null;
   for(const p of candidates){try{root=requireAuthorizedWorkspace(p);break}catch{}}
   if(!root)return;
-  const exit=nativeProcessExitStatus(payload);
+  const exit=direct?nativeProcessExitStatus(payload):{status:'unknown',exit_code:null};
   // Failed/unknown processes need no expensive workspace/report hashing.
   const sourceHashes={};
   const changed=exit.status==='passed'
@@ -268,7 +291,7 @@ export const ALWAYS_ON_POLICY = 'A2A Always-On (opt-in): Zero calls for clear/lo
 
 export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   if (!payload || typeof payload !== 'object') return {};
-  const event = payload.hookEventName || '';
+  const event = payload.hookEventName || payload.hook_event_name || '';
 
   if (event === 'SessionStart') {
     recordActiveSession(payload, baseDir);
