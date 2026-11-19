@@ -101,6 +101,18 @@ export function getCompactMode() {
   return false;
 }
 
+// Full-content Antigravity brain artifact retention is sensitive: default OFF.
+// Manual snapshot_artifact calls remain explicit and unaffected.
+export function getArtifactAutoSnapshotMode(){
+  return readSettings().artifact_auto_snapshot===true;
+}
+export function setArtifactAutoSnapshotMode(value){
+  if(value!==true&&value!==false&&value!=='on'&&value!=='off')throw new Error('Expected auto-snapshot on or off');
+  const enabled=value===true||value==='on';
+  writeSettings({artifact_auto_snapshot:enabled});
+  return enabled;
+}
+
 export function setCompactMode(val) {
   let boolVal;
   if (val === 'toggle') {
