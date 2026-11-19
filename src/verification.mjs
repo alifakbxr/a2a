@@ -11,48 +11,85 @@ import {normalizeAcceptanceCriterion,acceptanceCompletion,localEvidencePolicy} f
 export function parseArtifact(text, filename){
   const ext=filename.toLowerCase().split('.').at(-1), sample=text.slice(0,1200000);
   if(ext==='xml' && /<(?:testsuite|testsuites)\b/.test(sample)){
-    if(!/<\/testsuite>/.test(sample))return {status:'inconclusive',reason:'Incomplete JUnit XML',assertions:0,cases:[]};
-    const attrs=s=>Object.fromEntries([...s.matchAll(/([A-Za-z]+)="([^"]*)"/g)].map(x=>[x[1],x[2]]));
-    const caseTags=[...sample.matchAll(/<testcase\b([^>]*)>/g)].map(x=>({tag:x[0],at:x.index,a:attrs(x[1])}));
-    const unclosed=caseTags.some((v,i)=>!v.tag.endsWith('/>') && (()=>{const end=sample.indexOf('</testcase>',v.at),next=caseTags[i+1]?.at??Infinity;return end<0||end>=next})());
-    if(unclosed)return {status:'inconclusive',reason:'Unclosed JUnit testcase',assertions:caseTags.length,cases:[]};
-    const cases=caseTags.map((v,i)=>{
-      const end=sample.indexOf('</testcase>',v.at),next=caseTags[i+1]?.at??Infinity;
-      const body=v.tag.endsWith('/>')?'':end>=0&&end<next?sample.slice(v.at+v.tag.length,end):'';
-      const state=/<(?:failure|error)\b/.test(body)?'failed':/<skipped\b/.test(body)?'skipped':'passed';
-      return {name:v.a.name||'',state};
-    });
-    const rootMatch=sample.match(/<testsuites\b([^>]*)>/);
+    // A test report is untrusted local content. Fail closed on XML constructs
+    // outside the narrow JUnit schema, and strip non-structural log content
+    // BEFORE searching for testcase/failure tags.
+    if(/<!DOCTYPE\b|<!ENTITY\b/i.test(sample))return {status:'inconclusive',reason:'Unsupported XML entity or DTD',assertions:0,cases:[]};
+    const clean=sample
+      .replace(/<!--[\s\S]*?-->/g,'')
+      .replace(/<(?:system-out|system-err)\b[^>]*>[\s\S]*?<\/(?:system-out|system-err)\s*>/gi,'')
+      .replace(/<!\[CDATA\[[\s\S]*?\]\]>/g,'');
+    if(/<!--|<!\[CDATA\[|<(?:system-out|system-err)\b/i.test(clean))
+      return {status:'inconclusive',reason:'Incomplete XML comment or log content',assertions:0,cases:[]};
+    if(!/<\/testsuite\s*>/.test(clean)||/<testcase\b/i.test(clean)===false)
+      return {status:'inconclusive',reason:'Incomplete JUnit XML',assertions:0,cases:[]};
+    const attrs=text=>Object.fromEntries([...text.matchAll(/([A-Za-z][A-Za-z0-9_-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
+      .map(m=>[m[1],m[2]??m[3]]));
+    const tags=[...clean.matchAll(/<testcase\b([^>]*)>/g)];
+    const cases=[];let cursor=0;
+    for(const item of tags){
+      const tag=item[0],at=item.index;
+      if(at<cursor)return {status:'inconclusive',reason:'Overlapping or malformed JUnit testcases',assertions:cases.length,cases};
+      const attr=attrs(item[1]);
+      if(!attr.name)return {status:'inconclusive',reason:'JUnit testcase name absent',assertions:cases.length,cases};
+      const selfClosing=/\/\s*>$/.test(tag);
+      const close=selfClosing?at+tag.length:clean.indexOf('</testcase>',at+tag.length);
+      const next=clean.indexOf('<testcase',at+tag.length);
+      if(close<0||(!selfClosing&&next>=0&&next<close))
+        return {status:'inconclusive',reason:'Unclosed or nested JUnit testcase',assertions:cases.length,cases};
+      const body=selfClosing?'':clean.slice(at+tag.length,close);
+      cursor=selfClosing?at+tag.length:close+'</testcase>'.length;
+      const state=/<(?:failure|error)\b/i.test(body)?'failed':/<skipped\b/i.test(body)?'skipped':'passed';
+      cases.push({name:attr.name,state});
+    }
+    if(/<testcase\b/i.test(clean.slice(cursor))||/<!\[CDATA\[|<!--/.test(clean.slice(cursor)))
+      return {status:'inconclusive',reason:'Unparsed JUnit testcase',assertions:cases.length,cases};
+    const rootMatch=clean.match(/<testsuites\b([^>]*)>/);
     const rootAttrs=rootMatch?attrs(rootMatch[1]):{};
-    const suiteMatches=[...sample.matchAll(/<testsuite\b([^>]*)>/g)];
-    let expected=NaN, declaredFailed=0, declaredSkipped=0;
+    const suites=[...clean.matchAll(/<testsuite\b([^>]*)>/g)];
+    let expected=NaN,declaredFailed=0,declaredSkipped=0;
     if(rootAttrs.tests!==undefined){
       expected=Number(rootAttrs.tests);
       declaredFailed=Number(rootAttrs.failures||0)+Number(rootAttrs.errors||0);
       declaredSkipped=Number(rootAttrs.skipped||0);
-    }else if(suiteMatches.length>0){
-      let sumTests=0, hasTestsAttr=false;
-      for(const sm of suiteMatches){
-        const a=attrs(sm[1]);
-        if(a.tests!==undefined){hasTestsAttr=true;sumTests+=Number(a.tests)}
+    }else if(suites.length){
+      let sum=0,found=false;
+      for(const suite of suites){
+        const a=attrs(suite[1]);
+        if(a.tests!==undefined){found=true;sum+=Number(a.tests)}
         declaredFailed+=Number(a.failures||0)+Number(a.errors||0);
         declaredSkipped+=Number(a.skipped||0);
       }
-      expected=hasTestsAttr?sumTests:NaN;
+      expected=found?sum:NaN;
     }
-    const actualFailed=cases.filter(c=>c.state==='failed').length,actualSkipped=cases.filter(c=>c.state==='skipped').length;
-    if(!cases.length || !Number.isFinite(expected)||expected!==cases.length)return {status:'inconclusive',reason:'JUnit test count missing or does not match testcase elements',assertions:cases.length,cases};
-    if(declaredFailed!==actualFailed||declaredSkipped!==actualSkipped)return {status:'inconclusive',reason:'JUnit suite totals disagree with testcase outcomes',assertions:cases.length,cases};
-    return {status:actualFailed?'failed':actualSkipped===cases.length?'inconclusive':'passed',assertions:cases.length,failed:actualFailed,skipped:actualSkipped,format:'junit-xml',cases};
+    const failed=cases.filter(c=>c.state==='failed').length,skipped=cases.filter(c=>c.state==='skipped').length;
+    if(!cases.length||!Number.isSafeInteger(expected)||expected!==cases.length)
+      return {status:'inconclusive',reason:'JUnit count mismatch or missing',assertions:cases.length,cases};
+    if(!Number.isSafeInteger(declaredFailed)||!Number.isSafeInteger(declaredSkipped)
+      ||declaredFailed!==failed||declaredSkipped!==skipped)
+      return {status:'inconclusive',reason:'JUnit declared outcomes disagree with actual cases',assertions:cases.length,cases};
+    return {status:failed?'failed':skipped===cases.length?'inconclusive':'passed',
+      assertions:cases.length,failed,skipped,format:'junit-xml',cases};
   }
   if(/(?:^|\n)TAP version\s+\d+/.test(sample)||/^(?:ok|not ok)\s+\d+/m.test(sample)){
     const matches=[...sample.matchAll(/^(not ok|ok)\s+(\d+)\b(?:\s*-\s*([^\n#]*))?([^\n]*)$/gm)];
-    const cases=matches.map(m=>({name:(m[3]||'').trim(),state:m[1]==='not ok'?'failed':/#\s*SKIP\b/i.test(m[4]||'')?'skipped':'passed'}));
-    const expectedPlan=[...sample.matchAll(/^(\d+)\.\.(\d+)\s*$/gm)].at(-1);
-    if(!cases.length)return {status:'inconclusive',assertions:0,reason:'No TAP assertions',cases};
-    if(expectedPlan && Number(expectedPlan[2])-Number(expectedPlan[1])+1!==cases.length)return {status:'inconclusive',assertions:cases.length,reason:'TAP plan does not match assertions',cases};
+    const cases=matches.map(m=>({
+      name:(m[3]||'').trim(),
+      number:Number(m[2]),
+      state:m[1]==='not ok'?'failed':/#\s*(?:SKIP|TODO)\b/i.test(m[4]||'')?'skipped':'passed'
+    }));
+    if(/^\s*Bail out!\b/im.test(sample))
+      return {status:'failed',reason:'TAP bailout: run aborted',assertions:cases.length,cases};
+    const plans=[...sample.matchAll(/^(\d+)\.\.(\d+)\s*(?:#.*)?$/gm)];
+    if(plans.length!==1||Number(plans[0][1])!==1||Number(plans[0][2])<1)
+      return {status:'inconclusive',reason:'TAP plan missing or invalid',assertions:cases.length,cases};
+    const expected=Number(plans[0][2]);
+    if(!cases.length||!Number.isSafeInteger(expected)||expected!==cases.length
+      ||cases.some((c,i)=>c.number!==i+1))
+      return {status:'inconclusive',reason:'TAP assertions are missing, duplicated or out of order',assertions:cases.length,cases};
     const failed=cases.filter(c=>c.state==='failed').length,skipped=cases.filter(c=>c.state==='skipped').length;
-    return {status:failed?'failed':skipped===cases.length?'inconclusive':'passed',assertions:cases.length,failed,skipped,format:'tap',cases};
+    return {status:failed?'failed':skipped===cases.length?'inconclusive':'passed',
+      assertions:cases.length,failed,skipped,format:'tap',cases};
   }
   if(ext==='json'){
     try {
