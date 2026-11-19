@@ -33,7 +33,7 @@ A2A does **not** turn a successful build, a screenshot, an arbitrary test name o
 
 ## Requirements and installation
 
-- **Node.js >= 22.13.0** (the MCP engine uses built-in `node:sqlite`).
+- **Node.js >= 22.13.0** (built-in `node:sqlite`). The [extended CI matrix](https://github.com/alifakbxr/a2a/pull/47) validates Node 22/24 and **Node 26.13.1** on Ubuntu, macOS and Windows; Node 26 uses its current `sqlite.Database` API with an older-node fallback.
 - Google Antigravity with plugin/MCP support for IDE integration.
 - No third-party **runtime** npm dependencies and no automatic remote A2A telemetry service. The optional explicit `a2a stats` CLI command invokes an installed/authenticated `gh` client to read GitHub repository traffic; clone counts are **not verified plugin installations**.
 
@@ -145,3 +145,7 @@ Start at the [documentation index](docs/README.md). Key references:
 The plugin skill now uses **zero A2A calls for simple/native-solvable work** and normally **one scoped query OR impact summary** when uncertainty is material. Do not chain tools just to repeat information, invoke token reports after every step, or use a full skeleton before asking for a specific symbol. Typed verification and evidence recovery are used only when their distinct purposes require them. Always-On remains opt-in and only injects a short policy on `SessionStart`.
 
 Default Compact limits `a2a_context(action="skeleton")` to **4,800 preview characters total, 1,600 per file and six full previews**; additional requested files are disclosed as omitted. Compact `action="query"` returns at most **12 static relations**, with a truncation flag and original response count when clipped. These are **output budgets**, not a guarantee of lower model billing or better answers. For complex work requiring complete context, opt out with `compact off` and inspect the source natively. See [token measurement](docs/TOKEN_EFFICIENCY.md).
+
+### Node 26 + NVM on Linux
+
+If `which node` resolves to `~/.nvm/versions/node/v26.13.1/bin/node`, the Node runtime is suitable for A2A's tested core. Check the *actual* binary and SQLite API with `node scripts/a2a.mjs doctor` (look for `node_binary`, `sqlite_api`, `sqlite_version`). The plugin's MCP launcher invokes `node` via `PATH`, which might be different in Antigravity launched from the desktop. Check the IDE's environment when the plugin fails to start; do not assume the NVM binary visible in your terminal is also visible to the GUI. See [compatibility and validation](docs/COMPATIBILITY.md).
