@@ -275,7 +275,7 @@ export class Engine {
         if(plannedCriteria.some(c=>c.source_revision && c.source_revision!==s.revision))
           throw new Error('The prior plan pins a different source_revision; create a new reviewed plan with an explicit updated revision');
       }
-      const plan=planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria:plannedCriteria});
+      const plan=planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria:plannedCriteria,compact});
       if(plan_id!==null){
         plan.reissued_from=plan_id;
         plan.warning='A reissued plan retains the prior required scenarios but does not prove they were executed on current code. Rerun native tests and review new evidence.';
