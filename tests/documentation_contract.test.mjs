@@ -89,3 +89,18 @@ test('published docs distinguish local proof, external release gate, and active 
  assert.ok(content['docs/SECURITY.md'].includes('explicitly saved local Markdown'));
  assert.ok(!content['skills/a2a/SKILL.md'].includes('not fixed by this workflow'));
 });
+
+test('current documentation does not misstate closed audit issues or release readiness',()=>{
+ const build=read('BUILD_STATUS.md');
+ assert.match(build,/PR #69/);
+ assert.doesNotMatch(build,/other independently open P1\/P2 findings #54[–-]#61 remain tracked/);
+ assert.match(build,/main branch remains unchanged/i);
+ assert.match(build,/issue #15/);
+ const compatibility=read('docs/COMPATIBILITY.md');
+ assert.match(compatibility,/node_version_manager_path/);
+ assert.match(compatibility,/USERPROFILE/);
+ const security=read('docs/SECURITY.md');
+ assert.match(security,/state\.vscdb/);
+ assert.match(security,/64 MiB/);
+ assert.match(read('docs/CONTRACTS.md'),/6,500-byte/);
+});
