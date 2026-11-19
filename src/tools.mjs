@@ -44,7 +44,7 @@ const BASE_SPECS = [
       required:['workspace','operation'],
       properties:{
         workspace:ws,
-        operation:{type:'string',enum:['list','runs','incidents','record_incident','add_hypothesis','assess_hypothesis','hypotheses','side_questions','record_side_question','artifact_versions','artifact_diff','snapshot_artifact','save_checkpoint','model_recovery','tool_recovery']},
+        operation:{type:'string',enum:['list','runs','incidents','record_incident','add_hypothesis','assess_hypothesis','hypotheses','delete_incident','side_questions','record_side_question','artifact_versions','artifact_diff','snapshot_artifact','save_checkpoint','model_recovery','tool_recovery']},
         id:string,
         limit:{type:'integer',minimum:1,maximum:50},
         title:{type:'string',maxLength:240},
@@ -56,6 +56,7 @@ const BASE_SPECS = [
         experiment:{type:'string',maxLength:1000},
         incident_id:string,
         persist_rca:{type:'boolean',description:'Explicit opt-in to local private RCA text/experimental outcome retention. Never implied.'},
+        confirm_deletion:{type:'boolean',description:'For delete_incident: confirm irreversible logical removal of incident plus hypothesis records; not cryptographic erasure.'},
         hypothesis_id:{type:'string',maxLength:128,description:'Existing hypothesis for assess_hypothesis.'},
         parent_hypothesis_id:{type:'string',maxLength:128,description:'Optional parent hypothesis in the same incident, for multi-branch Why chains.'},
         predicted_observation:{type:'string',maxLength:300,description:'Falsifiable observation expected if this hypothesis is true.'},
