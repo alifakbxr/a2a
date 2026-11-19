@@ -6,7 +6,7 @@ import {uniqueId} from './storage.mjs';
 import {discoverTestCommands,gitChanges} from './scanner.mjs';
 
 import {proposeRiskTests} from './risk-guidance.mjs';
-import {normalizeAcceptanceCriterion,acceptanceCompletion} from './acceptance-matrix.mjs';
+import {normalizeAcceptanceCriterion,acceptanceCompletion,localEvidencePolicy} from './acceptance-matrix.mjs';
 
 export function parseArtifact(text, filename){
   const ext=filename.toLowerCase().split('.').at(-1), sample=text.slice(0,1200000);
@@ -126,8 +126,8 @@ export function assessVerification(store,wsId,root,rev,criteria){
       if(criterion.source_revision&&criterion.source_revision!==rev){
         derivedStatus='stale';reason='Explicit source revision differs from current workspace revision';
       }
-      if(derivedStatus==='passed'&&['browser','visual','hardware','security','independent'].includes(criterion.evidence_type)){
-        derivedStatus='inconclusive';reason='Local named test cannot independently attest this execution type, screen state or external acceptance';
+      if(derivedStatus==='passed'&&!localEvidencePolicy(criterion).locally_attestable){
+        derivedStatus='inconclusive';reason=localEvidencePolicy(criterion).reason;
       }
       const evidenceId=uniqueId('ev');
       store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',evidenceId,wsId,rev,criterion.id,derivedStatus==='stale'?'inconclusive':derivedStatus,parsed.format||'unknown',c.artifact,hash,JSON.stringify({assertions:parsed.assertions||0,failed:parsed.failed||0,skipped:parsed.skipped||0,reason,test_name:matchName,requested_evidence_type:criterion.evidence_type||'unspecified',trust:'local-report-not-cryptographically-attested'}),new Date().toISOString());
@@ -300,10 +300,16 @@ export function verifyHandoff(store,wsId,root,rev,{
 
   let criteriaResults=[];
   const hasExplicitCriteria = Array.isArray(criteria) && criteria.length > 0;
+  const criteriaSeen=new Set();
   if(hasExplicitCriteria){
+    if(criteria.length>40)throw new Error('Too many handoff criteria');
     for(const c of criteria){
-      const cid=typeof c==='string'?c:c.id;
-      const testName=typeof c==='object'&&c.test_name?c.test_name.trim():(typeof c==='string'?c.trim():'*');
+      if(typeof c!=='string' && (!c||typeof c!=='object'||Array.isArray(c)))throw new Error('Invalid handoff criterion');
+      const typed=typeof c==='string'?null:normalizeAcceptanceCriterion(c);
+      const cid=typed?.id??c.trim();
+      if(!cid||criteriaSeen.has(cid))throw new Error('Invalid or duplicate handoff criterion ID');
+      criteriaSeen.add(cid);
+      const testName=typeof c==='object'&&typeof c.test_name==='string'?c.test_name.trim():(typeof c==='string'?c.trim():'*');
       let cStatus='passed';
       let cReason=null;
       if(testName==='*'){
@@ -322,7 +328,13 @@ export function verifyHandoff(store,wsId,root,rev,{
           cReason=`Test case "${testName}" was skipped`;
         }
       }
-      criteriaResults.push({id:cid,status:cStatus,...(cReason?{reason:cReason}:{})});
+      if(typed?.source_revision&&typed.source_revision!==rev){
+        cStatus='inconclusive';cReason='Handoff criterion source revision is stale';
+      }
+      if(cStatus==='passed'&&!localEvidencePolicy(typed).locally_attestable){
+        cStatus='inconclusive';cReason=localEvidencePolicy(typed).reason;
+      }
+      criteriaResults.push({id:cid,status:cStatus,...(typed?.evidence_type?{evidence_type:typed.evidence_type}:{}),...(cReason?{reason:cReason}:{})});
     }
     if(criteriaResults.some(r=>r.status==='failed')){
       derivedStatus='failed';
@@ -411,6 +423,8 @@ export function verifyHandoff(store,wsId,root,rev,{
   return {
     operation:'verify_handoff',
     verified,
+    verified_scope:verified?'local-named-machine-assertions-only':'none',
+    independently_attested:false,
     tests_passed:testsPassed,
     deliverable_verified:deliverableVerified,
     status:derivedStatus,
@@ -428,7 +442,7 @@ export function verifyHandoff(store,wsId,root,rev,{
     run_id:runId,
     evidence_id:evidenceId,
     summary:deliverableVerified
-      ?`Worker ${worker_name||'task'} deliverable verified: ${parsed.assertions} assertions passed (${parsed.skipped||0} skipped) with mapped acceptance criteria across ${detectedChanged.length} changed files.`
+      ?`Worker ${worker_name||'task'} local named test assertions verified (${parsed.assertions} passed, ${parsed.skipped||0} skipped). This is not independent deliverable or runtime acceptance.`
       :testsPassed
         ?`Worker ${worker_name||'task'} tests passed (${parsed.assertions} assertions), but deliverable is unverified: acceptance criteria must be mapped to test cases.`
         :`Worker ${worker_name||'task'} handoff unverified (${derivedStatus}): ${reason||'Test requirements not satisfied.'}`,
