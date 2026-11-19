@@ -38,7 +38,7 @@ Package publication is blocked by default unless independently pinned, signed ex
 
 ## Re-audit privacy and provenance controls (19 November 2026)
 
-- **Edit-triggered Markdown history requires opt-in.** The default setting `artifact_auto_snapshot=false` prevents PostToolUse from copying full Antigravity brain Markdown into local SQLite/shadow files. Explicit `a2a artifact-autosnapshot on|off|status` controls future snapshots; it does not purge existing versions.
+- **Edit-triggered Markdown history requires opt-in.** The default setting `artifact_auto_snapshot=false` prevents PostToolUse from copying full Antigravity brain Markdown into local SQLite/shadow files. This setting is **global across authorized workspaces**, so enabling it permits future edit-triggered snapshots from any authorized project; use `off` when finished. Explicit `a2a artifact-autosnapshot on|off|status` controls future snapshots; it does not purge existing versions.
 - **Explicit acceptance retention:** `persist_plan:true` stores user-authored Given/When/Then and UI references locally, under the authorized workspace with source revision and manifest hash. Avoid placing customer data, credentials or sensitive text in plans. It is off by default.
 - **Native execution status:** an absent top-level error is *not* success. Local test provenance requires an unambiguous zero numeric exit code; failed/unknown events clear positive report hashes and cannot certify user-visible behavior.
 - **Verification scope:** neither local machine test nor native hook metadata independently authenticates visual/browser/hardware/security acceptance. `verify_handoff` and `assess` use one local evidence-type policy.
