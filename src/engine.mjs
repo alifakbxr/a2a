@@ -44,7 +44,7 @@ export class Engine {
     if(!current) return this.sync(workspace);
     return {root,wsId,revision:current.id,git:current.git_head};
   }
-  context({workspace,action='inspect',query='',limit=12,conversation_id=null,transcript_path=null,history_scope='current',history_limit=10,file=null,files=[],task={},path:targetPath=null}={}){
+  context({workspace,action='inspect',query='',limit=12,history_scope='current',history_limit=10,file=null,files=[],task={},path:targetPath=null}={}){
     const compact=getCompactMode();
     if(action==='orchestration'){requireAuthorizedWorkspace(workspace);return adviseOrchestration(task)}
     if(action==='tokens'&&history_scope==='all'){
