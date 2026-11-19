@@ -136,9 +136,8 @@ export class Engine {
     if(action==='query'){
       const qRes=contextQuery(this.store,s.wsId,{query,limit});
       if(compact){
-        if(qRes.uncertainty){
-          qRes.uncertainty=qRes.uncertainty.map(u=>u.length>60?u.slice(0,57)+'...':u);
-        }
+        // Keep full uncertainty statements: compact output cannot change
+        // the meaning of coverage/safety limits.
         const originalEdges=qRes.relations.length;
         if(originalEdges>12){
           qRes.relations=qRes.relations.slice(0,12);
@@ -229,9 +228,7 @@ export class Engine {
     let rawScopeBytes=0;
     for(const p of affectedPaths) rawScopeBytes+=fileBytes.get(p)||0;
     if(compact){
-      if(res.uncertainty){
-        res.uncertainty=res.uncertainty.map(u=>u.length>60?u.slice(0,57)+'...':u);
-      }
+      // Never shorten risk/uncertainty language to a misleading ellipsis.
       if(res.coverage){
         delete res.coverage.graph_nodes_visited;
         delete res.coverage.traversal_depth;
@@ -283,9 +280,7 @@ export class Engine {
         plan.warning='A reissued plan retains the prior required scenarios but does not prove they were executed on current code. Rerun native tests and review new evidence.';
       }
       if(compact){
-        if(plan.impact&&plan.impact.unknowns){
-          plan.impact.unknowns=plan.impact.unknowns.map(u=>u.length>60?u.slice(0,57)+'...':u);
-        }
+        // Preserve named unknowns and required checks; drop only verbose notes.
         if(plan.checks) delete plan.checks.note;
       }
       // Persist acceptance scope only on explicit opt-in; plans may contain
@@ -305,7 +300,8 @@ export class Engine {
       const res=assessVerification(this.store,s.wsId,s.root,s.revision,criteria,{planId:plan_id});
       if(compact){
         if(res.limits){
-          res.limits=['Report origin unverified','Untested behaviors out of scope'];
+          res.limits=['Report origin unverified','No independent release evidence','Untested behaviors out of scope',
+            ...(!res.scope_bound?['Acceptance scope is unbound; omitted planned scenarios cannot be detected']:[])];
         }
         res.compact=true;
       }
