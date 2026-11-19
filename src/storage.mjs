@@ -41,6 +41,16 @@ export class Store {
     this.#ensureColumn('workspaces','current_revision_id','TEXT');
     this.#ensureColumn('files','mtime_ms','REAL');
     this.#ensureColumn('artifact_versions','workspace_id','TEXT');
+    // Upgrade old v2.0.1 RCA tables BEFORE applying DDL indexes that depend
+    // on newly added columns. Other user data and incidents are preserved.
+    this.#ensureColumn('incidents','signature_sha','TEXT');
+    for(const [column,type] of [
+      ['revision_id','TEXT'],['parent_hypothesis_id','TEXT'],
+      ['why_depth','INTEGER NOT NULL DEFAULT 1'],['predicted_observation','TEXT'],
+      ['disconfirming_test','TEXT'],['expected_criterion_id','TEXT'],
+      ['plan_id','TEXT'],['assessment_json',"TEXT NOT NULL DEFAULT '{}'"],
+      ['assessed_revision_id','TEXT'],['updated_at','TEXT']
+    ])this.#ensureColumn('hypotheses',column,type);
     this.db.exec(DDL);
     // Existing v2.0.1 SQLite databases must upgrade in place, without
     // deleting prior user checkpoints or requiring a new major DB schema.
