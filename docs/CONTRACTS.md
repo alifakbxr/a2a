@@ -132,3 +132,16 @@ New installations default to `On-Demand` (**no automatic A2A calls or SessionSta
 In Compact, `a2a_context(action="skeleton")` limits previews to 4,800 characters total, 1,600 per file, and six previewed files out of up to 20 requested. Requested-but-omitted paths are returned with `skipped:true` and reason `compact_file_budget`; partial previews carry `truncated:true`, and summary counters disclose omissions. `action="query"` caps static relation rows at 12 and sets `relations_truncated:true` plus `relations_before_compaction` when necessary. This count refers to the query response *before compaction*, not total possible project edges. Impact `summary:true` retains its existing risk/uncertainty/coverage semantics.
 
 Only local payload bytes/characters and heuristic estimates are measurable by these APIs; neither the skill nor the `a2a tokens` CLI can prove provider billing or net token savings. Tool outputs that are truncated must not be presented as complete analysis. See [token efficiency](TOKEN_EFFICIENCY.md).
+
+## Adaptive RCA / 5 Whys contract (issue #48)
+
+The **existing** `a2a_evidence` tool now supports `assess_hypothesis`; there is **no fifth public MCP tool**. `record_incident`, `add_hypothesis` and `assess_hypothesis` require **explicit `persist_rca:true`** to store bounded private RCA text. A call to `record_incident` always yields `state:"investigating"`, even with valid evidence IDs; historical `evidence-linked` rows are displayed as *unverified*. The legacy `root_cause` field is **candidate cause text**, never a confirmed claim.
+
+`add_hypothesis` requires `incident_id`, `hypothesis`, `experiment`, `predicted_observation`, `disconfirming_test`, and an exact `expected_criterion_id`. Optional `parent_hypothesis_id` branches a Why chain up to depth 8; optional `plan_id` must match the hypothesis criterion in a fresh, hashed acceptance plan. New hypotheses start `untested`.
+
+`assess_hypothesis` requires `hypothesis_id`, `experiment_outcome` (`supports`, `refutes`, `inconclusive`), `observation`, optional `evidence_ids`, and `persist_rca:true`. For supported/refuted outcomes, every linked evidence record must match the current source revision/workspace and intact artifact hash, a **passing exact named unit/integration assertion**, and the hypothesis criterion. This results only in `locally_supported`, `refuted`, or `inconclusive`; **never independently proven root cause**. Source edits mark outcomes stale, even in Compact.
+
+`hypotheses` can filter by `incident_id`, returning parent/depth, recorded outcome, current freshness and a mandatory causal-proof warning. `incidents` includes candidate cause and `root_cause_verified:false`. Optional recurrence hints contain only prior same-signature incident **IDs**, not a claim that the previous cause applies. Incident/hypothesis notes are retained locally; sanitizers reject common plaintext credential assignments as a heuristic. See [Adaptive 5 Whys](ADAPTIVE_RCA_WORKFLOW.md).
+
+**Risk-guidance contract:** `proposeRiskTests` returns `suggested_test_ids` and `suggested_total`; its legacy `required_test_ids` is now empty because a heuristic cannot impose mandatory acceptance. Compact limits displayed suggestions to 3 while retaining all matched domain/omission counts. Only criteria explicitly added to the user's acceptance plan are mandatory.
+
