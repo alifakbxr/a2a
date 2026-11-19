@@ -90,6 +90,6 @@ export function proposeRiskTests({paths=[],criteria=[],compact=false}={}){
   coverage_assurance:'none',adopted_as_mandatory:false,
   limitations:['Static paths/criteria only suggest risks; they are not discovered vulnerabilities',
    'No suggested scenario was run or added to mandatory acceptance criteria',
-   'No domain match does not prove the application secure or complete',
+   'No domain match does not mean the application is secure or that route/service coverage is complete',
    'Use a user-reviewed a2a_verify plan and independent evidence for release claims']};
 }
