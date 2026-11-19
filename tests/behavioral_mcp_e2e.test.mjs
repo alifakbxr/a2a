@@ -193,5 +193,11 @@ test('re-audit real MCP stdio: immutable acceptance coverage, permission precede
   assert.equal(stale.isError,false);
   assert.equal(stale.body.completion.counts.stale,2);
   assert.equal(stale.body.completion.fully_verified,false);
+  const reissued=await io.call('a2a_verify',{workspace:io.work,operation:'plan',
+    plan_id:plan.body.plan_id,persist_plan:true,criteria:[]});
+  assert.equal(reissued.isError,false);
+  assert.notEqual(reissued.body.plan_id,plan.body.plan_id);
+  assert.equal(reissued.body.reissued_from,plan.body.plan_id);
+  assert.equal(reissued.body.completion.counts.not_tested,2);
  }finally{await io.close()}
 });
