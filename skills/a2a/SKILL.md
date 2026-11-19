@@ -21,7 +21,7 @@ description: Optional A2A local-first engineering context, impact, acceptance pl
 
 ## 19 November re-audit safeguards
 
-- For acceptance involving several conditions, request explicit `persist_plan:true` before relying on plan-scoped `assess(plan_id=...)`. This stores **private scenario text locally**; never use it implicitly. A bound assessment reports omitted cases as not tested and stale source as stale.
+- For acceptance involving several conditions, request explicit `persist_plan:true` before relying on plan-scoped `assess(plan_id=...)`. This stores **private scenario text locally**; never use it implicitly. A bound assessment reports omitted cases as not tested and stale source as stale. If code changes after planning, explicitly reissue the same acceptance scope with `a2a_verify(operation="plan",plan_id="<old-id>",persist_plan=true,criteria=[])` before new native tests; it does not mark any scenario as passed.
 - Native handoffs can verify only the exact named local machine assertions; a passing build or hook event cannot prove visual/browser/hardware/security execution. A native hook run with no confirmed numeric zero exit code is **unknown**, not successful.
 - Permission-denied tool errors require approval even when they mention a page ID; never retry with altered authorization.
 - Automatic full-content brain Markdown snapshots are **off by default**. Use the actual CLI `node scripts/a2a.mjs artifact-autosnapshot on|off|status` only on explicit user consent; warn that previously retained content is not deleted when turned off.
