@@ -13,6 +13,7 @@
 | Native-first agent behavior and tool minimization | [Workflow](NATIVE_FIRST_WORKFLOW.md) |
 | Checkpoints and recovery after failure | [Checkpoint & recovery](CHECKPOINT_RECOVERY.md) |
 | Agent behavior findings, 5 Whys, regressions | [Behavioral Five Whys](BEHAVIORAL_5_WHYS_V2_0_1.md) |
+| Native-first adaptive diagnosis and falsifiable RCA experiments | [Adaptive 5 Whys workflow](ADAPTIVE_RCA_WORKFLOW.md) |
 | Workspace safety and local privacy | [Security](SECURITY.md) |
 | Compatibility of stacks/Antigravity surfaces | [Compatibility](COMPATIBILITY.md) |
 
