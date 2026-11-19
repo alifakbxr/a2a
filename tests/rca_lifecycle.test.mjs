@@ -105,6 +105,8 @@ test('RCA: supported, refuted and inconclusive are source-bound local outcomes, 
   const list=f.engine.evidence({workspace:f.workspace,operation:'hypotheses',incident_id:inc.id});
   assert.equal(list.items[0].status,'inconclusive');
   assert.equal(list.items[0].assessment.independent_causal_proof,false);
+  assert.equal(list.items[0].experiments_total,3);
+  assert.deepEqual(list.items[0].recent_experiments.map(x=>x.outcome).sort(),['inconclusive','refutes','supports']);
   const incidents=f.engine.evidence({workspace:f.workspace,operation:'incidents'});
   assert.equal(incidents.items[0].root_cause_verified,false);
  }finally{f.clean()}
@@ -201,8 +203,13 @@ test('RCA: opt-in deletion removes only selected incident and hypotheses; Compac
  const f=fixture();try{
   const first=f.engine.evidence({workspace:f.workspace,operation:'record_incident',persist_rca:true,
    title:'Repeated QR printing after second scan',paths:['src/checkin.js']});
-  hypothesized(f,first);
+  const firstHyp=hypothesized(f,first);
   hypothesized(f,first,{hypothesis:'Backend print queue sends another duplicate after check-in'});
+  const ev=evaluated(f);
+  f.engine.evidence({workspace:f.workspace,operation:'assess_hypothesis',persist_rca:true,
+    hypothesis_id:firstHyp.id,experiment_outcome:'supports',evidence_ids:[ev],
+    observation:'Named synthetic check-in assertion passed with UI handler enabled'});
+  assert.equal(f.engine.store.get('SELECT count(*) AS n FROM rca_experiments WHERE hypothesis_id=?',firstHyp.id).n,1);
   for(let i=0;i<9;i++)f.engine.evidence({workspace:f.workspace,operation:'record_incident',
    persist_rca:true,title:'Separate synthetic incident number '+i,paths:['src/checkin.js']});
   const compact=f.engine.evidence({workspace:f.workspace,operation:'incidents',limit:50});
@@ -219,6 +226,8 @@ test('RCA: opt-in deletion removes only selected incident and hypotheses; Compac
   assert.equal(removed.deleted,true);
   assert.equal(removed.hypotheses_deleted,2);
   assert.equal(removed.other_evidence_preserved,true);
+  assert.equal(f.engine.store.get('SELECT count(*) AS n FROM rca_experiments WHERE hypothesis_id=?',firstHyp.id).n,0);
+  assert.ok(f.engine.store.get('SELECT id FROM evidence WHERE id=?',ev),'Independent test evidence must be retained');
   assert.match(removed.warning,/not cryptographic erasure/);
   assert.equal(f.engine.evidence({workspace:f.workspace,operation:'hypotheses',incident_id:first.id}).total,0);
   assert.equal(f.engine.evidence({workspace:f.workspace,operation:'incidents'}).total,9);
