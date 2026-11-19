@@ -8,8 +8,8 @@ import { DatabaseSync } from 'node:sqlite';
 export const sha256 = (v) => crypto.createHash('sha256').update(v).digest('hex');
 export const MAX_INDEX_FILES = 9000;
 export const MAX_SOURCE_BYTES = 160 * 1024;
-const BLOCKED_PARTS = new Set(['.git','node_modules','vendor','.next','.nuxt','.svelte-kit','.turbo','.parcel-cache','.dart_tool','.gradle','target','dist','build','coverage','.venv','venv','__pycache__','.pytest_cache','.mypy_cache','.ruff_cache','.idea','.vscode','.verifykit','.a2a','.cache','.terraform','.pnpm-store','.gitlab','.ssh','.aws','.kube','.gnupg','.config','.gemini','.claude','.cursor']);
-const SENSITIVE = /(^|\/)(\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|id_rsa|id_ed25519|.*\.pem|.*\.key|.*\.p12|.*\.pfx|secrets?(?:\..*)?|credentials?(?:\..*)?|.*\.sqlite(?:-wal|-shm)?|.*\.db|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|composer\.lock|Cargo\.lock|poetry\.lock|Gemfile\.lock|npm-shrinkwrap\.json)$/i;
+const BLOCKED_PARTS = new Set(['.git','node_modules','vendor','.next','.nuxt','.svelte-kit','.turbo','.parcel-cache','.dart_tool','.gradle','target','dist','build','coverage','.venv','venv','__pycache__','.pytest_cache','.mypy_cache','.ruff_cache','.idea','.vscode','.verifykit','.a2a','.cache','.terraform','.pnpm-store','.gitlab','.ssh','.aws','.kube','.gnupg','.docker','.azure','.gcloud','.config','.gemini','.claude','.cursor']);
+const SENSITIVE = /(^|\/)(\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|id_rsa|id_ed25519|id_ecdsa|id_dsa|\.htpasswd|\.pgpass|\.my\.cnf|\.vault-token|\.git-credentials|.*service[-_]account.*\.json|.*\.jks|.*\.keystore|.*\.kdbx|.*\.pem|.*\.key|.*\.p12|.*\.pfx|secrets?(?:\..*)?|credentials?(?:\..*)?|.*\.sqlite(?:-wal|-shm)?|.*\.db|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|composer\.lock|Cargo\.lock|poetry\.lock|Gemfile\.lock|npm-shrinkwrap\.json)$/i;
 const IGNORED_SUBPATHS = /(^|\/)storage\/logs(\/|$)/i;
 export const isSafeRelative = (rel) => typeof rel === 'string' && rel.length > 0 && rel.length <= 500 && !rel.includes('\0') && !path.isAbsolute(rel) && !rel.split(/[\\/]/).some(p=>p==='..') && !rel.startsWith('~');
 export const shouldIgnore = (rel) => {
@@ -215,7 +215,7 @@ export function isProtectedRoot(ws) {
   }
   // Deny descendants of credential/application state directories, not just
   // the directory itself. Ordinary projects in Documents remain permitted.
-  for (const sensitive of ['.ssh','.aws','.gnupg','.config','.gemini']) {
+  for (const sensitive of ['.ssh','.aws','.gnupg','.config','.gemini','.docker','.azure','.gcloud']) {
     const target=realpathIfExists(path.join(home,sensitive));
     if (isSameOrDescendantPath(target,canonical)) return true;
   }
