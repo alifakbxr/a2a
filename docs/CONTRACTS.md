@@ -85,7 +85,7 @@ A plan returns `not_tested` plus `completion.fully_verified:false`. For `assess`
 
 | URI | Meaning |
 | --- | --- |
-| `a2a://status` | Local plugin version, active mode/compact/auto-trust, authorized workspaces |
+| `a2a://status` | Plugin version and mode flags with redacted counts and booleans only; MCP never returns home/data directories or workspace paths |
 | `a2a://tokens/session` | Local session diagnostics; internal counters are not provider-verified token billing |
 | `a2a://workspace/summary` | Active workspace static index and coverage |
 | `a2a://side-questions` | Opt-in recorded side-question history |
