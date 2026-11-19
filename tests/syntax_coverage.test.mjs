@@ -14,16 +14,16 @@ test('exhaustive syntax validator recurses and fails on malformed ESM',()=>{
     fs.mkdirSync(path.join(tmp,'scripts'),{recursive:true});
     fs.mkdirSync(path.join(tmp,'src','nested'),{recursive:true});
     fs.copyFileSync(new URL('scripts/check-syntax.mjs',root),path.join(tmp,'scripts','check-syntax.mjs'));
-    fs.writeFileSync(path.join(tmp,'src','valid.mjs'),'export const valid = true;\\n');
-    fs.writeFileSync(path.join(tmp,'src','nested','invalid.mjs'),'export const bad = ;\\n');
+    fs.writeFileSync(path.join(tmp,'src','valid.mjs'),'export const valid = true;\n');
+    fs.writeFileSync(path.join(tmp,'src','nested','invalid.mjs'),'export const bad = ;\n');
     const run=()=>spawnSync(process.execPath,[path.join(tmp,'scripts','check-syntax.mjs')],{encoding:'utf8'});
     const bad=run();
     assert.notEqual(bad.status,0,'Nested malformed module must fail syntax gate');
     assert.match(bad.stderr,/SyntaxError|Unexpected token/);
-    fs.writeFileSync(path.join(tmp,'src','nested','invalid.mjs'),'export const bad = false;\\n');
+    fs.writeFileSync(path.join(tmp,'src','nested','invalid.mjs'),'export const bad = false;\n');
     const good=run();
     assert.equal(good.status,0,good.stderr);
-    assert.match(good.stdout,/Syntax validated: 3 src\\/scripts ESM files/);
+    assert.match(good.stdout,/Syntax validated: 3 src\/scripts ESM files/);
   }finally{fs.rmSync(tmp,{recursive:true,force:true})}
 });
 
@@ -34,6 +34,6 @@ test('CI and publication pipelines share the exhaustive syntax gate',()=>{
   for(const filename of ['.github/workflows/ci.yml','.github/workflows/publish-npm.yml','.github/workflows/publish-github-package.yml']){
     const yaml=read(filename);
     assert.match(yaml,/npm run syntax/,'Missing full syntax gate in '+filename);
-    assert.doesNotMatch(yaml,/node --check src\\//,'Stale manually maintained file list in '+filename);
+    assert.doesNotMatch(yaml,/node --check src\//,'Stale manually maintained file list in '+filename);
   }
 });
