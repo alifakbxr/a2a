@@ -17,7 +17,7 @@ const answer=(id,result,error)=>{
 };
 
 const RESOURCES = [
-  {uri:'a2a://status',name:'A2A Status',description:'Current A2A mode, compact mode, auto-trust policy, and authorized workspaces.',mimeType:'application/json'},
+  {uri:'a2a://status',name:'A2A Status',description:'Current A2A modes and redacted workspace counts; no local paths.',mimeType:'application/json'},
   {uri:'a2a://tokens/session',name:'A2A Session Diagnostics',description:'Local session event counts only; model token totals require official Antigravity CLI JSON output.',mimeType:'application/json'},
   {uri:'a2a://workspace/summary',name:'A2A Workspace Summary',description:'Active workspace graph coverage and estimated source inventory; not model token usage.',mimeType:'application/json'},
   {uri:'a2a://side-questions',name:'A2A Side Questions',description:'Recorded Antigravity side questions (/btw) and exploration notes.',mimeType:'application/json'},
@@ -41,9 +41,14 @@ function readResource(uri){
       mode:getA2AMode(),
       compact_mode:getCompactMode(),
       auto_trust:getAutoTrustMode(),
-      data_dir:dataDir(),
-      authorized_workspaces:loadAllowlist(),
-      antigravity_workspaces:loadAntigravityWorkspaces(),
+      data_dir_configured:fs.existsSync(dataDir()),
+      authorized_workspace_count:loadAllowlist().length,
+      antigravity_workspace_count:loadAntigravityWorkspaces().length,
+      active_workspace_authorized:(()=>{
+        const active=getActiveSession();
+        if(!active)return false;
+        try{requireAuthorizedWorkspace(active.workspace);return true}catch{return false}
+      })(),
     };
   }
   if(uri==='a2a://tokens/session'){
@@ -64,7 +69,7 @@ function readResource(uri){
     if(!activeWs)return {status:'no_active_workspace',reason:'Open an authorized workspace in a session first.'};
     return engine.context({workspace:activeWs,action:'inspect'});
   }
-  throw Object.assign(new Error('Resource not found: '+String(uri||'')),{code:-32002});
+  throw Object.assign(new Error('Resource not found'),{code:-32002});
 }
 
 function route(req){
@@ -118,6 +123,10 @@ io.on('line',(line)=>{
   if(req.id===undefined)return;
   try{answer(req.id,route(req))}catch(e){
     if(req.method==='tools/call'){answer(req.id,{content:[{type:'text',text:JSON.stringify(classifyMcpFailure(req.params?.name,e))}],isError:true});return}
+    if(req.method==='resources/read' && e?.code!==-32002 && e?.code!==-32602){
+      const safe=classifyMcpFailure('resources/read',e);
+      answer(req.id,null,{code:-32000,message:safe.code+': '+safe.message});return;
+    }
     answer(req.id,null,e);
   }
 });
