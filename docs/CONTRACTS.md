@@ -118,7 +118,7 @@ Privacy caveat: explicitly saved artifact versions and checkpoints **can contain
 
 ## Runtime and bounds
 
-- `node >=22.13.0` and built-in `node:sqlite`, with no third-party runtime package dependencies.
+- `node >=22.13.0` and built-in `node:sqlite`, with no third-party runtime package dependencies. Node 26.11+ uses `sqlite.Database`; Node 22 uses the compatible `sqlite.DatabaseSync` fallback. Cross-platform Node 22/24/26.13.1 tests and NVM launcher notes are documented in [Compatibility](COMPATIBILITY.md).
 - Local JSON-RPC messages are bounded; tool responses larger than **64 KiB** are rejected, not silently truncated into a false complete verdict. Reduce requested scope.
 - Workspace authorization, protected roots, symlink checks and explicit revocation take precedence over convenience. Hooks only record limited local metadata; there is **no `PreInvocation`** hook.
 - No third-party browser, runtime model API, prompt content upload or remote A2A telemetry.

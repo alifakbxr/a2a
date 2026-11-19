@@ -28,6 +28,12 @@
 
 [PR #43](https://github.com/alifakbxr/a2a/pull/43) addresses five new re-audit issues #38–#42: typed evidence scope in handoffs, fail-closed native process exit provenance, safety-prioritized permission errors, optional immutable acceptance manifests, and **default-off** automatic full brain Markdown content retention. The earlier **213/213** and **218/218** CI counts are historical, **not** test results for these new changes; assess the exact PR and merged-commit runs separately. The code still does **not** independently prove installed Antigravity, Figma, printer, real STOCKROOM F01–F18 or provider-token savings.
 
+## Node 24/26 LTS compatibility validation (19 November 2026)
+
+[PR #47](https://github.com/alifakbxr/a2a/pull/47) extends the runtime CI matrix from four to **nine** jobs: Node 22, Node 24 and exact **Node 26.13.1** on Ubuntu, macOS and Windows. The first nine-job PR run ([Actions 44462198522](https://github.com/alifakbxr/a2a/actions/runs/44462198522)) **passed all nine**, including **232/232 tests on Ubuntu Node 26.13.1**. Subsequent changes exposing `sqlite_api` and `node_binary` in CLI doctor require an additional clean run and post-merge verification before this PR is closed.
+
+Storage now prefers the non-deprecated `sqlite.Database` on Node 26 while retaining the `DatabaseSync` fallback for Node 22; transaction/WAL/rollback and old `verifykit.sqlite` migration are included in the test suite. **This is cross-platform Node/MCP coverage, not proof that an Antigravity desktop instance inherits the NVM PATH or executes native browser hooks.** External release #15 remains open.
+
 ## Actual private STOCKROOM preflight
 
 The four frozen source archives were privately recovered and fingerprinted. Native: 82/82 PHP syntax checks and Vite build passed; A2A-generated: 61/61 PHP syntax checks and Vite build passed. PHPUnit could not start because the test environment lacked required PHP extensions. **None of F01–F18 live HTTP/browser/database cases was established as passed.** See [benchmark preflight](docs/STOCKROOM_BENCHMARK_RECHECK_2026_11_18.md).

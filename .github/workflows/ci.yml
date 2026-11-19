@@ -20,11 +20,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Three OS families × supported LTS runtimes; keep 26 patch exact
+        # to validate the same binary version used on the user's Pop!_OS.
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node-version: ['22']
-        include:
-          - os: ubuntu-latest
-            node-version: '24'
+        node-version: ['22', '24', '26.13.1']
 
     steps:
       - name: Checkout repository
@@ -35,12 +34,19 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Runtime version and built-in SQLite smoke
+        run: |
+          node --version
+          node -p "process.versions.sqlite"
+          node --input-type=module -e "import {Database} from './src/sqlite-compat.mjs'; const db=new Database(':memory:'); db.exec('CREATE TABLE smoke (id INTEGER PRIMARY KEY, value TEXT)'); db.prepare('INSERT INTO smoke(value) VALUES(?)').run('ok'); if(db.prepare('SELECT value FROM smoke').get().value!=='ok') process.exit(1); db.close();"
+
       - name: Syntax & Compilation Check
         run: |
           node --check src/engine.mjs
           node --check src/mcp.mjs
           node --check src/verification.mjs
           node --check src/storage.mjs
+          node --check src/sqlite-compat.mjs
           node --check src/security.mjs
           node --check src/tokens.mjs
           node --check src/scanner.mjs

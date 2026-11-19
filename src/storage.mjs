@@ -1,4 +1,4 @@
-import { DatabaseSync } from 'node:sqlite';
+import { Database } from './sqlite-compat.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -28,7 +28,7 @@ export class Store {
     for(const file of [a2aFile,a2aFile+'-wal',a2aFile+'-shm',legacyFile])rejectUnsafeDbPath(file);
     if(!fs.existsSync(a2aFile) && fs.existsSync(legacyFile)){
       try{
-        const src=new DatabaseSync(legacyFile,{readOnly:true});
+        const src=new Database(legacyFile,{readOnly:true});
         try{src.prepare('VACUUM INTO ?').run(a2aFile)}finally{src.close()}
       }catch(e){
         // Raw copies are not WAL-consistent; never silently migrate a partial DB.
@@ -36,7 +36,7 @@ export class Store {
       }
     }
     this.file=a2aFile;
-    this.db=new DatabaseSync(this.file);
+    this.db=new Database(this.file);
     this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=4000; PRAGMA trusted_schema=OFF;');
     this.#ensureColumn('workspaces','current_revision_id','TEXT');
     this.#ensureColumn('files','mtime_ms','REAL');
