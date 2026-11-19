@@ -159,3 +159,13 @@ JUnit parsing refuses commented-out testcases, unsupported DTDs, incomplete stru
 
 The CLI `tokens` absolute workspace argument and `artifacts snapshot|list|diff|show` now use explicit `fs`/`path` imports and a bounded symlink-safe `active-session.json` reader. Cross-platform artifact root falls back to `getHomeDir()`. These local test/CLI fixes have no effect on the independent release gate [#15](https://github.com/alifakbxr/a2a/issues/15).
 
+
+## v2.0.1 reliability and privacy contract updates (19 November 2026)
+
+- Four public MCP tools remain. `a2a_evidence` includes opt-in Adaptive 5 Whys RCA operations; local hypotheses remain non-causal suggestions unless supported by exact source-bound machine assertions.
+- `a2a://status` returns redacted workspace **counts** and booleans only, not host paths or per-project names. `resources/read` errors sanitize authorization failures.
+- `hooks.json` recognizes native `write_file`, `edit_file`, `write_to_file`, `replace_file_content`, `multi_replace_file_content` tool events; native test evidence rejects indirect or spoofed commands.
+- `tools/list` enforces a 6,500-byte serialized contract budget with bounded IDs and criteria. Removed unused `a2a_context.conversation_id`, `a2a_context.transcript_path`, and `a2a_evidence.version_number`; deprecated `allow_stale` never permits PASS.
+- Syntax validation recursively covers all source and script `.mjs` files on all CI/runtime-publish gates. `a2a doctor` advises about shell-managed Node version manager paths without executing a shell or changing user configuration.
+
+See [security](SECURITY.md), [compatibility](COMPATIBILITY.md), and [release gate #15](https://github.com/alifakbxr/a2a/issues/15). A2A v2.0.1 is **not** externally certified or authorized for publishing.

@@ -41,3 +41,7 @@ A2A declares `"command": "node"` in `mcp_config.json` and invokes `node` from it
 For Linux/NVM diagnosis, check both `command -v node` and `node scripts/a2a.mjs doctor` inside a source checkout. Doctor now reports `node`, `node_binary`, `sqlite_api` and `sqlite_version`. If Antigravity cannot start its MCP server, verify the **IDE's inherited environment** and launch the IDE from a shell that has initialized NVM, or configure its process environment via the platform's supported mechanism. Do not hardcode one user's NVM path in the public plugin manifest.
 
 The CI test does not have access to the user's Pop!_OS GUI session; a live Antigravity plugin validation and MCP smoke remain required by [release gate #15](https://github.com/alifakbxr/a2a/issues/15).
+
+### Non-login PATH advisory
+
+`a2a doctor` reports `node_version_manager_path` and `path_advisory` when `process.execPath` is under common user-scoped NVM, fnm, Volta, asdf or nodenv layouts. This is a read-only warning: an interactive terminal's PATH does **not** prove a desktop-launched Antigravity process can spawn the same binary, and no shell probe, installation or config mutation is performed. Node 22.13+ remains required.

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {Engine} from '../src/engine.mjs';
 import {sqliteApiName} from '../src/sqlite-compat.mjs';
+import {nodeVersionManagerAdvisory} from '../src/node-runtime.mjs';
 import pkg from '../package.json' with {type:'json'};
 import {
   allowlistPath,settingsPath,getA2AMode,setA2AMode,getCompactMode,setCompactMode,
@@ -63,6 +64,7 @@ try{
       sqlite_api:sqliteApiName,
       sqlite_version:process.versions.sqlite||null,
       node_binary:process.execPath,
+      ...nodeVersionManagerAdvisory(process.execPath),
       mode:getA2AMode(),
       compact_mode:getCompactMode()?'enabled':'disabled',
       artifact_auto_snapshot:getArtifactAutoSnapshotMode()?'enabled':'disabled',

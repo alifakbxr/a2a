@@ -56,3 +56,9 @@ Documentation: [index](docs/README.md), [security](docs/SECURITY.md), [release](
 
 [PR #62](https://github.com/alifakbxr/a2a/pull/62) addresses CLI missing imports/session fallback, native file-hook matcher/argument compatibility, spoofed or masked exit-status test commands and JUnit/TAP false-PASS parsing. Synthetic adversarial CLI/hooks/test-report regressions are added. Exact PR and post-merge 9-job CI results must be verified separately. This implementation does **not** close the real Antigravity/STOCKROOM external [release gate #15](https://github.com/alifakbxr/a2a/issues/15); other independently open P1/P2 findings #54–#61 remain tracked.
 
+
+## 19 November 2026 follow-up hardening and remaining acceptance
+
+Post-merge code fixes on `v2.0.1`: PR #62 (CLI, hooks and evidence false-PASS), #63 (exhaustive syntax coverage), #64 (MCP resource privacy), #65 (Node SQLite consistency and runtime diagnostics), #66 (bounded 6.5KB MCP schema). Each was tested through 9-job Node 22/24/26.13.1 CI before merge. Subsequent source changes require their own checks; historical test counts above are **not** current test totals.
+
+The final Node desktop PATH advisory and shared file-boundary hardening are tracked independently as follow-up work. `main` stays frozen, external independent STOCKROOM acceptance F01–F18, live installed Antigravity validation and repeated A/B token trials remain open in issue #15; passing local CI is not equivalent to release certification.
