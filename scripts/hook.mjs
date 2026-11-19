@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import { dataDir, getA2AMode, getCompactMode, requireAuthorizedWorkspace } from '../src/security.mjs';
+import { dataDir, getA2AMode, getCompactMode, getArtifactAutoSnapshotMode, requireAuthorizedWorkspace } from '../src/security.mjs';
 import { sanitizeConversationId, vettedTranscript } from '../src/tokens.mjs';
 import { Store } from '../src/storage.mjs';
 import {gitChanges} from '../src/scanner.mjs';
@@ -170,7 +170,9 @@ function recordActiveSession(payload, baseDir) {
 }
 
 function handleArtifactModification(payload, baseDir) {
-  if(payload?.error) return;
+  // Full-content brain Markdown history is opt-in; session metadata remains
+  // independent and does not itself grant content-retention consent.
+  if(!getArtifactAutoSnapshotMode() || payload?.error) return;
   const toolName = payload?.toolCall?.name || payload?.toolName || '';
   if (!['write_to_file','replace_file_content','multi_replace_file_content','write_file','edit_file'].includes(toolName)) return;
   const args = payload?.toolCall?.args || payload?.toolArgs || payload?.toolInput || payload?.arguments || {};
