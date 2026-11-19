@@ -57,7 +57,7 @@ The npm registry package can be used separately (`npm install -g @aliip/a2a`), b
 
 - **On-Demand (default):** do not call A2A unless requested or genuinely needed by a native workflow.
 - **Always-On (opt-in):** a bounded adaptive policy injected at `SessionStart`. Small tasks should still cause **zero** A2A calls.
-- **Compact (opt-in):** concise outputs, without removing evidence uncertainty or changing verification semantics.
+- **Compact (default on for new installations):** bounded responses with explicit truncation/omission markers; run `node scripts/a2a.mjs compact off` to request fuller output. Existing explicit settings are honored. Neither mode changes evidence truth or release eligibility.
 - **Workspace trust:** authorization is required; an explicit revocation takes precedence over auto-trust. No permission bypass.
 
 ```bash
@@ -66,6 +66,7 @@ node scripts/a2a.mjs mode on-demand
 node scripts/a2a.mjs mode always-on
 node scripts/a2a.mjs toggle
 node scripts/a2a.mjs compact on
+node scripts/a2a.mjs compact off  # optional: expand code/graph previews
 node scripts/a2a.mjs autotrust active-only
 node scripts/a2a.mjs allow /absolute/path/to/project
 node scripts/a2a.mjs revoke /absolute/path/to/project
@@ -138,3 +139,9 @@ Start at the [documentation index](docs/README.md). Key references:
 ## License
 
 [MIT](LICENSE) © 2026 Alif Akbar and contributors.
+
+### Low-token operating practice
+
+The plugin skill now uses **zero A2A calls for simple/native-solvable work** and normally **one scoped query OR impact summary** when uncertainty is material. Do not chain tools just to repeat information, invoke token reports after every step, or use a full skeleton before asking for a specific symbol. Typed verification and evidence recovery are used only when their distinct purposes require them. Always-On remains opt-in and only injects a short policy on `SessionStart`.
+
+Default Compact limits `a2a_context(action="skeleton")` to **4,800 preview characters total, 1,600 per file and six full previews**; additional requested files are disclosed as omitted. Compact `action="query"` returns at most **12 static relations**, with a truncation flag and original response count when clipped. These are **output budgets**, not a guarantee of lower model billing or better answers. For complex work requiring complete context, opt out with `compact off` and inspect the source natively. See [token measurement](docs/TOKEN_EFFICIENCY.md).
