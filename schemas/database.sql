@@ -17,6 +17,19 @@ CREATE INDEX IF NOT EXISTS incidents_lookup ON incidents(workspace_id,created_at
 CREATE INDEX IF NOT EXISTS incidents_signature ON incidents(workspace_id,signature_sha,created_at DESC);
 CREATE TABLE IF NOT EXISTS hypotheses (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, incident_id TEXT, description TEXT NOT NULL, status TEXT NOT NULL, experiment TEXT, evidence_ids_json TEXT NOT NULL, created_at TEXT NOT NULL, revision_id TEXT, parent_hypothesis_id TEXT, why_depth INTEGER NOT NULL DEFAULT 1, predicted_observation TEXT, disconfirming_test TEXT, expected_criterion_id TEXT, plan_id TEXT, assessment_json TEXT NOT NULL DEFAULT '{}', assessed_revision_id TEXT, updated_at TEXT);
 CREATE INDEX IF NOT EXISTS hypotheses_incident ON hypotheses(workspace_id,incident_id,created_at DESC);
+-- Append-only local experimental interpretations. Never independent causal proof.
+CREATE TABLE IF NOT EXISTS rca_experiments (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL,
+  hypothesis_id TEXT NOT NULL,
+  revision_id TEXT NOT NULL,
+  outcome TEXT NOT NULL,
+  observation TEXT NOT NULL,
+  criterion_id TEXT NOT NULL,
+  evidence_ids_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS rca_experiments_history ON rca_experiments(workspace_id,hypothesis_id,created_at DESC);
 CREATE TABLE IF NOT EXISTS telemetry (workspace_id TEXT NOT NULL, tool_name TEXT NOT NULL, action TEXT NOT NULL, raw_scope_tokens INTEGER NOT NULL DEFAULT 0, response_tokens INTEGER NOT NULL DEFAULT 0, tokens_saved INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS telemetry_by_ws ON telemetry(workspace_id,created_at DESC);
 CREATE TABLE IF NOT EXISTS side_questions (id TEXT PRIMARY KEY, workspace_id TEXT, conversation_id TEXT NOT NULL, parent_conversation_id TEXT, title TEXT, question TEXT NOT NULL, summary TEXT, status TEXT NOT NULL DEFAULT 'resolved', transcript_path TEXT, metadata_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
