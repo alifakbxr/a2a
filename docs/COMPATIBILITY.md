@@ -30,6 +30,14 @@ Availability and model permissions depend on the actual Antigravity version and 
 
 ## Runtime and evidence compatibility (v2.0.1)
 
-Node.js **>=22.13.0** is required for built-in `node:sqlite`. The following is tested in cross-platform **Node/MCP CI**, not confirmed for every installed Antigravity IDE version: Ubuntu Node 22/24, Windows Node 22, macOS Node 22. The actual tool contract includes typed acceptance with UI viewport/state/reference, opt-in `model_recovery`/`tool_recovery`, and opt-in native orchestration with `file_ownership="independent"` for parallel recommendations. See [current MCP contract](CONTRACTS.md).
+Node.js **>=22.13.0** is required for built-in `node:sqlite`. The expanded [Node runtime CI matrix](https://github.com/alifakbxr/a2a/pull/47) tests **Node 22, current Node 24, and exact Node 26.13.1** on **Ubuntu, macOS and Windows** (nine platform/runtime combinations). Node 26.11+ exposes `sqlite.Database` and retains deprecated `DatabaseSync`; A2A prefers the current class and falls back to `DatabaseSync` on Node 22. Tests include local MCP JSON-RPC/stdio, WAL/rollback, old verifykit.sqlite `VACUUM INTO` migration, permission/security and CLI doctor. Green Node CI does not prove installed Antigravity IDE compatibility on every host. The actual tool contract includes typed acceptance with UI viewport/state/reference, opt-in `model_recovery`/`tool_recovery`, and opt-in native orchestration with `file_ownership="independent"` for parallel recommendations. See [current MCP contract](CONTRACTS.md).
 
 **Do not claim universal slash-command availability, browser access, native teamwork entitlements or running application compatibility without testing the installed environment.** A2A never adds language runtimes or test drivers. Real PHP/Laravel STOCKROOM external acceptance remains blocked, even though its frozen sources passed syntax and Vite build preflight.
+
+### NVM and Antigravity desktop PATH
+
+A2A declares `"command": "node"` in `mcp_config.json` and invokes `node` from its hooks. It resolves **whichever Node binary is in the Antigravity process's PATH**, which may differ from the interactive shell. An NVM-only Node installation may not be present when Antigravity is started from a desktop launcher.
+
+For Linux/NVM diagnosis, check both `command -v node` and `node scripts/a2a.mjs doctor` inside a source checkout. Doctor now reports `node`, `node_binary`, `sqlite_api` and `sqlite_version`. If Antigravity cannot start its MCP server, verify the **IDE's inherited environment** and launch the IDE from a shell that has initialized NVM, or configure its process environment via the platform's supported mechanism. Do not hardcode one user's NVM path in the public plugin manifest.
+
+The CI test does not have access to the user's Pop!_OS GUI session; a live Antigravity plugin validation and MCP smoke remain required by [release gate #15](https://github.com/alifakbxr/a2a/issues/15).
