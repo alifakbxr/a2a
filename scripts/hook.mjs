@@ -197,6 +197,28 @@ function handleArtifactModification(payload, baseDir) {
   }catch{}
 }
 
+// A completed tool call is not proof of a successful test process. Accept
+// explicit numeric exit statuses only; missing/conflicting signals fail closed.
+// Antigravity versions can expose different nested response objects.
+export function nativeProcessExitStatus(payload){
+  const sources=[payload,payload?.toolCallResult,payload?.toolResponse,payload?.response,payload?.result,payload?.toolResult];
+  const codes=[];
+  for(const source of sources){
+    if(!source||typeof source!=='object'||Array.isArray(source))continue;
+    for(const key of ['exitCode','exit_code','commandExitCode','processExitCode']){
+      if(Object.hasOwn(source,key) && source[key]!==null && source[key]!==undefined){
+        const code=source[key];
+        if(!Number.isSafeInteger(code))return {status:'unknown',exit_code:null,reason:'Invalid exit status representation'};
+        codes.push(code);
+      }
+    }
+  }
+  if(payload?.error || payload?.toolResponse?.error || payload?.toolCallResult?.error)return {status:'failed',exit_code:codes[0]??null,reason:'Native tool reported an error'};
+  if(!codes.length)return {status:'unknown',exit_code:null,reason:'No explicit process exit status available'};
+  if(codes.some(x=>x!==codes[0]))return {status:'unknown',exit_code:null,reason:'Conflicting native process exit statuses'};
+  return {status:codes[0]===0?'passed':'failed',exit_code:codes[0],reason:null};
+}
+
 function recordCommandRun(payload, baseDir) {
   handleArtifactModification(payload, baseDir);
   const cmd = payload?.toolCall?.args?.CommandLine;
@@ -220,16 +242,20 @@ function recordCommandRun(payload, baseDir) {
       if(stat.size<=1200000 && stat.isFile())reportHashes[rel]=sha256(fs.readFileSync(file));
     }catch{}
   }
-  // Local evidence only: does not prove the command's assertions or cryptographically attest execution.
+  // Clear positive provenance after unsuccessful or ambiguous runs. A pre-existing
+  // passing report must not be re-attested by a failed/unknown native command.
+  const exit=nativeProcessExitStatus(payload);
   const reportFile=path.join(baseDir,'last-test-run.json');
   writeJsonSecure(reportFile,{
     updatedAt:new Date().toISOString(),
     conversationId:sanitizeConversationId(payload?.conversationId),
     workspace:root,
     kind:'native-test-tool-completed',
-    succeeded:!payload?.error,
-    source_hashes:sourceHashes,
-    report_hashes:reportHashes,
+    succeeded:exit.status==='passed',
+    exit_status:exit.status,
+    exit_code:exit.exit_code,
+    source_hashes:exit.status==='passed'?sourceHashes:{},
+    report_hashes:exit.status==='passed'?reportHashes:{},
   });
 }
 
