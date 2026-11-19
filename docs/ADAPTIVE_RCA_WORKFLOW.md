@@ -80,3 +80,10 @@ Allowed outcomes: `supports`, `refutes`, `inconclusive`. Results are `locally_su
 The repository tests cover consent, hypothetical competing causes and parent branches, refutation, missing/unrelated/build-only/altered/stale evidence, source revision changes, existing SQLite migration, Compact warnings and actual MCP stdio+SQLite lifecycle. These are **synthetic tests**. The [external release issue #15](https://github.com/alifakbxr/a2a/issues/15) still requires real installed Antigravity, F01–F18, browser/physical printer where applicable, independent validation and repeated matched Native/A2A trials with official provider usage.
 
 Source of truth: [`src/rca.mjs`](../src/rca.mjs), [MCP contracts](CONTRACTS.md), [database schema](../schemas/database.sql), [tests](../tests/rca_lifecycle.test.mjs).
+
+### 5. Inspect bounded history or delete RCA notes
+
+In default Compact, `a2a_evidence(operation="incidents"|"hypotheses")` returns up to **8** entries, including `total`, `more_available` and a proof-warning. Use `compact off` to inspect up to 50 records. Reading a prior locally supported/refuted hypothesis re-checks all its linked artifact hashes; missing/modified evidence changes the displayed status to **stale**, even if source revision itself is unchanged.
+
+For explicit local cleanup, `a2a_evidence(operation="delete_incident",incident_id="...",persist_rca=true,confirm_deletion=true)` logically removes **one** incident and its attached hypotheses, leaving independent test artifacts, acceptance plans and other incidents untouched. Require user approval: deletion cannot be undone through A2A, but SQLite WAL/backups may retain old bytes, so it is **not cryptographic erasure**. Do not claim this deletes all related personal data.
+
