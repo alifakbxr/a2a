@@ -156,3 +156,6 @@ For recurring regressions, concurrency/permission failures and ambiguous causes,
 
 **RCA history privacy:** Compact lists show at most eight entries and disclose additional records. To logically remove a saved RCA incident with its hypotheses, explicitly invoke `a2a_evidence(operation="delete_incident",persist_rca=true,confirm_deletion=true,incident_id="...")`; this does **not** delete independently stored test artifacts or securely erase database backups. [Details](docs/ADAPTIVE_RCA_WORKFLOW.md).
 
+## v2.0.1 audit status (19 November 2026)
+
+The November audit's local implementation corrections (#50–#61) are integrated on the v2.0.1 branch: native hook/test provenance, strict JUnit/TAP assessment, MCP resource privacy, Node 22/24/26.13.1 CI, cross-platform filesystem safeguards, version-managed Node desktop PATH diagnostics, and bounded lower-overhead MCP schemas. Run node scripts/a2a.mjs doctor to see the actual Node binary and PATH advisory. **No live Antigravity installation acceptance or independently scored A/B benchmark is claimed.** The separate [release gate #15](https://github.com/alifakbxr/a2a/issues/15) blocks main and npm publication.
