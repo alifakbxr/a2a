@@ -3,9 +3,8 @@
 // Prefer the current API without abandoning users on supported older LTS lines.
 import * as sqlite from 'node:sqlite';
 
-export const Database = typeof sqlite.Database === 'function'
-  ? sqlite.Database
-  : sqlite.DatabaseSync;
+export const sqliteApiName = typeof sqlite.Database === 'function' ? 'Database' : 'DatabaseSync';
+export const Database = sqlite[sqliteApiName];
 
 if (typeof Database !== 'function') {
   throw new Error('A2A requires the built-in node:sqlite synchronous Database API (Node >=22.13.0)');
