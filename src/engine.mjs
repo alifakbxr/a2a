@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import {Store,uniqueId} from './storage.mjs';
-import {requireAuthorizedWorkspace,sha256,cleanError,safeFile,getCompactMode} from './security.mjs';
+import {requireAuthorizedWorkspace,sha256,cleanError,safeFile,getCompactMode,getHomeDir,readSafeJsonFile} from './security.mjs';
 import {discover,createGraph,snapshotOf,gitHead,discoverTestCommands} from './scanner.mjs';
 import {contextQuery,analyzeImpact,shortGraphSummary,validateChangedPaths} from './graph.mjs';
 import {planVerification,assessVerification,listEvidence,freshness,verifyHandoff} from './verification.mjs';
@@ -343,34 +343,37 @@ export class Engine {
     }
     if(operation==='assess_release'){
       if(typeof artifact!=='string'||!artifact)throw Error('Required relative release manifest');
-      const source=safeFile(s.root,artifact),stat=fs.statSync(source);
-      if(!stat.isFile()||stat.size>1024*1024)throw Error('Release manifest must be <=1 MiB');
-      let document;
-      try{document=JSON.parse(fs.readFileSync(source,'utf8'))}catch{throw Error('Invalid release manifest JSON')}
-      const trustFile=path.join(os.homedir(),'.config','a2a','trusted-evaluators.json');
-      let trustKeys={};
-      try{
-        const configStat=fs.lstatSync(trustFile);
-        if(configStat.isFile()&&configStat.size<=65536&&(process.platform==='win32'||(configStat.mode&0o022)===0)){
-          trustKeys=JSON.parse(fs.readFileSync(trustFile,'utf8'));
-        }
-      }catch{}
+      const source=safeFile(s.root,artifact);
+      const manifestData=readSafeJsonFile(source,{maxBytes:1024*1024});
+      if(!manifestData.ok)throw Error('Invalid or unsafe release manifest: '+manifestData.reason);
+      const document=manifestData.value;
+      const diagnostics=[];
+      const describe=(kind,read)=>{
+        if(read.ok||read.reason==='missing')return;
+        const help=read.reason==='unsafe_mode'?'group/world writable; apply chmod 600':
+          read.reason==='symlink_parent'||read.reason==='symlink'||read.reason==='unsafe_type'?'symlink or unsafe file':
+          read.reason==='too_large'?'exceeds 64 KiB':
+          read.reason==='invalid_json'?'invalid JSON':'unreadable or invalid';
+        diagnostics.push('Local '+kind+' config rejected ('+help+').');
+      };
+      const trustFile=path.join(getHomeDir(),'.config','a2a','trusted-evaluators.json');
+      const trustRead=readSafeJsonFile(trustFile,{maxBytes:65536,checkParentDir:true,requirePrivateMode:true});
+      describe('trusted-evaluators',trustRead);
+      const trustKeys=trustRead.ok?trustRead.value:{};
       // Frozen user-controlled scope; never read acceptance definitions from generated app.
-      let requiredScenarios=null;
-      const scopeFile=path.join(os.homedir(),'.config','a2a','acceptance-registry.json');
-      try{
-        const info=fs.lstatSync(scopeFile);
-        if(info.isFile()&&info.size<=65536&&(process.platform==='win32'||(info.mode&0o022)===0)){
-          const pinned=JSON.parse(fs.readFileSync(scopeFile,'utf8'));
-          if(pinned?.schema==='a2a-acceptance-registry-v1'&&Array.isArray(pinned.scenarios))requiredScenarios=pinned.scenarios;
-        }
-      }catch{}
+      const scopeFile=path.join(getHomeDir(),'.config','a2a','acceptance-registry.json');
+      const scopeRead=readSafeJsonFile(scopeFile,{maxBytes:65536,checkParentDir:true,requirePrivateMode:true});
+      describe('acceptance-registry',scopeRead);
+      const pinned=scopeRead.ok?scopeRead.value:null;
+      const requiredScenarios=pinned?.schema==='a2a-acceptance-registry-v1'&&Array.isArray(pinned.scenarios)?pinned.scenarios:null;
+      if(scopeRead.ok&&!requiredScenarios)diagnostics.push('Local acceptance-registry config rejected (invalid schema).');
       const evaluation=assessRelease(document,{trustKeys,requiredScenarios});
+      if(diagnostics.length)evaluation.limits.push(...diagnostics);
       if(document.revision!==s.revision){
         evaluation.verdict='blocked';evaluation.release_ready=false;
         evaluation.blockers.push({reason:'Current workspace snapshot differs from submitted release manifest'});
       }
-      const evidenceId=uniqueId('ev'),bytes=fs.readFileSync(source);
+      const evidenceId=uniqueId('ev'),bytes=manifestData.bytes;
       this.store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',evidenceId,s.wsId,s.revision,'release-readiness',
         evaluation.release_ready?'passed':'inconclusive','signed-release-evaluation',artifact,sha256(bytes),
         JSON.stringify({trust:'public-key-verified-issuer-claim',release_ready:evaluation.release_ready,signature_evidence:evaluation.scenarios.results.reduce((n,x)=>n+x.signature_verified_evidence,0)}),new Date().toISOString());
@@ -388,10 +391,8 @@ export class Engine {
   #resolveActiveConversationId(){
     try{
       const sf=path.join(this.store.base,'active-session.json');
-      if(fs.existsSync(sf)){
-        const d=JSON.parse(fs.readFileSync(sf,'utf8'));
-        if(d?.latest?.conversationId)return d.latest.conversationId;
-      }
+      const d=readSafeJsonFile(sf,{maxBytes:128*1024});
+      if(d.ok&&d.value.latest?.conversationId)return d.value.latest.conversationId;
     }catch{}
     return process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
   }
@@ -471,7 +472,7 @@ export class Engine {
       if(!inWorkspace){
         const sessionFile=path.join(this.store.base,'active-session.json');
         let latest=null;
-        try{latest=JSON.parse(fs.readFileSync(sessionFile,'utf8'))?.latest}catch{}
+        try{const d=readSafeJsonFile(sessionFile,{maxBytes:128*1024});latest=d.ok?d.value.latest:null}catch{}
         if(latest?.conversationId!==convId || !Array.isArray(latest.workspacePaths)
             || !latest.workspacePaths.some(w=>{try{return requireAuthorizedWorkspace(w)===s.root}catch{return false}})){
           throw new Error('Brain artifact does not belong to the active authorized workspace/session');

@@ -32,7 +32,7 @@ function validReleaseApproval(manifest,trustKeys){
  if(!isObject(approval)||typeof approval.key_id!=='string'||
     typeof approval.signature!=='string'||!/^[a-zA-Z0-9+/]{85,86}==$/.test(approval.signature)||
     typeof approval.approved_at!=='string'||!Number.isFinite(Date.parse(approval.approved_at)))return false;
- const key=keys[approval.key_id];
+ const key=Object.hasOwn(keys,approval.key_id)?keys[approval.key_id]:null;
  if(typeof key!=='string')return false;
  const approvedAt=Date.parse(approval.approved_at);
  if(approvedAt>Date.now()+5*60_000||approvedAt<Date.now()-90*24*60*60_000)return false;

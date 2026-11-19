@@ -14,6 +14,53 @@ export function debugLog(scope,error){
   const code=String(error?.code||error?.name||'unknown').replace(/[^a-z0-9_-]/gi,'').slice(0,48);
   process.stderr.write('[A2A debug] '+label+': '+code+'\n');
 }
+
+// Bounded, descriptor-pinned metadata reader. Never follows a leaf symlink;
+// checks user-owned parent components when reading trusted configuration.
+export function readSafeBytesFile(filename,{maxBytes=128*1024,checkParentDir=false,requirePrivateMode=false}={}){
+  let fd=null;
+  try{
+    if(typeof filename!=='string'||!Number.isSafeInteger(maxBytes)||maxBytes<1)return {ok:false,reason:'invalid_path_or_limit'};
+    const target=path.resolve(filename);
+    if(checkParentDir){
+      const home=path.resolve(getHomeDir()),rel=path.relative(home,path.dirname(target));
+      if(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel))return {ok:false,reason:'outside_home'};
+      let cursor=home;
+      for(const seg of rel.split(path.sep).filter(Boolean)){
+        cursor=path.join(cursor,seg);
+        const st=fs.lstatSync(cursor);
+        if(st.isSymbolicLink()||!st.isDirectory())return {ok:false,reason:'symlink_parent'};
+      }
+    }
+    const before=fs.lstatSync(target);
+    if(before.isSymbolicLink()||!before.isFile())return {ok:false,reason:'unsafe_type'};
+    if(before.size>maxBytes)return {ok:false,reason:'too_large'};
+    if(requirePrivateMode&&process.platform!=='win32'&&(before.mode&0o022)!==0)
+      return {ok:false,reason:'unsafe_mode'};
+    fd=fs.openSync(target,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));
+    const st=fs.fstatSync(fd);
+    if(!st.isFile()||st.size>maxBytes)return {ok:false,reason:'too_large_or_unsafe'};
+    if(st.dev!==before.dev||st.ino!==before.ino)return {ok:false,reason:'changed_during_read'};
+    if(requirePrivateMode&&process.platform!=='win32'&&(st.mode&0o022)!==0)
+      return {ok:false,reason:'unsafe_mode'};
+    const bytes=fs.readFileSync(fd);
+    if(bytes.length>maxBytes)return {ok:false,reason:'too_large'};
+    return {ok:true,bytes};
+  }catch(error){
+    return {ok:false,reason:error?.code==='ENOENT'?'missing':error?.code==='ELOOP'?'symlink':'unreadable'};
+  }finally{if(fd!==null)try{fs.closeSync(fd)}catch{}}
+}
+export function readSafeJsonFile(filename,options={}){
+  const read=readSafeBytesFile(filename,options);
+  if(!read.ok)return read;
+  try{
+    const value=JSON.parse(read.bytes.toString('utf8'));
+    if(!value||typeof value!=='object'||Array.isArray(value))
+      return {ok:false,reason:'invalid_json'};
+    return {ok:true,value,bytes:read.bytes};
+  }catch{return {ok:false,reason:'invalid_json'}}
+}
+
 export const MAX_INDEX_FILES = 9000;
 export const MAX_SOURCE_BYTES = 160 * 1024;
 const BLOCKED_PARTS = new Set(['.git','node_modules','vendor','.next','.nuxt','.svelte-kit','.turbo','.parcel-cache','.dart_tool','.gradle','target','dist','build','coverage','.venv','venv','__pycache__','.pytest_cache','.mypy_cache','.ruff_cache','.idea','.vscode','.verifykit','.a2a','.cache','.terraform','.pnpm-store','.gitlab','.ssh','.aws','.kube','.gnupg','.docker','.azure','.gcloud','.config','.gemini','.claude','.cursor']);
@@ -290,8 +337,9 @@ function parseJsonc(raw) {
 function extractWorkspaceFolderPaths(wsFilePath) {
   const results = [];
   try {
-    if (!fs.existsSync(wsFilePath) || !fs.statSync(wsFilePath).isFile()) return results;
-    const data = parseJsonc(fs.readFileSync(wsFilePath, 'utf8'));
+    const bytes=readSafeBytesFile(wsFilePath,{maxBytes:128*1024});
+    if(!bytes.ok)return results;
+    const data = parseJsonc(bytes.bytes.toString('utf8'));
     const folders = Array.isArray(data?.folders) ? data.folders : [];
     const baseDir = path.dirname(wsFilePath);
     for (const f of folders) {
@@ -334,17 +382,16 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
   }
 
   const dirs = new Set();
-  const addPath = (rawPath, { requireMarker = true } = {}) => {
+  const visitedWorkspaces=new Set();
+  const addPath = (rawPath, { requireMarker = true, depth = 0 } = {}) => {
+    if(depth>1)return;
     if (!rawPath || typeof rawPath !== 'string') return;
-    if (rawPath.endsWith('.code-workspace')) {
-      for (const folder of extractWorkspaceFolderPaths(rawPath)) {
-        addPath(folder, { requireMarker });
-      }
-      return;
-    }
-    if (path.basename(rawPath) === 'workspace.json') {
-      for (const folder of extractWorkspaceFolderPaths(rawPath)) {
-        addPath(folder, { requireMarker });
+    if (rawPath.endsWith('.code-workspace') || path.basename(rawPath) === 'workspace.json') {
+      const absolute=path.resolve(rawPath);
+      if(visitedWorkspaces.has(absolute))return;
+      visitedWorkspaces.add(absolute);
+      for(const folder of extractWorkspaceFolderPaths(absolute)){
+        addPath(folder,{requireMarker,depth:depth+1});
       }
       return;
     }

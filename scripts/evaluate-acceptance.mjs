@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {readSafeJsonFile} from '../src/security.mjs';
 const isObj=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const check=(v,m)=>{if(!v)throw new Error(m)};
 const statuses=new Set(['passed','failed','partial','blocked','not-tested']);
@@ -15,7 +16,7 @@ export function attestationPayload({revision,scenarioId,evidence}){
 }
 export function validateEvidenceSignature({revision,scenarioId,evidence,trustKeys={}}){
  if(!isObj(evidence)||evidence.outcome!=='passed'||evidence.revision!==revision||!types.has(evidence.type)||!digest(evidence.artifact_sha256)||!Number.isSafeInteger(evidence.assertion_count)||evidence.assertion_count<1||typeof evidence.reference!=='string'||!evidence.reference.trim()||typeof evidence.checked_at!=='string'||Number.isNaN(Date.parse(evidence.checked_at)))return false;
- const key=trustKeys[evidence.key_id];
+ const key=typeof evidence.key_id==='string'&&Object.hasOwn(trustKeys,evidence.key_id)?trustKeys[evidence.key_id]:null;
  if(typeof key!=='string'||typeof evidence.signature!=='string'||evidence.signature.length>1024||!/^[A-Za-z0-9+/]+=*$/.test(evidence.signature))return false;
  try{
   const parsed=crypto.createPublicKey(key);
@@ -82,23 +83,26 @@ export function assessRelease(input,{trustKeys={},requiredScenarios=null}={}){
  return {schema:'a2a-release-gate-v2',revision:input.revision,verdict:release_ready?'eligible-for-review':'blocked',release_ready,scope_verified:scopeVerified,scenarios:{passed,total:results.length,results},blockers,limits:['Key verification attests the claimed issuer, not that tests were executed honestly','An independent assessor must review runner provenance, scenario semantics, browser/build identity and hidden dependencies','Missing or untrusted evidence never counts as passed','Independent frozen acceptance registry must be pinned outside the implementation repository','An eligible-for-review result is NOT production security certification']};
 }
 export function assessFile(file,{trustKeyFile=null,requiredScenarioFile=null}={}){
- const st=fs.statSync(file);check(st.isFile()&&st.size<=1024*1024,'Evaluation file must be <=1 MiB');
+ const evidence=readSafeJsonFile(file,{maxBytes:1024*1024});
+ check(evidence.ok,'Unsafe or invalid evaluation file');
  let keys={};
  if(trustKeyFile){
-  const info=fs.statSync(trustKeyFile);check(info.isFile()&&info.size<=64*1024,'Trust config too large');
-  keys=JSON.parse(fs.readFileSync(trustKeyFile,'utf8'));
+  const trust=readSafeJsonFile(trustKeyFile,{maxBytes:64*1024});
+  check(trust.ok,'Unsafe or invalid public-key trust configuration');
+  keys=trust.value;
   check(isObj(keys)&&Object.keys(keys).length<=20,'Invalid public-key trust config');
  }
  let requiredScenarios=null;
  if(requiredScenarioFile){
-  const info=fs.statSync(requiredScenarioFile);
-  check(info.isFile()&&info.size<=64*1024,'Pinned registry too large');
-  const registry=JSON.parse(fs.readFileSync(requiredScenarioFile,'utf8'));
-  check(isObj(registry)&&registry.schema==='a2a-acceptance-registry-v1'&&Array.isArray(registry.scenarios),'Invalid frozen acceptance registry');
-  requiredScenarios=registry.scenarios;
+  const registry=readSafeJsonFile(requiredScenarioFile,{maxBytes:64*1024});
+  check(registry.ok,'Unsafe or invalid pinned acceptance registry');
+  const pinned=registry.value;
+  check(isObj(pinned)&&pinned.schema==='a2a-acceptance-registry-v1'&&Array.isArray(pinned.scenarios),'Invalid frozen acceptance registry');
+  requiredScenarios=pinned.scenarios;
  }
- return assessRelease(JSON.parse(fs.readFileSync(file,'utf8')),{trustKeys:keys,requiredScenarios});
+ return assessRelease(evidence.value,{trustKeys:keys,requiredScenarios});
 }
+
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  try{check(process.argv.length>=3&&process.argv.length<=5,'Usage: node scripts/evaluate-acceptance.mjs <evidence.json> [trusted-public-keys.json] [pinned-requirements.json]');process.stdout.write(JSON.stringify(assessFile(process.argv[2],{trustKeyFile:process.argv[3],requiredScenarioFile:process.argv[4]}),null,2)+'\n')}
  catch(e){process.stderr.write('Acceptance evaluation failed: '+e.message+'\n');process.exitCode=1}

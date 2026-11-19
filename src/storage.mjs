@@ -2,7 +2,7 @@ import { Database } from './sqlite-compat.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import {dataDir,sha256,safeArtifactPath,MAX_ARTIFACT_BYTES,realpathIfExists} from './security.mjs';
+import {dataDir,sha256,safeArtifactPath,MAX_ARTIFACT_BYTES,realpathIfExists,readSafeBytesFile} from './security.mjs';
 
 const DDL=fs.readFileSync(new URL('../schemas/database.sql',import.meta.url),'utf8');
 export class Store {
@@ -169,6 +169,10 @@ export class Store {
     const sanitizedSummary=summary?String(summary).slice(0,2000):null;
     const existing=this.get('SELECT * FROM side_questions WHERE conversation_id=? AND workspace_id IS ?',conversationId,workspaceId);
     const sid=id||existing?.id||sha256((workspaceId||'unassigned')+':'+conversationId+':'+(parentConversationId||'')).slice(0,32);
+    // Explicit ids never grant ownership of a record in another workspace.
+    const byId=this.get('SELECT workspace_id FROM side_questions WHERE id=?',sid);
+    if(byId?.workspace_id!=null && byId.workspace_id!==workspaceId)
+      throw new Error('Side question ID belongs to another workspace');
     const now=new Date().toISOString();
     const createdAt=existing?.created_at||now;
     const metaJson=JSON.stringify(metadata||{});
@@ -184,7 +188,8 @@ export class Store {
          status=excluded.status,
          transcript_path=COALESCE(excluded.transcript_path,side_questions.transcript_path),
          metadata_json=excluded.metadata_json,
-         updated_at=excluded.updated_at`,
+         updated_at=excluded.updated_at
+       WHERE side_questions.workspace_id IS excluded.workspace_id OR side_questions.workspace_id IS NULL`,
       sid,workspaceId,conversationId,parentConversationId,sanitizedTitle,sanitizedQuestion,sanitizedSummary,status,transcriptPath,metaJson,createdAt,now
     );
     if(workspaceId){
@@ -193,6 +198,8 @@ export class Store {
       }catch{}
     }
     const saved=this.get('SELECT * FROM side_questions WHERE id=?',sid);
+    if(!saved||(saved.workspace_id!=null&&saved.workspace_id!==workspaceId))
+      throw new Error('Side question workspace ownership mismatch');
     return {...saved,metadata:JSON.parse(saved.metadata_json||'{}'),metadata_json:undefined};
   }
   listSideQuestions({workspaceId=null,parentConversationId=null,conversationId=null,limit=20}={}){
@@ -223,7 +230,9 @@ export class Store {
     const artifactName=path.basename(validPath);
     let rawContent=content;
     if(rawContent===null){
-      rawContent=fs.readFileSync(validPath,'utf8');
+      const read=readSafeBytesFile(validPath,{maxBytes:MAX_ARTIFACT_BYTES});
+      if(!read.ok)throw new Error('Artifact file is unsafe or too large');
+      rawContent=read.bytes.toString('utf8');
     }
     if(typeof rawContent!=='string'||Buffer.byteLength(rawContent)>MAX_ARTIFACT_BYTES){
       throw new Error(`Artifact content exceeds maximum allowed size (${MAX_ARTIFACT_BYTES/1024} KB)`);

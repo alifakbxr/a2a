@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import {safeFile,sha256} from './security.mjs';
+import {safeFile,sha256,readSafeBytesFile,readSafeJsonFile} from './security.mjs';
 import {uniqueId} from './storage.mjs';
 import {discoverTestCommands,gitChanges} from './scanner.mjs';
 
@@ -208,12 +208,12 @@ export function assessVerification(store,wsId,root,rev,criteria,{planId=null}={}
   });
 }
 export function listEvidence(store,wsId,root,currentRevision,{limit=20,id}={}){
-  const check=x=>{let artifact_intact=false;try{const p=safeFile(root,x.artifact_path);artifact_intact=sha256(fs.readFileSync(p))===x.artifact_sha}catch{};return {fresh:x.revision_id===currentRevision&&artifact_intact,artifact_intact}};
+  const check=x=>{let artifact_intact=false;try{const p=safeFile(root,x.artifact_path),bytes=readSafeBytesFile(p,{maxBytes:4*1024*1024});artifact_intact=bytes.ok&&sha256(bytes.bytes)===x.artifact_sha}catch{};return {fresh:x.revision_id===currentRevision&&artifact_intact,artifact_intact}};
   if(id){const e=store.get('SELECT * FROM evidence WHERE workspace_id=? AND id=?',wsId,id);if(!e)return {found:false};return {...e,...check(e),metadata:JSON.parse(e.metadata_json),metadata_json:undefined}}
   const n=Math.max(1,Math.min(50,Number(limit)||20));
   return {items:store.all('SELECT id,criterion_id,status,artifact_path,artifact_sha,revision_id,created_at FROM evidence WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,n).map(x=>{const state=check(x);return {id:x.id,criterion_id:x.criterion_id,status:x.status,artifact_path:x.artifact_path,revision_id:x.revision_id,created_at:x.created_at,...state}})};
 }
-export function freshness(store,wsId,root,revision){const items=store.all('SELECT id,revision_id,criterion_id,status,artifact_path,artifact_sha FROM evidence WHERE workspace_id=? ORDER BY created_at DESC LIMIT 30',wsId);return items.map(x=>{let artifact_intact=false;try{artifact_intact=sha256(fs.readFileSync(safeFile(root,x.artifact_path)))===x.artifact_sha}catch{};return {id:x.id,revision_id:x.revision_id,criterion_id:x.criterion_id,status:x.status,artifact_intact,fresh:x.revision_id===revision&&artifact_intact}})}
+export function freshness(store,wsId,root,revision){const items=store.all('SELECT id,revision_id,criterion_id,status,artifact_path,artifact_sha FROM evidence WHERE workspace_id=? ORDER BY created_at DESC LIMIT 30',wsId);return items.map(x=>{let artifact_intact=false;try{const bytes=readSafeBytesFile(safeFile(root,x.artifact_path),{maxBytes:4*1024*1024});artifact_intact=bytes.ok&&sha256(bytes.bytes)===x.artifact_sha}catch{};return {id:x.id,revision_id:x.revision_id,criterion_id:x.criterion_id,status:x.status,artifact_intact,fresh:x.revision_id===revision&&artifact_intact}})}
 
 export const CANDIDATE_ARTIFACTS = [
   'report.xml',
@@ -251,11 +251,11 @@ export function nativeRunProvenance(store,root,changedFiles,relReport,reportHash
   if(!changedFiles.length || !store?.base)return {matched:false,reason:'No changed source files were bound to the native run'};
   try{
     const sameWorkspace=(a,b)=>a&&b&&fs.realpathSync(a)===fs.realpathSync(b);
-    const file=path.join(store.base,'last-test-run.json');
-    const st=fs.statSync(file);
-    if(!st.isFile() || st.size>128*1024)return {matched:false,reason:'Native run metadata is unavailable'};
-    const record=JSON.parse(fs.readFileSync(file,'utf8'));
-    const active=JSON.parse(fs.readFileSync(path.join(store.base,'active-session.json'),'utf8'))?.latest;
+    const recordFile=readSafeJsonFile(path.join(store.base,'last-test-run.json'),{maxBytes:128*1024});
+    const activeFile=readSafeJsonFile(path.join(store.base,'active-session.json'),{maxBytes:128*1024});
+    if(!recordFile.ok||!activeFile.ok)return {matched:false,reason:'Native run metadata is missing or unsafe'};
+    const record=recordFile.value;
+    const active=activeFile.value.latest;
     if(!active?.conversationId || active.conversationId!==record.conversationId
        || !Array.isArray(active.workspacePaths)
        || !active.workspacePaths.some(w=>{try{return sameWorkspace(w,root)}catch{return false}})){
