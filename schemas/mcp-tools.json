@@ -282,6 +282,10 @@
                     "source_revision": {
                       "type": "string",
                       "maxLength": 160
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 160
                     }
                   }
                 }
