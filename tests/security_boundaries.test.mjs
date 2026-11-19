@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {Store} from '../src/storage.mjs';
-import {readSafeBytesFile,readSafeJsonFile,loadAntigravityWorkspaces,invalidateWorkspaceCache} from '../src/security.mjs';
+import {Engine} from '../src/engine.mjs';
+import {readSafeBytesFile,readSafeJsonFile,loadAntigravityWorkspaces,invalidateWorkspaceCache,authorizeWorkspace} from '../src/security.mjs';
 
 test('bounded descriptor-pinned reads reject oversized, symlinked and group-writable metadata',t=>{
  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-io-negative-'));
@@ -80,4 +81,39 @@ test('side question caller-supplied id cannot overwrite another workspace record
   assert.equal(owner.workspace_id,wsA);
   assert.equal(owner.question,'original question');
  }finally{s.close();fs.rmSync(tmp,{recursive:true,force:true})}
+});
+
+test('release config with insecure permissions fails closed with actionable diagnostics and no paths',()=>{
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-release-config-'));
+ const oldHome=process.env.HOME,oldData=process.env.A2A_DATA_DIR;
+ let engine;
+ try{
+  process.env.HOME=tmp;process.env.A2A_DATA_DIR=path.join(tmp,'data');
+  const work=path.join(tmp,'workspace');fs.mkdirSync(work);
+  fs.writeFileSync(path.join(work,'package.json'),'{"name":"release-config-test"}');
+  authorizeWorkspace(work);
+  const cfg=path.join(tmp,'.config','a2a');
+  const trust=path.join(cfg,'trusted-evaluators.json');
+  const registry=path.join(cfg,'acceptance-registry.json');
+  fs.writeFileSync(trust,'{}',{mode:0o600});
+  fs.writeFileSync(registry,JSON.stringify({schema:'a2a-acceptance-registry-v1',scenarios:[]}),{mode:0o600});
+  if(process.platform!=='win32'){fs.chmodSync(trust,0o664);fs.chmodSync(registry,0o664);}
+  else{fs.writeFileSync(trust,'{invalid');fs.writeFileSync(registry,'{invalid');}
+  const manifest={revision:'unverified',evaluator:{independent:true,name:'external-fixture'},scenarios:[
+   {id:'F01',requirement:'Independent scenario',verdict:'not-tested',critical:true,evidence:[]}
+  ]};
+  fs.writeFileSync(path.join(work,'release.json'),JSON.stringify(manifest));
+  engine=new Engine();
+  const result=engine.verify({workspace:work,operation:'assess_release',artifact:'release.json'});
+  assert.equal(result.release_ready,false);
+  assert.ok(result.limitations.some(x=>x.includes('trusted-evaluators config rejected')));
+  assert.ok(result.limitations.some(x=>x.includes('acceptance-registry config rejected')));
+  assert.ok(!result.limitations.join(' ').includes(tmp));
+ }finally{
+  if(engine)engine.close();
+  if(oldHome===undefined)delete process.env.HOME;else process.env.HOME=oldHome;
+  if(oldData===undefined)delete process.env.A2A_DATA_DIR;else process.env.A2A_DATA_DIR=oldData;
+  invalidateWorkspaceCache();
+  fs.rmSync(tmp,{recursive:true,force:true});
+ }
 });
