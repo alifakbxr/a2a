@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {CANDIDATE_ARTIFACTS} from '../src/verification.mjs';
 import {Database,sqliteApiName} from '../src/sqlite-compat.mjs';
 
-const root=path.resolve(new URL('..',import.meta.url).pathname);
+const root=fileURLToPath(new URL('../',import.meta.url));
 test('runtime uses one modern built-in SQLite binding and unique report candidates',()=>{
   assert.equal(typeof Database,'function');
   assert.ok(['Database','DatabaseSync'].includes(sqliteApiName));
