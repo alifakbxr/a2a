@@ -16,7 +16,7 @@ import {assessRelease} from '../scripts/evaluate-acceptance.mjs';
 import {adviseOrchestration} from './orchestration-advisor.mjs';
 import {saveRecoveryCheckpoint,recoveryStatus} from './model-recovery.mjs';
 import {classifyNativeToolFailure} from './native-tool-recovery.mjs';
-import {recordRcaIncident,addRcaHypothesis,assessRcaHypothesis,listRcaIncidents,listRcaHypotheses} from './rca.mjs';
+import {recordRcaIncident,addRcaHypothesis,assessRcaHypothesis,listRcaIncidents,listRcaHypotheses,deleteRcaIncident} from './rca.mjs';
 
 export class Engine {
   constructor({store}={}) {this.store=store||new Store();this.owned=!store;}
@@ -394,7 +394,7 @@ export class Engine {
     }catch{}
     return process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
   }
-  evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id,conversation_id,parent_conversation_id,question,summary,status,artifact_name,artifact_path,v1,v2,task_summary,completed=[],next_steps=[],decisions=[],pending_tests=[],tool_family='other',error_hint='',error_class,retry_count=0,persist_rca=false,hypothesis_id,parent_hypothesis_id=null,predicted_observation,disconfirming_test,expected_criterion_id,plan_id=null,experiment_outcome,observation}={}){
+  evidence({workspace,operation='list',id,limit=20,title,root_cause='',paths=[],criteria=[],evidence_ids=[],hypothesis,experiment,incident_id,conversation_id,parent_conversation_id,question,summary,status,artifact_name,artifact_path,v1,v2,task_summary,completed=[],next_steps=[],decisions=[],pending_tests=[],tool_family='other',error_hint='',error_class,retry_count=0,persist_rca=false,confirm_deletion=false,hypothesis_id,parent_hypothesis_id=null,predicted_observation,disconfirming_test,expected_criterion_id,plan_id=null,experiment_outcome,observation}={}){
     const compact=getCompactMode();
     const isReadOnly=operation==='tool_recovery'||operation==='model_recovery'||operation==='list'||operation==='runs'||operation==='incidents'||operation==='hypotheses'||operation==='side_questions'||operation==='side-questions'||operation==='artifact_versions'||operation==='artifact-versions'||operation==='artifact_diff'||operation==='artifact-diff';
     // Freshness is a security-relevant claim: never reuse cached revision metadata
@@ -419,7 +419,7 @@ export class Engine {
     }
     if(operation==='list')return {revision:s.revision,...listEvidence(this.store,wsId,s.root,s.revision,{limit,id}),...(compact?{compact:true}:{})};
     if(operation==='runs')return {revision:s.revision,runs:this.store.all('SELECT id,revision_id,verdict,criteria_json,created_at FROM runs WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,Math.max(1,Math.min(50,Number(limit)||20))).map(x=>({...x,fresh:x.revision_id===s.revision,criteria:JSON.parse(x.criteria_json),criteria_json:undefined})),...(compact?{compact:true}:{})};
-    if(operation==='incidents')return {...listRcaIncidents(this.store,wsId,s.revision,limit),...(compact?{compact:true}:{})};
+    if(operation==='incidents')return {...listRcaIncidents(this.store,wsId,s.revision,compact?Math.min(8,Number(limit)||20):limit),...(compact?{compact:true}:{})};
     if(operation==='record_incident')return {...recordRcaIncident(this.store,wsId,s.root,s.revision,{title,root_cause,paths,criteria,evidence_ids,persist_rca}),...(compact?{compact:true}:{})};
     if(operation==='add_hypothesis')return {...addRcaHypothesis(this.store,wsId,s.revision,{
       hypothesis,experiment,incident_id,parent_hypothesis_id,predicted_observation,disconfirming_test,expected_criterion_id,plan_id,persist_rca
@@ -427,7 +427,8 @@ export class Engine {
     if(operation==='assess_hypothesis')return {...assessRcaHypothesis(this.store,wsId,s.root,s.revision,{
       hypothesis_id,experiment_outcome,observation,evidence_ids,persist_rca
     }),...(compact?{compact:true}:{})};
-    if(operation==='hypotheses')return {...listRcaHypotheses(this.store,wsId,s.revision,limit,incident_id||null),...(compact?{compact:true}:{})};
+    if(operation==='hypotheses')return {...listRcaHypotheses(this.store,wsId,s.root,s.revision,compact?Math.min(8,Number(limit)||20):limit,incident_id||null),...(compact?{compact:true}:{})};
+    if(operation==='delete_incident')return deleteRcaIncident(this.store,wsId,{incident_id,persist_rca,confirm_deletion});
     if(operation==='side_questions'||operation==='side-questions'){
       const items=this.store.listSideQuestions({workspaceId:wsId,parentConversationId:parent_conversation_id,conversationId:conversation_id||id,limit});
       return {workspace:s.root,count:items.length,items,...(compact?{compact:true}:{})};
