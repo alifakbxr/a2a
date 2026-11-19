@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import { dataDir, getA2AMode, getCompactMode, getArtifactAutoSnapshotMode, requireAuthorizedWorkspace } from '../src/security.mjs';
+import { dataDir, getA2AMode, getArtifactAutoSnapshotMode, requireAuthorizedWorkspace } from '../src/security.mjs';
 import { sanitizeConversationId, vettedTranscript } from '../src/tokens.mjs';
 import { Store } from '../src/storage.mjs';
 import {gitChanges} from '../src/scanner.mjs';
@@ -264,6 +264,8 @@ function recordCommandRun(payload, baseDir) {
   });
 }
 
+export const ALWAYS_ON_POLICY = 'A2A Always-On (opt-in): Zero calls for clear/local tasks. For cross-file/auth/schema uncertainty, use one scoped a2a_context query (limit=5) OR a2a_impact(summary=true); no chains without new evidence. Native Antigravity edits/tests. Local PASS is not independent E2E. No automatic token stats, teamwork or verbose handoffs.';
+
 export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   if (!payload || typeof payload !== 'object') return {};
   const event = payload.hookEventName || '';
@@ -278,14 +280,8 @@ export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   if (event === 'SessionStart') {
     // In on-demand mode do not inject instructions into every Antigravity session.
     if (getA2AMode() !== 'always-on') return {};
-    const compact = getCompactMode();
-    const policy = 'A2A Always-On (adaptive): For docs, typos, styles, isolated edits or research, use native tools without A2A calls. For shared APIs, auth, schema or multi-module changes, call a2a_impact once with summary=true. Use targeted symbol queries to navigate; do not fetch a skeleton and then the same full file unless needed. Reuse existing analysis until the changed scope differs. Run targeted native tests for testable behavior and assess evidence once. Verify worker handoffs only for testable code with named criteria. Keep uncertainty and limitations. No forced teamwork, repeated token footers or unverified savings claims.';
     return {
-      injectSteps: [{
-        systemMessage: {
-          systemMessage: compact ? policy + ' Keep responses concise without dropping evidence.' : policy,
-        },
-      }],
+      injectSteps: [{systemMessage:{systemMessage:ALWAYS_ON_POLICY}}],
     };
   }
 

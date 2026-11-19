@@ -77,3 +77,11 @@ The user-history behavioral audit produced issues [#30–#35](https://github.com
 - **Privacy:** no raw Antigravity archives are added to the public repository; raw tool errors are never echoed from the recovery helper.
 
 **Measured scope:** [post-merge CI](https://github.com/alifakbxr/a2a/actions/runs/44325007116) passed 4/4 platforms with 213/213 Node tests on Ubuntu Node 22, including **real local MCP stdio/SQLite E2E**. This is **not** live Antigravity/Figma/printer or real STOCKROOM F01–F18 validation. Independent external evidence remains open in [issue #15](https://github.com/alifakbxr/a2a/issues/15). See [Behavioral Five Whys](BEHAVIORAL_5_WHYS_V2_0_1.md).
+
+## Fast-path low-token workflow (issue #44)
+
+1. **No A2A for simple/native-solvable tasks**, including isolated changes with enough context. Default `On-Demand` injects no session policy. Do not invent mandatory A2A calls.
+2. **One targeted tool for a material question:** choose `a2a_context(action="query",query="...",limit=5)` **or** `a2a_impact(changed=[...],summary=true)`; prefer actual changed paths and reuse the answer until source/scope changes. Do not blindly chain inspect, query, skeleton and impact.
+3. For behavioral risk, use scoped `a2a_verify` only when Given/When/Then and real native tests are needed; `persist_plan:true` stores user-authored scenarios only with explicit permission. Source changes invalidate earlier evidence.
+4. Default **Compact** caps skeleton to 4,800 total characters/1,600 per file/six previews and query graph relations to 12 with explicit truncation. Use native source reads or `compact off` for complete evidence as needed, rather than treating previews as a substitute.
+5. Report **what was tested** and remaining unknowns, without repeated token footers. Static prompt/payload reductions do not measure true model usage. Benchmark with official usage and independent quality gates.

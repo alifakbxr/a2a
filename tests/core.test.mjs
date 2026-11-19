@@ -150,11 +150,11 @@ test('a2a mode defaults to on-demand and supports toggle/set',()=>{
 test('compact mode supports toggle and skeletonization',()=>{
   fixture();
   try{
+    assert.equal(getCompactMode(),true,'Fresh installs prefer compact output');
+    assert.equal(setCompactMode(false),false,'Explicit compact off still supported');
     assert.equal(getCompactMode(),false);
-    assert.equal(setCompactMode(true),true);
+    assert.equal(setCompactMode('toggle'),true);
     assert.equal(getCompactMode(),true);
-    assert.equal(setCompactMode('toggle'),false);
-    assert.equal(getCompactMode(),false);
 
     const rawJs = `// test comment\nfunction test() {\n  /* multiline */\n  return 42;\n}\n\n\n`;
     const skeleton = skeletonizeCode(rawJs, '.js');

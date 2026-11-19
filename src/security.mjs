@@ -98,7 +98,8 @@ export function getCompactMode() {
   const data = readSettings();
   if (typeof data.compact === 'boolean') return data.compact;
   if (data.compact === 'on' || data.compact === 'enabled' || data.compact === 'true') return true;
-  return false;
+  // New installs default to bounded responses. Explicit compact off is honored.
+  return true;
 }
 
 // Full-content Antigravity brain artifact retention is sensitive: default OFF.
