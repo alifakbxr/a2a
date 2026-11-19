@@ -7,7 +7,7 @@ import { sanitizeConversationId, vettedTranscript } from '../src/tokens.mjs';
 import { Store } from '../src/storage.mjs';
 import {gitChanges} from '../src/scanner.mjs';
 import {CANDIDATE_ARTIFACTS} from '../src/verification.mjs';
-import {safeFile,sha256} from '../src/security.mjs';
+import {safeFile,sha256,debugLog} from '../src/security.mjs';
 
 function writeJsonSecure(filePath, obj) {
   const dir = path.dirname(filePath);
@@ -33,7 +33,7 @@ function safeLocalJson(file,maxBytes=128*1024){
     if(!stat.isFile()||stat.isSymbolicLink()||stat.size>maxBytes)return null;
     const value=JSON.parse(fs.readFileSync(file,'utf8'));
     return value&&typeof value==='object'&&!Array.isArray(value)?value:null;
-  }catch{return null}
+  }catch(error){debugLog('hook_metadata',error);return null}
 }
 function hookArgs(payload){
   const input=payload?.toolCall?.args||payload?.toolArgs||payload?.toolInput||payload?.arguments;

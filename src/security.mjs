@@ -3,9 +3,17 @@ import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-import { DatabaseSync } from 'node:sqlite';
+import { Database } from './sqlite-compat.mjs';
 
 export const sha256 = (v) => crypto.createHash('sha256').update(v).digest('hex');
+// Opt-in diagnostics intentionally contain only stable error classes/codes, never paths,
+// raw messages, credentials, or stdout (which would corrupt MCP JSON-RPC framing).
+export function debugLog(scope,error){
+  if(process.env.A2A_DEBUG!=='1')return;
+  const label=String(scope).replace(/[^a-z0-9_-]/gi,'').slice(0,48);
+  const code=String(error?.code||error?.name||'unknown').replace(/[^a-z0-9_-]/gi,'').slice(0,48);
+  process.stderr.write('[A2A debug] '+label+': '+code+'\n');
+}
 export const MAX_INDEX_FILES = 9000;
 export const MAX_SOURCE_BYTES = 160 * 1024;
 const BLOCKED_PARTS = new Set(['.git','node_modules','vendor','.next','.nuxt','.svelte-kit','.turbo','.parcel-cache','.dart_tool','.gradle','target','dist','build','coverage','.venv','venv','__pycache__','.pytest_cache','.mypy_cache','.ruff_cache','.idea','.vscode','.verifykit','.a2a','.cache','.terraform','.pnpm-store','.gitlab','.ssh','.aws','.kube','.gnupg','.docker','.azure','.gcloud','.config','.gemini','.claude','.cursor']);
@@ -360,7 +368,7 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
       if (!fs.existsSync(dbFile)) continue;
       let db;
       try {
-        db = new DatabaseSync(dbFile, { readOnly: true });
+        db = new Database(dbFile, { readOnly: true });
         const row = db.prepare("SELECT value FROM ItemTable WHERE key='content.trust.model.key'").get();
         if (row?.value) {
           const parsed = JSON.parse(row.value);
@@ -374,8 +382,8 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
             if (raw) addPath(raw, { requireMarker: false });
           }
         }
-      } catch {} finally {
-        try { db?.close(); } catch {}
+      } catch(error) {debugLog('ide_trust_database',error)} finally {
+        try { db?.close(); } catch(error) {debugLog('ide_trust_close',error)}
       }
     }
   } catch {}
