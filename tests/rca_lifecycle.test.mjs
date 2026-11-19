@@ -176,3 +176,51 @@ test('RCA: old SQLite incident/hypothesis tables migrate without losing rows',()
   }finally{s.close()}
  }finally{fs.rmSync(root,{recursive:true,force:true})}
 });
+
+test('RCA: read refresh refuses prior local support when evidence hash is no longer intact',()=>{
+ const f=fixture();try{
+  const e=evaluated(f),inc=f.engine.evidence({workspace:f.workspace,operation:'record_incident',
+   persist_rca:true,title:'A repeat QR scan can print twice',paths:['src/checkin.js']});
+  const h=hypothesized(f,inc);
+  const verified=f.engine.evidence({workspace:f.workspace,operation:'assess_hypothesis',
+   persist_rca:true,hypothesis_id:h.id,experiment_outcome:'supports',
+   observation:'Unit reproducer passed under controlled UI handler state',
+   evidence_ids:[e]});
+  assert.equal(verified.status,'locally_supported');
+  // Tamper metadata without changing project code; defensive read must still
+  // check the actual evidence hash before repeating a support claim.
+  f.engine.store.run('UPDATE evidence SET artifact_sha=? WHERE id=?','0'.repeat(64),e);
+  const list=f.engine.evidence({workspace:f.workspace,operation:'hypotheses',incident_id:inc.id});
+  assert.equal(list.items[0].source_freshness,'current');
+  assert.equal(list.items[0].status,'stale');
+  assert.equal(list.items[0].linked_evidence_intact,false);
+ }finally{f.clean()}
+});
+
+test('RCA: opt-in deletion removes only selected incident and hypotheses; Compact lists disclose hidden rows',()=>{
+ const f=fixture();try{
+  const first=f.engine.evidence({workspace:f.workspace,operation:'record_incident',persist_rca:true,
+   title:'Repeated QR printing after second scan',paths:['src/checkin.js']});
+  hypothesized(f,first);
+  hypothesized(f,first,{hypothesis:'Backend print queue sends another duplicate after check-in'});
+  for(let i=0;i<9;i++)f.engine.evidence({workspace:f.workspace,operation:'record_incident',
+   persist_rca:true,title:'Separate synthetic incident number '+i,paths:['src/checkin.js']});
+  const compact=f.engine.evidence({workspace:f.workspace,operation:'incidents',limit:50});
+  assert.equal(compact.items.length,8);
+  assert.equal(compact.total,10);
+  assert.equal(compact.more_available,true);
+  assert.match(compact.warning,/not independently prove/);
+  assert.throws(()=>f.engine.evidence({workspace:f.workspace,operation:'delete_incident',
+    persist_rca:true,incident_id:first.id}),/confirm_deletion/);
+  assert.throws(()=>f.engine.evidence({workspace:f.workspace,operation:'delete_incident',
+    persist_rca:true,confirm_deletion:true,incident_id:'inc-other-workspace'}),/authorized workspace/);
+  const removed=f.engine.evidence({workspace:f.workspace,operation:'delete_incident',
+    persist_rca:true,confirm_deletion:true,incident_id:first.id});
+  assert.equal(removed.deleted,true);
+  assert.equal(removed.hypotheses_deleted,2);
+  assert.equal(removed.other_evidence_preserved,true);
+  assert.match(removed.warning,/not cryptographic erasure/);
+  assert.equal(f.engine.evidence({workspace:f.workspace,operation:'hypotheses',incident_id:first.id}).total,0);
+  assert.equal(f.engine.evidence({workspace:f.workspace,operation:'incidents'}).total,9);
+ }finally{f.clean()}
+});
