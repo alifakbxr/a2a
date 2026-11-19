@@ -122,6 +122,7 @@ test('P1 #40: permission denied takes priority over page IDs, error codes and ca
     assert.ok(!JSON.stringify(r).includes(params.error_hint));
   }
   assert.equal(classifyNativeToolFailure({error_hint:'-32602 invalid pageId'}).category,'invalid_arguments');
+  assert.equal(classifyNativeToolFailure({error_hint:'Request failed with HTTP 403',tool_family:'browser'}).requires_user_approval,true);
 });
 
 test('P1 #41: persisted acceptance plan retains omitted mandatory scenarios and is revision bound',()=>{
@@ -151,6 +152,9 @@ test('P1 #41: persisted acceptance plan retains omitted mandatory scenarios and 
     assert.equal(simple.scope_bound,false);
     assert.equal(simple.completion.total,1);
     assert.ok(simple.limits.some(x=>/scope is unbound/.test(x)));
+    const pinnedRevision=f.engine.context({workspace:f.workspace}).revision;
+    const pinned=f.engine.verify({workspace:f.workspace,operation:'plan',persist_plan:true,
+      criteria:[{...baseCriteria,source_revision:pinnedRevision}]});
     fs.writeFileSync(path.join(f.workspace,'src','checkin.js'),'export const noDuplicatePrint = false;\n');
     const stale=f.engine.verify({workspace:f.workspace,operation:'assess',plan_id:plan.plan_id,
       criteria:[{id:baseCriteria.id,artifact:rel,test_name:'second QR does not print'}]});
@@ -172,6 +176,8 @@ test('P1 #41: persisted acceptance plan retains omitted mandatory scenarios and 
       plan_id:renewed.plan_id,criteria:[]});
     assert.equal(renewedResult.completion.counts.not_tested,2);
     assert.equal(renewedResult.scope_bound,true);
+    assert.throws(()=>f.engine.verify({workspace:f.workspace,operation:'plan',
+      plan_id:pinned.plan_id,persist_plan:true,criteria:[]}),/pins a different source_revision/);
   }finally{f.end()}
 });
 
