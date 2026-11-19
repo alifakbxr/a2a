@@ -15,6 +15,18 @@ Four public, JSON-RPC 2.0 **stdio** tools. Every tool requires an **authorized a
 
 The public operation enums above reflect current `src/tools.mjs`. Additional engine-internal compatibility aliases may exist but are not guaranteed as public input enums. A2A cannot launch native commands, edit project source, run browsers, force model selection or guarantee upstream agent obedience.
 
+### Scope binding and privacy (19 November re-audit)
+
+`persist_plan` (Boolean, default `false`) on `a2a_verify(operation="plan")` stores the entire user-authored acceptance matrix in private SQLite, hashed and bound to the current source revision. The result includes a `plan_id` (or `null` when disabled), `scope_bound` and `scope_persisted`. This is an explicit **local-content retention** opt-in.
+
+Pass `plan_id` on `a2a_verify(operation="assess")`. Provide evidence bindings by `id` (`artifact`, exact `test_name` or `blocked`); the stored Given/When/Then and required evidence type cannot be replaced. Omitted required cases appear as `not_tested`; an outdated plan becomes `stale`, and unexpected IDs or mutated expectations are rejected. Without `plan_id`, a standalone assessment remains backwards compatible but reports `scope_bound:false` and cannot know the original mandatory scenario list.
+
+`verify_handoff` enforces the **same local evidence-kind policy** as `assess`. For browser/visual/hardware/security/independent criteria, named local reports and native hook records never produce `verified:true`. The `verified_scope` field is limited to **named local machine assertions**, with `independently_attested:false`.
+
+PostToolUse native test provenance is **fail-closed**: only an unambiguous numeric exit code zero, without tool error, may set `succeeded:true`. A missing, malformed, conflicting or nonzero exit status does not authenticate a native test run.
+
+Automatic full-content brain Markdown snapshots are **disabled by default**; opt in with `a2a artifact-autosnapshot on` and disable with `off`. Opt-in stores raw local artifact content; disabling does not erase previous versions. User-invoked `snapshot_artifact` is separate.
+
 ### Verification plan: typed acceptance
 
 `a2a_verify(operation="plan",criteria=[...])` accepts up to 40 strings (legacy) or objects. **Typed** criteria include:
