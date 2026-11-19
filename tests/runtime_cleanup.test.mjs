@@ -26,7 +26,7 @@ test('release authorization CLI executes relative-path entry rather than silentl
 test('debug diagnostics remain opt-in, stderr-only and redact raw error text',()=>{
   const script="import {debugLog} from './src/security.mjs';debugLog('ide_trust_db',Object.assign(new Error('/home/private/token.txt'),{code:'EACCES'}));";
   for(const enabled of ['0','1']){
-    const run=spawnSync(process.execPath,['--input-type=module','-e',script],{cwd:root,env:{...process.env,A2A_DEBUG:enabled},encoding:'utf8'});
+    const run=spawnSync(process.execPath,['--input-type=module','-e',script],{cwd:root,env:{...process.env,A2A_DEBUG:enabled,NODE_NO_WARNINGS:'1'},encoding:'utf8'});
     assert.equal(run.status,0,run.stderr);
     assert.equal(run.stdout,'');
     if(enabled==='1'){
