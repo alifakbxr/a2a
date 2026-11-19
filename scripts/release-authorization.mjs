@@ -2,6 +2,7 @@
 // Fail-closed publishing gate. External acceptance material is supplied by an
 // independently controlled CI environment, not read from repository sources.
 import fs from 'node:fs';
+import path from 'node:path';
 import crypto from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
@@ -115,7 +116,7 @@ export function authorizeFromEnvironment(){
    registry:readExternalJson('A2A_RELEASE_REGISTRY_B64')});
 }
 
-if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
+if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
  try{
    const result=authorizeFromEnvironment();
    process.stdout.write(JSON.stringify(result)+'\n');
