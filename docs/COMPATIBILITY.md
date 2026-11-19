@@ -41,3 +41,7 @@ A2A declares `"command": "node"` in `mcp_config.json` and invokes `node` from it
 For Linux/NVM diagnosis, check both `command -v node` and `node scripts/a2a.mjs doctor` inside a source checkout. Doctor now reports `node`, `node_binary`, `sqlite_api` and `sqlite_version`. If Antigravity cannot start its MCP server, verify the **IDE's inherited environment** and launch the IDE from a shell that has initialized NVM, or configure its process environment via the platform's supported mechanism. Do not hardcode one user's NVM path in the public plugin manifest.
 
 The CI test does not have access to the user's Pop!_OS GUI session; a live Antigravity plugin validation and MCP smoke remain required by [release gate #15](https://github.com/alifakbxr/a2a/issues/15).
+
+### Cross-platform HOME and path boundaries
+
+`getHomeDir()` is the shared resolver for user-scoped Antigravity brain, token history, release config, snapshots, and CLI/hook paths, supporting Windows `USERPROFILE` when `HOME` is unset. Storage protects both the OS account home and an overridden `HOME` from permission changes. Relative project snapshots resolve against the authorized workspace root rather than the MCP process CWD. `isSamePath` and `isSameOrDescendantPath` consistently handle Windows/macOS case defaults and macOS `/private/var`, `/private/tmp`, `/private/etc` aliases. The benchmark capture reader canonicalizes the manifest root. These guards do not replace real native IDE/browser tests on each OS.
