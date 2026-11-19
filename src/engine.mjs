@@ -65,10 +65,17 @@ export class Engine {
       const uniqueTargets=[...new Set(targets)].slice(0,20);
       if(!uniqueTargets.length) throw new Error('Provide file or files for action="skeleton"');
       let totalRaw=0, totalSkel=0;
-      let remainingOutputChars=32000;
+      const outputCharBudget=compact?4800:32000;
+      const perFileCharBudget=compact?1600:6000;
+      let remainingOutputChars=outputCharBudget;
       let omittedFiles=0;
       const items=[];
-      for(const rel of uniqueTargets){
+      for(const [index,rel] of uniqueTargets.entries()){
+        if(compact&&index>=6){
+          omittedFiles++;
+          items.push({file:rel,skipped:true,reason:'compact_file_budget'});
+          continue;
+        }
         const full=safeFile(s.root,rel);
         const stat=fs.statSync(full);
         if(stat.size>160*1024 || remainingOutputChars<100){
@@ -78,7 +85,7 @@ export class Engine {
         }
         const raw=fs.readFileSync(full,'utf8');
         const wholeSkeleton=skeletonizeCode(raw,path.extname(rel));
-        const cap=Math.min(6000,remainingOutputChars);
+        const cap=Math.min(perFileCharBudget,remainingOutputChars);
         const skeleton=wholeSkeleton.length>cap?wholeSkeleton.slice(0,cap):wholeSkeleton;
         const truncated=skeleton.length<wholeSkeleton.length;
         remainingOutputChars-=skeleton.length;
@@ -102,9 +109,10 @@ export class Engine {
           estimated_source_tokens:totalRaw,
           estimated_preview_tokens:totalSkel,
           estimated_preview_only:true,
+          preview_char_budget:outputCharBudget,
           omitted_files:omittedFiles,
           truncated_files:items.filter(x=>x.truncated).length,
-          note:'These are relative payload-size estimates; no model usage or net savings were measured.',
+          note:compact?'Payload estimates only; no billed savings proven.':'These are relative payload-size estimates; no model usage or net savings were measured.',
         },
         ...(compact?{compact:true}:{}),
       };
@@ -127,8 +135,16 @@ export class Engine {
 
     if(action==='query'){
       const qRes=contextQuery(this.store,s.wsId,{query,limit});
-      if(compact&&qRes.uncertainty){
-        qRes.uncertainty=qRes.uncertainty.map(u=>u.length>60?u.slice(0,57)+'...':u);
+      if(compact){
+        if(qRes.uncertainty){
+          qRes.uncertainty=qRes.uncertainty.map(u=>u.length>60?u.slice(0,57)+'...':u);
+        }
+        const originalEdges=qRes.relations.length;
+        if(originalEdges>12){
+          qRes.relations=qRes.relations.slice(0,12);
+          qRes.relations_truncated=true;
+          qRes.relations_before_compaction=originalEdges;
+        }
       }
       const payload={...base,...qRes,...(compact?{compact:true}:{})};
       const fileBytes=new Map(s.index.files.map(f=>[f.path,f.bytes]));
