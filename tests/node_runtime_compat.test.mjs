@@ -6,7 +6,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import * as sqlite from 'node:sqlite';
-import {Database} from '../src/sqlite-compat.mjs';
+import {Database,sqliteApiName} from '../src/sqlite-compat.mjs';
 import {Store} from '../src/storage.mjs';
 
 function withTemp(fn){
@@ -18,6 +18,7 @@ function withTemp(fn){
 test('Node 22-26 SQLite compatibility chooses current Database when available',()=>{
   assert.equal(typeof Database,'function');
   assert.equal(Database,typeof sqlite.Database==='function'?sqlite.Database:sqlite.DatabaseSync);
+  assert.equal(sqliteApiName,typeof sqlite.Database==='function'?'Database':'DatabaseSync');
   const db=new Database(':memory:');
   try{
     db.exec('PRAGMA foreign_keys=ON; PRAGMA trusted_schema=OFF; CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT NOT NULL)');
@@ -77,4 +78,7 @@ test('CLI doctor reports running Node version on all supported runtimes',()=>wit
   assert.equal(doctor.node,process.versions.node);
   assert.equal(doctor.node_requirement,'>=22.13.0');
   assert.equal(doctor.sqlite,'node:sqlite');
+  assert.equal(doctor.sqlite_api,sqliteApiName);
+  assert.equal(doctor.sqlite_version,process.versions.sqlite||null);
+  assert.equal(doctor.node_binary,process.execPath);
 }));
