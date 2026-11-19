@@ -2,6 +2,15 @@
 
 A2A is a local-first, native-first **engineering intelligence support layer** for Antigravity. It is neither a model nor a proxy for native terminal/browser/agents. The plugin owns static context, guidance, metadata, evidence accounting and controlled local recovery; **Antigravity** owns project edits, terminal/browser actions, workspace permissions, and any native model/teamwork execution.
 
+## Re-audit invariants (19 November 2026)
+
+- Both `a2a_verify(assess)` and `a2a_verify(verify_handoff)` share `localEvidencePolicy`; restricted browser/visual/hardware/security/independent acceptance remains **unattested** by local reports.
+- The optional `acceptance_plans` table stores immutable user-authored, revision-bound scenario scope only when `persist_plan:true`; missing or modified criteria cannot disappear from a bound assessment.
+- Native PostToolUse reports distinguish confirmed zero exit, nonzero exit, and unknown/conflicting status. Only the first can contribute local test-run provenance.
+- Automatic Antigravity brain Markdown **full-content** history is default **off** and requires explicit `a2a artifact-autosnapshot on`; manual snapshots remain explicit.
+- Permission-denied recovery takes safety precedence over argument/page ID heuristics.
+- The release still requires independently signed evidence and F01–F18/Antigravity acceptance under issue #15.
+
 ## Architectural invariants
 
 1. **Four public MCP tools, no added runtime dependencies.** `a2a_context`, `a2a_impact`, `a2a_verify`, `a2a_evidence` communicate via JSON-RPC 2.0 stdio on Node >=22.13.0. Legacy aliases remain optional.
