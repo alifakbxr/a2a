@@ -102,7 +102,7 @@ export function assessVerification(store,wsId,root,rev,criteria,{planId=null}={}
     throw new Error('Provide 1–40 criteria, or a persisted plan_id with optional evidence bindings');
   let boundRevision=null,requested=criteria;
   if(planId!==null){
-    if(typeof planId!=='string'||!/^apl_[A-Za-z0-9_-]{8,100}$/.test(planId))throw new Error('Invalid plan_id');
+    if(typeof planId!=='string'||!/^apl-[A-Za-z0-9-]{8,100}$/.test(planId))throw new Error('Invalid plan_id');
     const saved=store.get('SELECT * FROM acceptance_plans WHERE workspace_id=? AND id=?',wsId,planId);
     if(!saved)throw new Error('Unknown or unauthorized acceptance plan');
     if(sha256(saved.criteria_json)!==saved.manifest_sha)throw new Error('Acceptance plan integrity mismatch');
