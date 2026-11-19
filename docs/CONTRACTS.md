@@ -145,3 +145,7 @@ The **existing** `a2a_evidence` tool now supports `assess_hypothesis`; there is 
 
 **Risk-guidance contract:** `proposeRiskTests` returns `suggested_test_ids` and `suggested_total`; its legacy `required_test_ids` is now empty because a heuristic cannot impose mandatory acceptance. Compact limits displayed suggestions to 3 while retaining all matched domain/omission counts. Only criteria explicitly added to the user's acceptance plan are mandatory.
 
+### RCA privacy cleanup and Compact evidence freshness
+
+`a2a_evidence(operation="delete_incident")` requires an authorized workspace, existing `incident_id`, `persist_rca:true` and `confirm_deletion:true`. It atomically deletes only the selected incident and its linked hypotheses; existing independent machine evidence and acceptance plans are **not removed**. This is logical deletion, not secure erasure of SQLite WAL/backups. In Compact, `incidents` and `hypotheses` lists show max 8 entries and report `total` / `more_available`, retaining causal-proof warnings. The `hypotheses` read path re-checks source revisions and stored named-test evidence hashes; a previously locally-supported cause becomes **stale** if the linked report was modified or removed.
+
