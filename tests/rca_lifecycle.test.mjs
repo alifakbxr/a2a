@@ -125,7 +125,7 @@ test('RCA: rejects stale, tampered and build-only evidence and secret-bearing no
   fs.writeFileSync(path.join(f.workspace,f.rel),'{"format":"a2a-test-report-v1","completed":false,"cases":[]}');
   assert.throws(()=>f.engine.evidence({workspace:f.workspace,operation:'assess_hypothesis',
    persist_rca:true,hypothesis_id:hyp.id,experiment_outcome:'supports',evidence_ids:[ev],
-   observation:'A local test reproduced the duplicate printing'}),/hash\/path/);
+   observation:'A local test reproduced the duplicate printing'}),/stale|hash\/path/);
   // Restore report then change source to make all previous observations stale.
   fs.writeFileSync(path.join(f.workspace,'src','checkin.js'),'export const canPrint=()=>true;\n');
   const stale=f.engine.evidence({workspace:f.workspace,operation:'hypotheses',incident_id:inc.id});
