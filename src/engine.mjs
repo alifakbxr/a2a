@@ -258,6 +258,8 @@ export class Engine {
         if(!saved||sha256(saved.criteria_json)!==saved.manifest_sha)throw new Error('Unknown or invalid prior acceptance plan');
         plannedCriteria=JSON.parse(saved.criteria_json);
         if(!Array.isArray(plannedCriteria)||plannedCriteria.length===0||plannedCriteria.length>40)throw new Error('Invalid prior plan');
+        if(plannedCriteria.some(c=>c.source_revision && c.source_revision!==s.revision))
+          throw new Error('The prior plan pins a different source_revision; create a new reviewed plan with an explicit updated revision');
       }
       const plan=planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria:plannedCriteria});
       if(plan_id!==null){
