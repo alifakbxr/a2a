@@ -2,7 +2,7 @@ import { Database } from './sqlite-compat.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import {dataDir,sha256,safeArtifactPath,MAX_ARTIFACT_BYTES,realpathIfExists,readSafeBytesFile} from './security.mjs';
+import {dataDir,sha256,safeArtifactPath,MAX_ARTIFACT_BYTES,realpathIfExists,readSafeBytesFile,getHomeDir,isSamePath} from './security.mjs';
 
 const DDL=fs.readFileSync(new URL('../schemas/database.sql',import.meta.url),'utf8');
 export class Store {
@@ -10,10 +10,13 @@ export class Store {
     this.base=path.resolve(base);
     // Never chmod a broad/shared directory if a mistaken environment override
     // points storage at HOME, /tmp, filesystem root or an app configuration root.
-    const home=os.homedir();
-    const unsafe=[path.parse(this.base).root,home,os.tmpdir(),path.join(home,'.config'),path.join(home,'.gemini'),path.join(home,'.gemini','antigravity')];
-    const compare=p=>process.platform==='win32'?p.toLowerCase():p;
-    if(unsafe.some(p=>compare(path.resolve(p))===compare(this.base)))throw new Error('A2A data directory must be a dedicated private directory');
+    // Treat both the OS account home and overridden HOME/USERPROFILE as protected;
+    // never chmod a user's home directory due to an environment override.
+    const homes=new Set([os.homedir(),getHomeDir()]);
+    const unsafe=[path.parse(this.base).root,os.tmpdir(),...[...homes].flatMap(home=>[
+      home,path.join(home,'.config'),path.join(home,'.gemini'),path.join(home,'.gemini','antigravity')
+    ])];
+    if(unsafe.some(p=>isSamePath(p,this.base)))throw new Error('A2A data directory must be a dedicated private directory');
     fs.mkdirSync(this.base,{recursive:true,mode:0o700});
     const dataStat=fs.lstatSync(this.base);
     if(dataStat.isSymbolicLink()||!dataStat.isDirectory())throw new Error('A2A data directory must be a real directory');
@@ -347,7 +350,7 @@ export class Store {
   }
   scanAndSnapshotBrainArtifacts(conversationId,brainDir=null,{workspaceId=null,workspaceRoot=null}={}){
     if(!conversationId)return [];
-    const bDir=brainDir||path.join(process.env.HOME||'','.gemini/antigravity/brain',conversationId);
+    const bDir=brainDir||path.join(getHomeDir(),'.gemini','antigravity','brain',conversationId);
     if(!fs.existsSync(bDir))return [];
     const results=[];
     try{

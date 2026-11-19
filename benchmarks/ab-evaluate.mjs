@@ -71,7 +71,7 @@ export function evaluateManifest(manifest,readCapture,{minRepetitions=5}={}){
 function safeCapture(root,name){
   const file=path.resolve(root,name),rel=path.relative(root,file);
   check(rel&&rel!=='..'&&!rel.startsWith('..'+path.sep)&&!path.isAbsolute(rel),'Capture must stay inside manifest directory');
-  const real=fs.realpathSync(file),resolved=path.relative(root,real);
+  const real=fs.realpathSync(file),resolved=path.relative(fs.realpathSync(root),real);
   check(resolved&&resolved!=='..'&&!resolved.startsWith('..'+path.sep)&&!path.isAbsolute(resolved),'Capture symlink escapes manifest directory');
   const st=fs.statSync(real);check(st.isFile()&&st.size<=MAX,'Capture must be a regular file <=8 MiB');
   return fs.readFileSync(real,'utf8');

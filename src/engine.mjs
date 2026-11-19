@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import {Store,uniqueId} from './storage.mjs';
-import {requireAuthorizedWorkspace,sha256,cleanError,safeFile,getCompactMode,getHomeDir,readSafeJsonFile} from './security.mjs';
+import {requireAuthorizedWorkspace,sha256,cleanError,safeFile,getCompactMode,getHomeDir,isSamePath,isSameOrDescendantPath,readSafeJsonFile} from './security.mjs';
 import {discover,createGraph,snapshotOf,gitHead,discoverTestCommands} from './scanner.mjs';
 import {contextQuery,analyzeImpact,shortGraphSummary,validateChangedPaths} from './graph.mjs';
 import {planVerification,assessVerification,listEvidence,freshness,verifyHandoff} from './verification.mjs';
@@ -464,11 +464,13 @@ export class Engine {
     if(operation==='snapshot_artifact'||operation==='snapshot-artifact'){
       const convId=conversation_id||id||this.#resolveActiveConversationId();
       if(!artifact_path&&!artifact_name)throw new Error('artifact_path or artifact_name is required');
-      const targetPath=artifact_path||path.join(process.env.HOME||'','.gemini/antigravity/brain',convId,artifact_name);
-      // Authorization for a project does not grant access to every conversation's
-      // brain files. Require this conversation to be active in that workspace.
+      const targetPath=artifact_path
+        ? (path.isAbsolute(artifact_path)?artifact_path:path.resolve(s.root,artifact_path))
+        : path.join(getHomeDir(),'.gemini','antigravity','brain',convId,artifact_name);
+      // Absolute path identity, including macOS /private aliases and case normalization,
+      // must be verified against this authorized workspace rather than process.cwd().
       const absolute=path.resolve(targetPath);
-      const inWorkspace=absolute!==s.root && absolute.startsWith(s.root+path.sep);
+      const inWorkspace=isSameOrDescendantPath(s.root,absolute)&&!isSamePath(s.root,absolute);
       if(!inWorkspace){
         const sessionFile=path.join(this.store.base,'active-session.json');
         let latest=null;

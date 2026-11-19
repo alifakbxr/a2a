@@ -109,14 +109,9 @@ export const settingsPath = () => {
 };
 
 function readSettings() {
-  try {
-    const file=settingsPath(),stat=fs.lstatSync(file);
-    if(stat.isFile()&&!stat.isSymbolicLink()&&stat.size<=64*1024){
-      const result=JSON.parse(fs.readFileSync(file,'utf8'));
-      return result&&typeof result==='object'&&!Array.isArray(result)?result:{};
-    }
-  } catch {}
-  return {};
+  const read=readSafeJsonFile(settingsPath(),{maxBytes:64*1024,checkParentDir:true});
+  if(!read.ok){if(read.reason!=='missing')debugLog('settings_read',read.reason);return {}}
+  return read.value;
 }
 
 function writeSettings(patch) {
@@ -412,7 +407,23 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
       ...(process.env.APPDATA ? [path.join(process.env.APPDATA, 'Antigravity IDE', 'User', 'globalStorage', 'state.vscdb')] : []),
     ];
     for (const dbFile of stateCandidates) {
-      if (!fs.existsSync(dbFile)) continue;
+      // SQLite takes a pathname, so conservatively refuse symlinked/oversized
+      // trust stores and user-controlled symlinked parent directories.
+      let safeDb=false;
+      try{
+        const leaf=fs.lstatSync(dbFile);
+        if(leaf.isFile()&&!leaf.isSymbolicLink()&&leaf.size<=64*1024*1024){
+          const rel=path.relative(path.resolve(home),path.dirname(path.resolve(dbFile)));
+          if(rel!=='.'&&rel!==''&&(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel)))continue;
+          let dir=path.resolve(home);safeDb=true;
+          for(const seg of rel.split(path.sep).filter(Boolean)){
+            dir=path.join(dir,seg);
+            const st=fs.lstatSync(dir);
+            if(!st.isDirectory()||st.isSymbolicLink()){safeDb=false;break}
+          }
+        }
+      }catch{}
+      if(!safeDb)continue;
       let db;
       try {
         db = new Database(dbFile, { readOnly: true });
@@ -439,10 +450,10 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
   try {
     for (const appDir of ['antigravity-cli', 'antigravity', 'antigravity-ide']) {
       const cliSettings = path.join(home, '.gemini', appDir, 'settings.json');
-      if (!fs.existsSync(cliSettings)) continue;
+      const config=readSafeJsonFile(cliSettings,{maxBytes:128*1024,checkParentDir:true});
+      if(!config.ok)continue;
       try {
-        const content = JSON.parse(fs.readFileSync(cliSettings, 'utf8'));
-        const trusted = Array.isArray(content?.trustedWorkspaces) ? content.trustedWorkspaces : [];
+        const trusted = Array.isArray(config.value?.trustedWorkspaces) ? config.value.trustedWorkspaces : [];
         for (const p of trusted) {
           addPath(p, { requireMarker: false });
         }
@@ -463,8 +474,9 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
         for (const f of fs.readdirSync(projDir)) {
           if (!f.endsWith('.json')) continue;
           try {
-            const content = JSON.parse(fs.readFileSync(path.join(projDir, f), 'utf8'));
-            const resources = content?.projectResources?.resources || [];
+            const read=readSafeJsonFile(path.join(projDir,f),{maxBytes:128*1024,checkParentDir:true});
+            if(!read.ok)continue;
+            const resources = read.value?.projectResources?.resources || [];
             for (const res of resources) {
               if (res.folderUri && typeof res.folderUri === 'string' && res.folderUri.startsWith('file://')) {
                 try {
@@ -480,8 +492,9 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
     // 4. ~/.gemini/projects.json (historical projects — require project marker)
     try {
       const pJson = path.join(home, '.gemini', 'projects.json');
-      if (fs.existsSync(pJson)) {
-        const content = JSON.parse(fs.readFileSync(pJson, 'utf8'));
+      const read=readSafeJsonFile(pJson,{maxBytes:128*1024,checkParentDir:true});
+      if(read.ok){
+        const content=read.value;
         if (content?.projects && typeof content.projects === 'object') {
           for (const p of Object.keys(content.projects)) {
             addPath(p, { requireMarker: true });
@@ -520,9 +533,9 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
     const active=[];
     try{
       const sessionFile=path.join(dataDir(),'active-session.json');
-      const stat=fs.lstatSync(sessionFile);
-      if(stat.isFile()&&!stat.isSymbolicLink()&&stat.size<=128*1024){
-        const latest=JSON.parse(fs.readFileSync(sessionFile,'utf8'))?.latest;
+      const metadata=readSafeJsonFile(sessionFile,{maxBytes:128*1024});
+      if(metadata.ok){
+        const latest=metadata.value.latest;
         const candidates=[...(Array.isArray(latest?.workspacePaths)?latest.workspacePaths.slice(0,32):[]),latest?.cwd];
         for(const candidate of candidates){
           if(typeof candidate!=='string'||!path.isAbsolute(candidate))continue;
@@ -543,9 +556,12 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
 function readWorkspaceGrants(){
   const file=allowlistPath();
   try{
-    const stat=fs.lstatSync(file);
-    if(!stat.isFile()||stat.isSymbolicLink()||stat.size>128*1024)throw Error('Unsafe workspace grants file');
-    const data=JSON.parse(fs.readFileSync(file,'utf8'));
+    const read=readSafeJsonFile(file,{maxBytes:128*1024,checkParentDir:true});
+    if(!read.ok){
+      if(read.reason==='missing')return {allowed:[],revoked:[],valid:true};
+      throw Error('Unsafe workspace grants file');
+    }
+    const data=read.value;
     if(!data||!Array.isArray(data.allowed)||!Array.isArray(data.revoked??[]))throw Error('Malformed workspace grants');
     const validList=xs=>xs.every(x=>typeof x==='string'&&x.length<=1024&&path.isAbsolute(x));
     const revoked=data.revoked??[];
@@ -560,37 +576,22 @@ function readWorkspaceGrants(){
 export function loadAllowlist(){return readWorkspaceGrants().allowed}
 export function loadRevokedWorkspaces(){return readWorkspaceGrants().revoked}
 
+// Normalize only documented macOS /private aliases (never arbitrary paths)
+// and the default case-insensitive OS families before comparing boundaries.
+function normalizedComparablePath(input){
+  let resolved=path.resolve(input);
+  if(process.platform==='darwin')
+    resolved=resolved.replace(/^\/private(?=\/(?:var|tmp|etc)(?:\/|$))/,'');
+  return process.platform==='win32'||process.platform==='darwin'?resolved.toLowerCase():resolved;
+}
+export function isSamePath(a,b){
+  return typeof a==='string'&&a.length>0&&typeof b==='string'&&b.length>0&&
+    normalizedComparablePath(a)===normalizedComparablePath(b);
+}
 export function isSameOrDescendantPath(parent, child) {
-  if (!parent || !child) return false;
-  const p = path.resolve(parent);
-  const c = path.resolve(child);
-  if (p === c) return true;
-
-  const pWithSep = p.endsWith(path.sep) ? p : p + path.sep;
-  if (c.startsWith(pWithSep)) return true;
-
-  // Case-insensitive check (Windows and macOS default filesystems)
-  if (process.platform === 'win32' || process.platform === 'darwin') {
-    const pLower = p.toLowerCase();
-    const cLower = c.toLowerCase();
-    const pLowerWithSep = pLower.endsWith(path.sep) ? pLower : pLower + path.sep;
-    if (cLower === pLower || cLower.startsWith(pLowerWithSep)) return true;
-  }
-
-  // macOS /private symlink alias check (/var -> /private/var, /tmp -> /private/tmp)
-  if (process.platform === 'darwin') {
-    const pPriv = p.startsWith('/private/') ? p : '/private' + p;
-    const cPriv = c.startsWith('/private/') ? c : '/private' + c;
-    const pPrivWithSep = pPriv.endsWith('/') ? pPriv : pPriv + '/';
-    if (cPriv === pPriv || cPriv.startsWith(pPrivWithSep)) return true;
-
-    const pNoPriv = p.startsWith('/private/') ? p.slice('/private'.length) : p;
-    const cNoPriv = c.startsWith('/private/') ? c.slice('/private'.length) : c;
-    const pNoPrivWithSep = pNoPriv.endsWith('/') ? pNoPriv : pNoPriv + '/';
-    if (cNoPriv === pNoPriv || cNoPriv.startsWith(pNoPrivWithSep)) return true;
-  }
-
-  return false;
+  if(typeof parent!=='string'||!parent||typeof child!=='string'||!child)return false;
+  const p=normalizedComparablePath(parent),c=normalizedComparablePath(child);
+  return c===p||c.startsWith(p.endsWith(path.sep)?p:p+path.sep);
 }
 
 export function isWorkspaceAuthorized(ws){
@@ -692,7 +693,7 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
     const brainDir = path.resolve(getHomeDir(), '.gemini', 'antigravity', 'brain', conversationId);
     // Only top-level Markdown artifacts can be read from a conversation brain.
     // Never allow .system_generated or nested internal conversation content.
-    if (path.dirname(resolved) === brainDir && path.extname(resolved).toLowerCase()==='.md'
+    if (isSamePath(path.dirname(resolved),brainDir) && path.extname(resolved).toLowerCase()==='.md'
         && !path.basename(resolved).startsWith('.')) {
       // The special brain exception does not rely on workspace approval.
       // Every directory segment below HOME must therefore be a real directory,
@@ -722,7 +723,7 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
   }
 
   const base = path.basename(resolved);
-  const relativeInsideBoundary=path.relative(authorizedBoundary,resolved);
+  const relativeInsideBoundary=trustedBrainArtifact?path.basename(resolved):path.relative(authorizedBoundary,resolved);
   if (shouldIgnore(relativeInsideBoundary) || /(?:^\.env|\.pem$|\.key$|\.sqlite|\.git$)/i.test(base)) {
     throw new Error('Access to sensitive file denied');
   }

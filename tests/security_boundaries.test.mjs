@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {Store} from '../src/storage.mjs';
+import {Database} from '../src/sqlite-compat.mjs';
 import {Engine} from '../src/engine.mjs';
 import {readSafeBytesFile,readSafeJsonFile,loadAntigravityWorkspaces,invalidateWorkspaceCache,authorizeWorkspace} from '../src/security.mjs';
 
@@ -113,6 +114,39 @@ test('release config with insecure permissions fails closed with actionable diag
   if(engine)engine.close();
   if(oldHome===undefined)delete process.env.HOME;else process.env.HOME=oldHome;
   if(oldData===undefined)delete process.env.A2A_DATA_DIR;else process.env.A2A_DATA_DIR=oldData;
+  invalidateWorkspaceCache();
+  fs.rmSync(tmp,{recursive:true,force:true});
+ }
+});
+
+test('IDE trusted workspace discovery rejects symlinked SQLite and oversized JSON metadata',()=>{
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-ide-metadata-'));
+ const oldHome=process.env.HOME;
+ try{
+  process.env.HOME=tmp;
+  const work=path.join(tmp,'trusted-project');
+  fs.mkdirSync(work);fs.writeFileSync(path.join(work,'package.json'),'{"name":"trusted-project"}');
+  const dbDir=path.join(tmp,'.config','Antigravity IDE','User','globalStorage');
+  fs.mkdirSync(dbDir,{recursive:true});
+  const rawDb=path.join(tmp,'external.db');
+  const db=new Database(rawDb);
+  db.exec('CREATE TABLE ItemTable (key TEXT PRIMARY KEY,value TEXT)');
+  db.prepare('INSERT INTO ItemTable(key,value) VALUES(?,?)').run('content.trust.model.key',JSON.stringify({uriTrustInfo:[
+   {trusted:true,uri:{fsPath:work}}
+  ]}));
+  db.close();
+  try{
+   fs.symlinkSync(rawDb,path.join(dbDir,'state.vscdb'),'file');
+   invalidateWorkspaceCache();
+   assert.ok(!loadAntigravityWorkspaces({bypassCache:true}).includes(work));
+  }catch(err){if(!['EPERM','EACCES','ENOTSUP'].includes(err.code))throw err}
+  const cli=path.join(tmp,'.gemini','antigravity','settings.json');
+  fs.mkdirSync(path.dirname(cli),{recursive:true});
+  fs.writeFileSync(cli,JSON.stringify({trustedWorkspaces:[work],padding:'x'.repeat(200000)}));
+  invalidateWorkspaceCache();
+  assert.ok(!loadAntigravityWorkspaces({bypassCache:true}).includes(work));
+ }finally{
+  if(oldHome===undefined)delete process.env.HOME;else process.env.HOME=oldHome;
   invalidateWorkspaceCache();
   fs.rmSync(tmp,{recursive:true,force:true});
  }
