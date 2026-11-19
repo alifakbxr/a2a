@@ -210,6 +210,15 @@
             },
             "maxItems": 200
           },
+          "persist_plan": {
+            "type": "boolean",
+            "description": "For plan: explicitly persist its full criterion scope locally, bound to the current source revision. Default false."
+          },
+          "plan_id": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "For assess: enforce every criterion of an explicit persisted plan, including omitted and stale scenarios."
+          },
           "criteria": {
             "type": "array",
             "maxItems": 40,
