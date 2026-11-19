@@ -26,7 +26,8 @@ test('all independently developed MCP actions survive integration',()=>{
 
 test('all known STOCKROOM critical risk domains remain in integrated plan',()=>{
   const r=proposeRiskTests({paths:['routes/web.php','app/Services/PosCheckoutService.php','app/Services/RefundService.php','app/Services/InventoryService.php','public/sw.js','resources/js/offline/db.ts']});
-  const required=new Set(r.required_test_ids);
+  const required=new Set(r.suggested_test_ids);
+  assert.deepEqual(r.required_test_ids,[],'Suggestions are not accepted as mandatory scenarios until user reviews them');
   for(const check of ['auth-entry-points','auth-store-link','finance-line-reconcile','finance-paid-reconcile','refund-duplicate-lines','refund-amount-only','transfer-race','offline-process-restart','offline-user-switch','idem-response-loss','idem-payload-conflict']){
     assert.ok(required.has(check),check);
   }
