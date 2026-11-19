@@ -49,6 +49,10 @@ The npm and GitHub Packages publishing workflows now run [release authorization]
 
 On 18 November 2026, the original frozen STOCKROOM app archives were independently checked for PHP syntax and frontend production builds. They passed those checks, but PHPUnit could not start in the local environment because required PHP extensions were unavailable. Full F01–F18 dynamic acceptance is still not complete. Details: [Frozen STOCKROOM benchmark local rerun](./STOCKROOM_BENCHMARK_RECHECK_2026_11_18.md).
 
+## 19 November 2026 re-audit release hold
+
+[PR #43](https://github.com/alifakbxr/a2a/pull/43) addresses #38–#42, including a false-positive native handoff path and a hook run-status ambiguity. Both P0 issues prevent release confidence until regression coverage and exact post-merge CI pass. It also hardens mixed permission denial handling, explicit plan-scope persistence and opt-in full Markdown content retention. **Do not infer successful real Antigravity operation from a local synthetic hook fixture.** External F01–F18, human approval and issue #15 are still outstanding.
+
 ## Current behavioral hardening CI (18 November 2026)
 
 **Source:** [PR #36](https://github.com/alifakbxr/a2a/pull/36) merged to `v2.0.1` at `67ea5888caf61751952c8a7daa1eb222d738d4b6`. [Post-merge CI run #44325007116](https://github.com/alifakbxr/a2a/actions/runs/44325007116) completed **4/4 successful jobs**, with **213/213 Node tests** on Ubuntu Node 22. This includes local real MCP stdio/SQLite E2E for authorized/denied workspaces, typed criteria, negative false-PASS controls, checkpoint recovery and privacy. It **does not** prove Antigravity installed-plugin behavior, Figma/browser visual states, printer hardware, Laravel HTTP/database transactions, or any independent F01–F18 PASS.
