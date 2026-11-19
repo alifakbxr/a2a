@@ -6,7 +6,7 @@ import {uniqueId} from './storage.mjs';
 import {discoverTestCommands,gitChanges} from './scanner.mjs';
 
 import {proposeRiskTests} from './risk-guidance.mjs';
-import {normalizeAcceptanceCriterion,acceptanceCompletion} from './acceptance-matrix.mjs';
+import {normalizeAcceptanceCriterion,acceptanceCompletion,localEvidencePolicy} from './acceptance-matrix.mjs';
 
 export function parseArtifact(text, filename){
   const ext=filename.toLowerCase().split('.').at(-1), sample=text.slice(0,1200000);
@@ -94,13 +94,43 @@ export function planVerification({index,impact,criteria=[]}){
   return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,risk_guidance:riskGuidance,...(maintainerReview?{maintainer_review:maintainerReview}:{}),checks,completion:acceptanceCompletion(plan,[],{planning:true}),execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
 }
 function aggregate(results){if(results.some(r=>r.status==='failed'))return 'failed';if(results.some(r=>r.status==='blocked'))return 'blocked';if(results.length&&results.every(r=>r.status==='passed'))return 'passed';return 'inconclusive'}
-export function assessVerification(store,wsId,root,rev,criteria){
+export function assessVerification(store,wsId,root,rev,criteria,{planId=null}={}){
   // Either the entire verification run and its evidence records are committed,
   // or none are. Invalid later criteria must never leave orphaned passed evidence.
   return store.transaction(()=>{
-  if(!Array.isArray(criteria)||criteria.length===0||criteria.length>40)throw new Error('Provide 1–40 criteria including artifact paths');
+  if(!Array.isArray(criteria)||criteria.length>40||(!planId&&criteria.length===0))
+    throw new Error('Provide 1–40 criteria, or a persisted plan_id with optional evidence bindings');
+  let boundRevision=null,requested=criteria;
+  if(planId!==null){
+    if(typeof planId!=='string'||!/^apl-[A-Za-z0-9-]{8,100}$/.test(planId))throw new Error('Invalid plan_id');
+    const saved=store.get('SELECT * FROM acceptance_plans WHERE workspace_id=? AND id=?',wsId,planId);
+    if(!saved)throw new Error('Unknown or unauthorized acceptance plan');
+    if(sha256(saved.criteria_json)!==saved.manifest_sha)throw new Error('Acceptance plan integrity mismatch');
+    const authoritative=JSON.parse(saved.criteria_json);
+    if(!Array.isArray(authoritative)||authoritative.length===0||authoritative.length>40)throw new Error('Invalid persisted acceptance plan');
+    boundRevision=saved.revision_id;
+    const indexed=new Map();
+    for(const item of criteria){
+      if(!item||typeof item!=='object'||Array.isArray(item)||typeof item.id!=='string'||indexed.has(item.id))throw new Error('Invalid or duplicate plan evidence binding');
+      indexed.set(item.id,item);
+    }
+    const expected=new Set(authoritative.map(c=>c.id));
+    if([...indexed.keys()].some(id=>!expected.has(id)))throw new Error('Assessment criterion is not part of the persisted plan');
+    requested=authoritative.map(original=>{
+      const binding=indexed.get(original.id)||{};
+      // The persisted plan controls the meaning of acceptance. Caller may
+      // attach evidence but may not silently change its expected behavior.
+      for(const key of ['description','given','when','then','evidence_type','viewport','ui_state','reference','source_revision','negative']){
+        if(Object.hasOwn(binding,key)&&JSON.stringify(binding[key])!==JSON.stringify(original[key]))
+          throw new Error('Acceptance contract changed: '+key);
+      }
+      return {...original,...(typeof binding.artifact==='string'?{artifact:binding.artifact}:{}),
+        ...(typeof binding.test_name==='string'?{test_name:binding.test_name}:{}),
+        ...(binding.blocked===true?{blocked:true}:{})};
+    });
+  }
   const ids=new Set(),results=[],plan=[];
-  for(const c of criteria){
+  for(const c of requested){
     if(typeof c==='string')throw new Error('Assessment criteria require an explicit id and named test evidence');
     const criterion=normalizeAcceptanceCriterion(c);
     if(ids.has(criterion.id))throw new Error('Invalid or duplicate criterion ID');
@@ -123,20 +153,21 @@ export function assessVerification(store,wsId,root,rev,criteria){
         else if(parsed.status==='failed'){derivedStatus='failed';reason='The same test suite contains failures';}
         else {derivedStatus='passed';reason=null;}
       }
-      if(criterion.source_revision&&criterion.source_revision!==rev){
-        derivedStatus='stale';reason='Explicit source revision differs from current workspace revision';
+      if((criterion.source_revision&&criterion.source_revision!==rev)||(boundRevision&&boundRevision!==rev)){
+        derivedStatus='stale';reason='Acceptance plan or explicit source revision differs from current workspace revision';
       }
-      if(derivedStatus==='passed'&&['browser','visual','hardware','security','independent'].includes(criterion.evidence_type)){
-        derivedStatus='inconclusive';reason='Local named test cannot independently attest this execution type, screen state or external acceptance';
+      if(derivedStatus==='passed'&&!localEvidencePolicy(criterion).locally_attestable){
+        derivedStatus='inconclusive';reason=localEvidencePolicy(criterion).reason;
       }
       const evidenceId=uniqueId('ev');
       store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',evidenceId,wsId,rev,criterion.id,derivedStatus==='stale'?'inconclusive':derivedStatus,parsed.format||'unknown',c.artifact,hash,JSON.stringify({assertions:parsed.assertions||0,failed:parsed.failed||0,skipped:parsed.skipped||0,reason,test_name:matchName,requested_evidence_type:criterion.evidence_type||'unspecified',trust:'local-report-not-cryptographically-attested'}),new Date().toISOString());
       result={id:criterion.id,status:derivedStatus,evidence_id:evidenceId,assertions:parsed.assertions||0,...(reason?{reason}:{})};
     }else if(c.blocked===true){result={id:criterion.id,status:'blocked',reason:'Required environment unavailable; no runnable evidence supplied'}}
+    if(boundRevision&&boundRevision!==rev){result={id:criterion.id,status:'stale',reason:'Persisted acceptance plan revision differs from current workspace source'};}
     results.push(result);
   }
   const verdict=aggregate(results),runId=uniqueId('run');store.run('INSERT INTO runs VALUES(?,?,?,?,?,?)',runId,wsId,rev,verdict,JSON.stringify(results),new Date().toISOString());
-  return {run_id:runId,revision:rev,verdict,criteria:results,completion:acceptanceCompletion(plan,results),proof_scope:'named-machine-test-assertions-only',release_ready:false,semantic_requirements_proven:false,limits:['A passing JUnit/TAP/JSON suite is NOT a release-readiness or semantic concurrency/offline/security verdict.','Only independently signed acceptance evidence via assess_release can report release eligibility.','Report parsing does not attest origin or test execution authenticity.']};
+  return {run_id:runId,revision:rev,verdict,criteria:results,plan_id:planId||null,scope_bound:Boolean(planId),scope_source_revision:boundRevision,completion:acceptanceCompletion(plan,results),proof_scope:'named-machine-test-assertions-only',release_ready:false,semantic_requirements_proven:false,limits:['A passing JUnit/TAP/JSON suite is NOT a release-readiness or semantic concurrency/offline/security verdict.','Only independently signed acceptance evidence via assess_release can report release eligibility.','Report parsing does not attest origin or test execution authenticity.',...(!planId?['Acceptance scope is unbound: omitted planned scenarios cannot be detected without plan_id.']:[])]};
   });
 }
 export function listEvidence(store,wsId,root,currentRevision,{limit=20,id}={}){
@@ -300,10 +331,16 @@ export function verifyHandoff(store,wsId,root,rev,{
 
   let criteriaResults=[];
   const hasExplicitCriteria = Array.isArray(criteria) && criteria.length > 0;
+  const criteriaSeen=new Set();
   if(hasExplicitCriteria){
+    if(criteria.length>40)throw new Error('Too many handoff criteria');
     for(const c of criteria){
-      const cid=typeof c==='string'?c:c.id;
-      const testName=typeof c==='object'&&c.test_name?c.test_name.trim():(typeof c==='string'?c.trim():'*');
+      if(typeof c!=='string' && (!c||typeof c!=='object'||Array.isArray(c)))throw new Error('Invalid handoff criterion');
+      const typed=typeof c==='string'?null:normalizeAcceptanceCriterion(c);
+      const cid=typed?.id??c.trim();
+      if(!cid||criteriaSeen.has(cid))throw new Error('Invalid or duplicate handoff criterion ID');
+      criteriaSeen.add(cid);
+      const testName=typeof c==='object'&&typeof c.test_name==='string'?c.test_name.trim():(typeof c==='string'?c.trim():'*');
       let cStatus='passed';
       let cReason=null;
       if(testName==='*'){
@@ -322,7 +359,13 @@ export function verifyHandoff(store,wsId,root,rev,{
           cReason=`Test case "${testName}" was skipped`;
         }
       }
-      criteriaResults.push({id:cid,status:cStatus,...(cReason?{reason:cReason}:{})});
+      if(typed?.source_revision&&typed.source_revision!==rev){
+        cStatus='inconclusive';cReason='Handoff criterion source revision is stale';
+      }
+      if(cStatus==='passed'&&!localEvidencePolicy(typed).locally_attestable){
+        cStatus='inconclusive';cReason=localEvidencePolicy(typed).reason;
+      }
+      criteriaResults.push({id:cid,status:cStatus,...(typed?.evidence_type?{evidence_type:typed.evidence_type}:{}),...(cReason?{reason:cReason}:{})});
     }
     if(criteriaResults.some(r=>r.status==='failed')){
       derivedStatus='failed';
@@ -411,6 +454,8 @@ export function verifyHandoff(store,wsId,root,rev,{
   return {
     operation:'verify_handoff',
     verified,
+    verified_scope:verified?'local-named-machine-assertions-only':'none',
+    independently_attested:false,
     tests_passed:testsPassed,
     deliverable_verified:deliverableVerified,
     status:derivedStatus,
@@ -428,7 +473,7 @@ export function verifyHandoff(store,wsId,root,rev,{
     run_id:runId,
     evidence_id:evidenceId,
     summary:deliverableVerified
-      ?`Worker ${worker_name||'task'} deliverable verified: ${parsed.assertions} assertions passed (${parsed.skipped||0} skipped) with mapped acceptance criteria across ${detectedChanged.length} changed files.`
+      ?`Worker ${worker_name||'task'} local named test assertions verified (${parsed.assertions} passed, ${parsed.skipped||0} skipped). This is not independent deliverable or runtime acceptance.`
       :testsPassed
         ?`Worker ${worker_name||'task'} tests passed (${parsed.assertions} assertions), but deliverable is unverified: acceptance criteria must be mapped to test cases.`
         :`Worker ${worker_name||'task'} handoff unverified (${derivedStatus}): ${reason||'Test requirements not satisfied.'}`,

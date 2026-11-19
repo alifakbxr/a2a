@@ -75,6 +75,10 @@ The utility classifies incomplete steps and reported scenario statuses, but does
 
 Store raw headless event streams only in a private location. Do not publish cookies, prompts, authentication details, complete user logs or internal browser profiles.
 
+## Re-audit note: checkpoint versus acceptance plan
+
+A task checkpoint holds **unverified** decisions and pending tests; it is not a frozen acceptance manifest. For optional complete-scope assessment use `a2a_verify(plan,persist_plan:true)` and pass its `plan_id` to `a2a_verify(assess)`. The plan is persisted only by explicit request and is bound to the source revision. `model_recovery` notes remain separate and never count as a passing test.
+
 ## What this does not prove
 
 An opt-in checkpoint, a locally passing named test, and a stream-derived reported pass are different evidence classes. None establishes independent HTTP/browser/DB behavior, end-user visual parity, F01–F18 STOCKROOM acceptance, or publication eligibility.

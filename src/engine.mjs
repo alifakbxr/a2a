@@ -246,22 +246,47 @@ export class Engine {
     this.store.recordTelemetry(s.wsId,{toolName:'a2a_impact',action:'impact',rawScopeTokens:estimateTokens(rawScopeBytes),responseTokens:estimateTokens(JSON.stringify(payload))});
     return payload;
   }
-  verify({workspace,operation='plan',criteria=[],changed=[],worker_name,artifact,allow_stale}={}){
+  verify({workspace,operation='plan',criteria=[],changed=[],worker_name,artifact,allow_stale,persist_plan=false,plan_id=null}={}){
     const compact=getCompactMode();
     const s=this.sync(workspace,{verifyIntegrity:true});
     if(operation==='plan'){
       validateChangedPaths(changed);
-      const plan=planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria});
+      let plannedCriteria=criteria;
+      if(plan_id!==null){
+        if(persist_plan!==true||!Array.isArray(criteria)||criteria.length!==0)throw new Error('Reissue plan requires persist_plan=true and no replacement criteria');
+        const saved=this.store.get('SELECT * FROM acceptance_plans WHERE workspace_id=? AND id=?',s.wsId,plan_id);
+        if(!saved||sha256(saved.criteria_json)!==saved.manifest_sha)throw new Error('Unknown or invalid prior acceptance plan');
+        plannedCriteria=JSON.parse(saved.criteria_json);
+        if(!Array.isArray(plannedCriteria)||plannedCriteria.length===0||plannedCriteria.length>40)throw new Error('Invalid prior plan');
+        if(plannedCriteria.some(c=>c.source_revision && c.source_revision!==s.revision))
+          throw new Error('The prior plan pins a different source_revision; create a new reviewed plan with an explicit updated revision');
+      }
+      const plan=planVerification({index:s.index,impact:analyzeImpact(this.store,s.wsId,s.root,{changed}),criteria:plannedCriteria});
+      if(plan_id!==null){
+        plan.reissued_from=plan_id;
+        plan.warning='A reissued plan retains the prior required scenarios but does not prove they were executed on current code. Rerun native tests and review new evidence.';
+      }
       if(compact){
         if(plan.impact&&plan.impact.unknowns){
           plan.impact.unknowns=plan.impact.unknowns.map(u=>u.length>60?u.slice(0,57)+'...':u);
         }
         if(plan.checks) delete plan.checks.note;
       }
+      // Persist acceptance scope only on explicit opt-in; plans may contain
+      // user-authored requirements and are therefore private local content.
+      if(persist_plan===true){
+        if(plan.criteria.length===0)throw new Error('Cannot persist an empty acceptance plan');
+        const id=uniqueId('apl');
+        const manifest=JSON.stringify(plan.criteria);
+        this.store.run('INSERT INTO acceptance_plans(id,workspace_id,revision_id,manifest_sha,criteria_json,created_at) VALUES(?,?,?,?,?,?)',
+          id,s.wsId,s.revision,sha256(manifest),manifest,new Date().toISOString());
+        this.store.run('DELETE FROM acceptance_plans WHERE workspace_id=? AND id NOT IN (SELECT id FROM acceptance_plans WHERE workspace_id=? ORDER BY created_at DESC LIMIT 30)',s.wsId,s.wsId);
+        plan.plan_id=id;plan.scope_bound=true;plan.scope_persisted=true;
+      }else{plan.plan_id=null;plan.scope_bound=false;plan.scope_persisted=false;}
       return {revision:s.revision,...plan,...(compact?{compact:true}:{})};
     }
     if(operation==='assess'){
-      const res=assessVerification(this.store,s.wsId,s.root,s.revision,criteria);
+      const res=assessVerification(this.store,s.wsId,s.root,s.revision,criteria,{planId:plan_id});
       if(compact){
         if(res.limits){
           res.limits=['Report origin unverified','Untested behaviors out of scope'];

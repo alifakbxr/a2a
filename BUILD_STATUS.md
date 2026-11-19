@@ -24,6 +24,10 @@
 - Opt-in teamwork advisor requires explicit low coupling and independent file ownership. No automatic workers or additional runtime dependencies.
 - Privacy-preserving telemetry for historic conversations; no fabricated token savings. Optional `a2a stats` calls remote GitHub APIs via the user's installed `gh` CLI only when explicitly requested; clone traffic is not a verified installation metric.
 
+## Follow-up re-audit (19 November 2026)
+
+[PR #43](https://github.com/alifakbxr/a2a/pull/43) addresses five new re-audit issues #38–#42: typed evidence scope in handoffs, fail-closed native process exit provenance, safety-prioritized permission errors, optional immutable acceptance manifests, and **default-off** automatic full brain Markdown content retention. The earlier **213/213** and **218/218** CI counts are historical, **not** test results for these new changes; assess the exact PR and merged-commit runs separately. The code still does **not** independently prove installed Antigravity, Figma, printer, real STOCKROOM F01–F18 or provider-token savings.
+
 ## Actual private STOCKROOM preflight
 
 The four frozen source archives were privately recovered and fingerprinted. Native: 82/82 PHP syntax checks and Vite build passed; A2A-generated: 61/61 PHP syntax checks and Vite build passed. PHPUnit could not start because the test environment lacked required PHP extensions. **None of F01–F18 live HTTP/browser/database cases was established as passed.** See [benchmark preflight](docs/STOCKROOM_BENCHMARK_RECHECK_2026_11_18.md).

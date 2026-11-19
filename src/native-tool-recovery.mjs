@@ -16,14 +16,17 @@ export function classifyNativeToolFailure({error_class,error_hint='',tool_family
  if(!Number.isSafeInteger(retry_count)||retry_count<0||retry_count>20)throw Error('Invalid retry count');
  if(error_class!==undefined&&!CATEGORIES.has(error_class))throw Error('Unknown error class');
  const e=error_hint;
+ // Authorization failures are safety critical: an argument/pageId substring or
+ // a caller-provided lower-severity class must never downgrade them.
+ const denial=/(?:permission denied|forbidden|eacces|unauthori[sz]ed|\b403\b|access denied)/i.test(e);
  const detected=
-  /(?:-32602|invalid (?:arguments?|parameter)|missing (?:required|parameter)|pageid)/i.test(e)?'invalid_arguments':
+  denial?'permission_denied':
+  /(?:-32602|invalid (?:arguments?|parameter)|missing (?:required|parameter)|invalid pageid)/i.test(e)?'invalid_arguments':
   /(?:execution context (?:was )?destroyed|context lost|stale element|no such page|target closed)/i.test(e)?'context_lost':
   /(?:timeout|timed out|deadline exceeded|etimedout)/i.test(e)?'timeout':
-  /(?:permission denied|forbidden|eacces|unauthori[sz]ed|403)/i.test(e)?'permission_denied':
   /(?:enoent|file not found|no such file|path does not exist)/i.test(e)?'missing_file':
   /(?:edit conflict|patch failed|expected text not found|old string not found|does not match)/i.test(e)?'edit_conflict':'unknown';
- const category=detected==='unknown'?(error_class||'unknown'):detected;
+ const category=error_class==='permission_denied'?'permission_denied':(detected==='unknown'?(error_class||'unknown'):detected);
  const advice=ADVICE[category];
  return {
   status:'guidance_only',category,

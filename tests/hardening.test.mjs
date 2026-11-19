@@ -90,7 +90,7 @@ test('verification: native-run report + source hashes permit local PASS; changed
   fs.writeFileSync(path.join(ws1,'report.xml'),xml);
   handleHookEvent({hookEventName:'SessionStart',conversationId:'conv-native-test-11',workspacePaths:[ws1],cwd:ws1},{baseDir:process.env.A2A_DATA_DIR});
   const hook=handleHookEvent({hookEventName:'PostToolUse',conversationId:'conv-native-test-11',workspacePaths:[ws1],
-    toolCall:{name:'run_command',args:{Cwd:ws1,CommandLine:'npm test'}},error:''},{baseDir:process.env.A2A_DATA_DIR});
+    toolCall:{name:'run_command',args:{Cwd:ws1,CommandLine:'npm test'}},exitCode:0,error:''},{baseDir:process.env.A2A_DATA_DIR});
   assert.deepEqual(hook,{});
   const run=JSON.parse(fs.readFileSync(path.join(process.env.A2A_DATA_DIR,'last-test-run.json'),'utf8'));
   assert.equal(run.report_hashes['report.xml'],sha256(xml));

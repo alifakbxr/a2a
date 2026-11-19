@@ -19,6 +19,14 @@ A2A augments the *native Antigravity agent*; it is not a model, terminal proxy, 
 
 **Four public MCP tools only:** `a2a_context`, `a2a_impact`, `a2a_verify`, `a2a_evidence`. Legacy `verifykit_*` aliases remain callable; listing requires the explicit `A2A_LEGACY_TOOL_ALIASES=1` flag.
 
+### Re-audit hardening (19 November 2026)
+
+The follow-up [re-audit issues #38–#42](https://github.com/alifakbxr/a2a/pull/43) identified five coverage, privacy and recovery gaps. Handoff verification now applies the same evidence-type restrictions as local assessment: a named build cannot prove browser, visual, hardware, security or independent acceptance even with native-hook metadata. A native test hook records success only with an explicit unambiguous process exit code of zero; missing and failed status are **not success**. Permission-denied recovery takes priority over page IDs.
+
+**Optional complete-scope acceptance:** use `a2a_verify(operation="plan",persist_plan=true)` to retain a private, revision-bound plan and receive a `plan_id`. Pass that ID to `a2a_verify(operation="assess")` to include all required scenarios, including omitted ones as `not_tested`. If code changed, the bound plan is stale. Explicitly reissue the **unchanged scope** on the new source revision with `a2a_verify(operation="plan",plan_id="<previous-id>",persist_plan=true,criteria=[])`; this resets all scenarios to `not_tested` and does not verify test results. If a criterion explicitly pins `source_revision`, A2A refuses to reissue it onto different code: review that criterion and create a new plan with the updated revision. Standalone legacy assessment remains available but its coverage is **scope-unbound**; none can claim independently verified completion.
+
+**Brain Markdown privacy:** automatic full-content edit-event snapshotting is now **OFF by default**. Manually enable with `node scripts/a2a.mjs artifact-autosnapshot on`; check status or turn it off with `artifact-autosnapshot status|off`. When enabled, local SQLite and shadow files may retain sensitive Markdown content; disabling does **not** delete previously saved data. `snapshot_artifact` remains an explicit, separate operation.
+
 ### Truthful completion
 
 A2A does **not** turn a successful build, a screenshot, an arbitrary test name or locally supplied JSON into proof of end-to-end behavior. A structured acceptance item declares a scenario, required evidence type and (for browser/visual cases) viewport, UI state and reference. Planning starts `not_tested`; local assessments report only the **named test assertions** actually present, with a `completion.fully_verified=false` summary. Browser, visual, hardware, security and independent acceptance cannot be established from a local build/test report. Real release approval is separate and fail-closed.

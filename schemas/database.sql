@@ -55,3 +55,15 @@ CREATE TABLE IF NOT EXISTS recovery_checkpoints (
   PRIMARY KEY(workspace_id, conversation_id)
 );
 CREATE INDEX IF NOT EXISTS recovery_recent ON recovery_checkpoints(workspace_id,updated_at DESC);
+
+-- Explicit opt-in, revision-bound acceptance plan scope for subsequent assess calls.
+CREATE TABLE IF NOT EXISTS acceptance_plans (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL,
+  revision_id TEXT NOT NULL,
+  manifest_sha TEXT NOT NULL,
+  criteria_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id)
+);
+CREATE INDEX IF NOT EXISTS acceptance_plans_recent ON acceptance_plans(workspace_id,created_at DESC);

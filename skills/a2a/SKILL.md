@@ -19,6 +19,13 @@ description: Optional A2A local-first engineering context, impact, acceptance pl
 8. For teamwork, `a2a_context(action="orchestration")` recommends native modes **only when the user/IDE declares them available**, dependencies are low and file ownership is **independent**. Ask for user approval; A2A launches no worker.
 9. Final handoff: state what was implemented, the exact assertions that passed, failed, blocked, stale and **not tested**; avoid claiming full completion, release readiness or token savings without corresponding independent evidence.
 
+## 19 November re-audit safeguards
+
+- For acceptance involving several conditions, request explicit `persist_plan:true` before relying on plan-scoped `assess(plan_id=...)`. This stores **private scenario text locally**; never use it implicitly. A bound assessment reports omitted cases as not tested and stale source as stale. If code changes after planning, explicitly reissue the same acceptance scope with `a2a_verify(operation="plan",plan_id="<old-id>",persist_plan=true,criteria=[])` before new native tests; it does not mark any scenario as passed.
+- Native handoffs can verify only the exact named local machine assertions; a passing build or hook event cannot prove visual/browser/hardware/security execution. A native hook run with no confirmed numeric zero exit code is **unknown**, not successful.
+- Permission-denied tool errors require approval even when they mention a page ID; never retry with altered authorization.
+- Automatic full-content brain Markdown snapshots are **off by default**. Use the actual CLI `node scripts/a2a.mjs artifact-autosnapshot on|off|status` only on explicit user consent; warn that previously retained content is not deleted when turned off.
+
 ## CLI controls — actual subcommands
 
 From a checkout, use `node scripts/a2a.mjs` (or the `a2a` executable when installed). Supported examples:

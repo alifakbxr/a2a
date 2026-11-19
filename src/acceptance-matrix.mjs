@@ -44,6 +44,19 @@ export function normalizeAcceptanceCriterion(input){
   };
 }
 
+
+const LOCAL_ATTESTATION_EXCLUDED=new Set(['browser','visual','hardware','security','independent']);
+// A2A machine reports are inspectable local assertions, not independent
+// execution/visual/hardware witnesses. Shared by assess and verify_handoff.
+export function localEvidencePolicy(criterion){
+  const kind=criterion?.evidence_type||'unspecified';
+  if(LOCAL_ATTESTATION_EXCLUDED.has(kind))return {
+    locally_attestable:false,
+    reason:'Local named tests and native hook metadata cannot independently attest '+kind+' acceptance'
+  };
+  return {locally_attestable:true,reason:null};
+}
+
 export function acceptanceCompletion(plan,results,{planning=false}={}){
   const byId=new Map(results.map(r=>[r.id,r]));
   const counts={passed:0,failed:0,blocked:0,not_tested:0,stale:0,inconclusive:0};

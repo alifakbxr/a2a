@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {spawn} from 'node:child_process';
+import {spawn,spawnSync} from 'node:child_process';
 import {createInterface} from 'node:readline';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -127,5 +127,77 @@ test('real MCP stdio: deny untrusted, plan, reject false UI PASS, checkpoint/rec
   const inputError=await io.call('a2a_verify',{workspace:io.work,operation:'plan',criteria:[{...acceptance,foo:'invalid'}]});
   assert.equal(inputError.isError,true);
   assert.equal(inputError.body.code,'invalid_tool_arguments');
+ }finally{await io.close()}
+});
+
+test('re-audit real MCP stdio: immutable acceptance coverage, permission precedence and failed native tool provenance',async()=>{
+ const io=start();
+ try{
+  const initialized=await io.request('initialize',{protocolVersion:'2025-03-26',capabilities:{}});
+  assert.equal(initialized.result.serverInfo.name,'a2a');
+  const allowDir=path.join(io.home,'.config','a2a');
+  fs.mkdirSync(allowDir,{recursive:true});
+  fs.writeFileSync(path.join(allowDir,'allowed-workspaces.json'),
+   JSON.stringify({version:1,allowed:[fs.realpathSync(io.work)]}));
+  const scenarios=[
+   {id:'native-checkin',given:'Guest already checked in',when:'Same QR is scanned',
+    then:'The server rejects a second print',evidence_type:'integration'},
+   {id:'figma-hover',given:'Vendor data loaded',when:'Delete button hovered',
+    then:'Button visible at small viewport',evidence_type:'visual',
+    viewport:'375x812',ui_state:'hover',reference:'Figma node'}
+  ];
+  const plan=await io.call('a2a_verify',{workspace:io.work,operation:'plan',
+    persist_plan:true,criteria:scenarios});
+  assert.equal(plan.isError,false);
+  assert.equal(plan.body.scope_bound,true);
+  assert.match(plan.body.plan_id,/^apl-/);
+  const reportDir=path.join(io.work,'reports');
+  fs.mkdirSync(reportDir,{recursive:true});
+  const report='reports/suite.json';
+  fs.writeFileSync(path.join(io.work,report),JSON.stringify({
+    format:'a2a-test-report-v1',completed:true,cases:[{name:'named backend assertion',state:'passed'}]}));
+  const result=await io.call('a2a_verify',{workspace:io.work,operation:'assess',
+    plan_id:plan.body.plan_id,
+    criteria:[{id:'native-checkin',artifact:report,test_name:'named backend assertion'}]});
+  assert.equal(result.isError,false);
+  assert.equal(result.body.scope_bound,true);
+  assert.equal(result.body.completion.total,2);
+  assert.equal(result.body.completion.counts.passed,1);
+  assert.equal(result.body.completion.counts.not_tested,1);
+  assert.equal(result.body.completion.fully_verified,false);
+  const denied=await io.call('a2a_verify',{workspace:io.work,operation:'assess',
+   plan_id:plan.body.plan_id,
+   criteria:[{id:'native-checkin',evidence_type:'browser',artifact:report,test_name:'named backend assertion'}]});
+  assert.equal(denied.isError,true);
+  const permission=await io.call('a2a_evidence',{workspace:io.work,operation:'tool_recovery',
+    error_hint:'pageId 14 returned 403 Permission denied',tool_family:'browser',error_class:'invalid_arguments'});
+  assert.equal(permission.isError,false);
+  assert.equal(permission.body.category,'permission_denied');
+  assert.equal(permission.body.requires_user_approval,true);
+  assert.equal(permission.body.automatic_execution,false);
+
+  const commandEnv={...process.env,HOME:io.home,USERPROFILE:io.home,A2A_DATA_DIR:path.join(io.base,'db')};
+  const hookPayload={hookEventName:'PostToolUse',conversationId:'reaudit-mcp-e2e',workspacePaths:[io.work],
+    toolCall:{name:'run_command',args:{CommandLine:'npm test',Cwd:io.work}},exitCode:1};
+  const hooked=spawnSync(process.execPath,['scripts/hook.mjs'],{
+   cwd:path.resolve('.'),input:JSON.stringify(hookPayload),env:commandEnv,encoding:'utf8',timeout:15000});
+  assert.equal(hooked.status,0,hooked.stderr);
+  const observed=JSON.parse(fs.readFileSync(path.join(io.base,'db','last-test-run.json'),'utf8'));
+  assert.equal(observed.exit_status,'failed');
+  assert.equal(observed.succeeded,false);
+  assert.deepEqual(observed.report_hashes,{});
+
+  fs.writeFileSync(path.join(io.work,'src','checkin.js'),'export function shouldPrint(isRepeat){return true}');
+  const stale=await io.call('a2a_verify',{workspace:io.work,operation:'assess',
+    plan_id:plan.body.plan_id,criteria:[]});
+  assert.equal(stale.isError,false);
+  assert.equal(stale.body.completion.counts.stale,2);
+  assert.equal(stale.body.completion.fully_verified,false);
+  const reissued=await io.call('a2a_verify',{workspace:io.work,operation:'plan',
+    plan_id:plan.body.plan_id,persist_plan:true,criteria:[]});
+  assert.equal(reissued.isError,false);
+  assert.notEqual(reissued.body.plan_id,plan.body.plan_id);
+  assert.equal(reissued.body.reissued_from,plan.body.plan_id);
+  assert.equal(reissued.body.completion.counts.not_tested,2);
  }finally{await io.close()}
 });

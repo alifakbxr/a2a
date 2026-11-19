@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import { dataDir, getA2AMode, getCompactMode, requireAuthorizedWorkspace } from '../src/security.mjs';
+import { dataDir, getA2AMode, getCompactMode, getArtifactAutoSnapshotMode, requireAuthorizedWorkspace } from '../src/security.mjs';
 import { sanitizeConversationId, vettedTranscript } from '../src/tokens.mjs';
 import { Store } from '../src/storage.mjs';
 import {gitChanges} from '../src/scanner.mjs';
@@ -170,7 +170,9 @@ function recordActiveSession(payload, baseDir) {
 }
 
 function handleArtifactModification(payload, baseDir) {
-  if(payload?.error) return;
+  // Full-content brain Markdown history is opt-in; session metadata remains
+  // independent and does not itself grant content-retention consent.
+  if(!getArtifactAutoSnapshotMode() || payload?.error) return;
   const toolName = payload?.toolCall?.name || payload?.toolName || '';
   if (!['write_to_file','replace_file_content','multi_replace_file_content','write_file','edit_file'].includes(toolName)) return;
   const args = payload?.toolCall?.args || payload?.toolArgs || payload?.toolInput || payload?.arguments || {};
@@ -197,6 +199,28 @@ function handleArtifactModification(payload, baseDir) {
   }catch{}
 }
 
+// A completed tool call is not proof of a successful test process. Accept
+// explicit numeric exit statuses only; missing/conflicting signals fail closed.
+// Antigravity versions can expose different nested response objects.
+export function nativeProcessExitStatus(payload){
+  const sources=[payload,payload?.toolCallResult,payload?.toolResponse,payload?.response,payload?.result,payload?.toolResult];
+  const codes=[];
+  for(const source of sources){
+    if(!source||typeof source!=='object'||Array.isArray(source))continue;
+    for(const key of ['exitCode','exit_code','commandExitCode','processExitCode']){
+      if(Object.hasOwn(source,key) && source[key]!==null && source[key]!==undefined){
+        const code=source[key];
+        if(!Number.isSafeInteger(code))return {status:'unknown',exit_code:null,reason:'Invalid exit status representation'};
+        codes.push(code);
+      }
+    }
+  }
+  if(payload?.error || payload?.toolResponse?.error || payload?.toolCallResult?.error)return {status:'failed',exit_code:codes[0]??null,reason:'Native tool reported an error'};
+  if(!codes.length)return {status:'unknown',exit_code:null,reason:'No explicit process exit status available'};
+  if(codes.some(x=>x!==codes[0]))return {status:'unknown',exit_code:null,reason:'Conflicting native process exit statuses'};
+  return {status:codes[0]===0?'passed':'failed',exit_code:codes[0],reason:null};
+}
+
 function recordCommandRun(payload, baseDir) {
   handleArtifactModification(payload, baseDir);
   const cmd = payload?.toolCall?.args?.CommandLine;
@@ -207,29 +231,36 @@ function recordCommandRun(payload, baseDir) {
   let root=null;
   for(const p of candidates){try{root=requireAuthorizedWorkspace(p);break}catch{}}
   if(!root)return;
+  const exit=nativeProcessExitStatus(payload);
+  // Failed/unknown processes need no expensive workspace/report hashing.
   const sourceHashes={};
-  const changed=gitChanges(root).filter(p=>/\.(?:js|ts|jsx|tsx|mjs|cjs|php|py|go|rs|kt|java|dart|gd|swift|cs|rb|vue|svelte|sql)$/i.test(p));
+  const changed=exit.status==='passed'
+    ? gitChanges(root).filter(p=>/\.(?:js|ts|jsx|tsx|mjs|cjs|php|py|go|rs|kt|java|dart|gd|swift|cs|rb|vue|svelte|sql)$/i.test(p))
+    : [];
   for(const rel of changed.slice(0,200)){
     try{sourceHashes[rel]=sha256(fs.readFileSync(safeFile(root,rel)))}catch{}
   }
   const reportHashes={};
-  for(const rel of CANDIDATE_ARTIFACTS){
+  for(const rel of exit.status==='passed'?CANDIDATE_ARTIFACTS:[]){
     try{
       const file=safeFile(root,rel);
       const stat=fs.statSync(file);
       if(stat.size<=1200000 && stat.isFile())reportHashes[rel]=sha256(fs.readFileSync(file));
     }catch{}
   }
-  // Local evidence only: does not prove the command's assertions or cryptographically attest execution.
+  // Clear positive provenance after unsuccessful or ambiguous runs. A pre-existing
+  // passing report must not be re-attested by a failed/unknown native command.
   const reportFile=path.join(baseDir,'last-test-run.json');
   writeJsonSecure(reportFile,{
     updatedAt:new Date().toISOString(),
     conversationId:sanitizeConversationId(payload?.conversationId),
     workspace:root,
     kind:'native-test-tool-completed',
-    succeeded:!payload?.error,
-    source_hashes:sourceHashes,
-    report_hashes:reportHashes,
+    succeeded:exit.status==='passed',
+    exit_status:exit.status,
+    exit_code:exit.exit_code,
+    source_hashes:exit.status==='passed'?sourceHashes:{},
+    report_hashes:exit.status==='passed'?reportHashes:{},
   });
 }
 
