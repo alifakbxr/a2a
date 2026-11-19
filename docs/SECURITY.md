@@ -58,3 +58,5 @@ RCA writes require `persist_rca:true` on each `record_incident`, `add_hypothesis
 
 RCA cleanup is available through the existing `a2a_evidence(operation="delete_incident",persist_rca:true,confirm_deletion:true,incident_id:"...")` contract. It removes only the selected incident/hypotheses in an atomic transaction, **not other evidence or plans**. Logical deletion does not securely erase SQLite WAL, backups or filesystem remnants; plan retention separately. Compact history is limited to eight entries by default with omission counters; report artifact integrity is rechecked when a hypothesis is read, not just at the moment of assessment.
 
+RCA assessments additionally preserve a local append-only experimental interpretation history; this contains the user/agent observation text and evidence references, not whole test reports. Deleting an incident also deletes that history logically. Persistent SQLite and backups must still be handled under user-controlled retention policies.
+
