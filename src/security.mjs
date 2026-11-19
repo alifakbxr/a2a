@@ -43,9 +43,20 @@ export function readSafeBytesFile(filename,{maxBytes=128*1024,checkParentDir=fal
     if(st.dev!==before.dev||st.ino!==before.ino)return {ok:false,reason:'changed_during_read'};
     if(requirePrivateMode&&process.platform!=='win32'&&(st.mode&0o022)!==0)
       return {ok:false,reason:'unsafe_mode'};
-    const bytes=fs.readFileSync(fd);
-    if(bytes.length>maxBytes)return {ok:false,reason:'too_large'};
-    return {ok:true,bytes};
+    // A same-user writer can grow a file after fstat. Never use unbounded
+    // readFileSync(fd): read at most maxBytes+1 even during concurrent writes.
+    const chunks=[];let total=0;
+    while(total<=maxBytes){
+      const chunk=Buffer.allocUnsafe(Math.min(64*1024,maxBytes+1-total));
+      const length=fs.readSync(fd,chunk,0,chunk.length,null);
+      if(length===0)break;
+      chunks.push(chunk.subarray(0,length));total+=length;
+    }
+    if(total>maxBytes)return {ok:false,reason:'too_large'};
+    const after=fs.fstatSync(fd);
+    if(after.size!==st.size||after.mtimeMs!==st.mtimeMs||after.ctimeMs!==st.ctimeMs)
+      return {ok:false,reason:'changed_during_read'};
+    return {ok:true,bytes:Buffer.concat(chunks,total)};
   }catch(error){
     return {ok:false,reason:error?.code==='ENOENT'?'missing':error?.code==='ELOOP'?'symlink':'unreadable'};
   }finally{if(fd!==null)try{fs.closeSync(fd)}catch{}}

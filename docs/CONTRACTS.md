@@ -169,3 +169,7 @@ The CLI `tokens` absolute workspace argument and `artifacts snapshot|list|diff|s
 - Syntax validation recursively covers all source and script `.mjs` files on all CI/runtime-publish gates. `a2a doctor` advises about shell-managed Node version manager paths without executing a shell or changing user configuration.
 
 See [security](SECURITY.md), [compatibility](COMPATIBILITY.md), and [release gate #15](https://github.com/alifakbxr/a2a/issues/15). A2A v2.0.1 is **not** externally certified or authorized for publishing.
+
+## File safety and workspace origin (v2.0.1)
+
+Evidence list/freshness rehashes are bounded to 4 MiB per report. The release manifest is parsed and hashed from one bounded pinned read; independent acceptance registry and trusted keys reject group/world-writable files, symlinks and malformed JSON with sanitized diagnostics. Local side-question records are restricted to their owning workspace. Recursive workspace-file expansion has a visited set and depth bound; IDE SQLite trust-state reads have size/type limits. Relative snapshots are anchored to the approved project root; Antigravity brain artifacts require matching active conversation scope. See [security](SECURITY.md) and [compatibility](COMPATIBILITY.md). These are local safety gates, not proof of external software acceptance.

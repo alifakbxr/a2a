@@ -54,11 +54,17 @@ Documentation: [index](docs/README.md), [security](docs/SECURITY.md), [release](
 
 ## Additional P0 re-audit fixes — issue #50–#53
 
-[PR #62](https://github.com/alifakbxr/a2a/pull/62) addresses CLI missing imports/session fallback, native file-hook matcher/argument compatibility, spoofed or masked exit-status test commands and JUnit/TAP false-PASS parsing. Synthetic adversarial CLI/hooks/test-report regressions are added. Exact PR and post-merge 9-job CI results must be verified separately. This implementation does **not** close the real Antigravity/STOCKROOM external [release gate #15](https://github.com/alifakbxr/a2a/issues/15); other independently open P1/P2 findings #54–#61 remain tracked.
+[PR #62](https://github.com/alifakbxr/a2a/pull/62) addresses CLI missing imports/session fallback, native file-hook matcher/argument compatibility, spoofed or masked exit-status test commands and JUnit/TAP false-PASS parsing. Synthetic adversarial CLI/hooks/test-report regressions are added. PR #62 was merged after 9/9 cross-platform CI and succeeded in the subsequent version-branch CI. Real Antigravity/STOCKROOM external [release gate #15](https://github.com/alifakbxr/a2a/issues/15) is still open.
 
 
 ## 19 November 2026 follow-up hardening and remaining acceptance
 
 Post-merge code fixes on `v2.0.1`: PR #62 (CLI, hooks and evidence false-PASS), #63 (exhaustive syntax coverage), #64 (MCP resource privacy), #65 (Node SQLite consistency and runtime diagnostics), #66 (bounded 6.5KB MCP schema). Each was tested through 9-job Node 22/24/26.13.1 CI before merge. Subsequent source changes require their own checks; historical test counts above are **not** current test totals.
 
-The final Node desktop PATH advisory and shared file-boundary hardening are tracked independently as follow-up work. `main` stays frozen, external independent STOCKROOM acceptance F01–F18, live installed Antigravity validation and repeated A/B token trials remain open in issue #15; passing local CI is not equivalent to release certification.
+PR #67 added bounded safe I/O and release trust diagnostics, #68 added Node version-manager desktop PATH advice, and PR #69 integrated cross-platform HOME/path normalization and IDE-trust metadata safeguards. `main` stays frozen, external independent STOCKROOM acceptance F01–F18, live installed Antigravity validation and repeated A/B token trials remain open in issue #15; passing local CI is not equivalent to release certification.
+
+## Final code-level audit reconciliation — 19 November 2026
+
+Source-audited issues #50–#61 have been addressed through PR #62–#69 on the v2.0.1 integration branch, subject to final post-merge CI. This includes Adaptive RCA, strict local test provenance, safe native hooks, full syntax checks, MCP privacy, bounded trust-file reads, cross-platform workspace boundaries, Node 22/24/26.13.1 compatibility, and shortened tools/list descriptions. The 6,500-byte MCP contract cap retains all four tools and Adaptive RCA operations; it is a **byte bound**, not an official token-billing or causal savings measurement.
+
+Independent real Antigravity installation, frozen STOCKROOM F01–F18 security/financial/browser acceptance and repeated controlled Native/A2A benchmarks remain mandatory in open issue #15. The main branch remains unchanged. Do not publish, tag, promote into main or assert production-readiness based on local CI alone.
