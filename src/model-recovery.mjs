@@ -40,7 +40,7 @@ export function saveRecoveryCheckpoint(store,wsId,{conversationId,revision,taskS
   // Never persist common credential or bearer-token assignments in plaintext
   // as part of a model-recovery handoff, even when supplied explicitly.
   const notes=[taskSummary,...completed,...nextSteps,...decisions,...pendingTests];
-  if(notes.some(x=>/(?:password|passwd|api[ _-]?key|(?:access[_-]?|refresh[_-]?)?token|cookie|authorization|private[_-]?key|secret)\s*[:=]|\bBearer\s+[A-Za-z0-9._~-]{8,}/i.test(x))){
+  if(notes.some(x=>/(?:password|passwd|api[ _-]?key|(?:access[_-]?|refresh[_-]?)?token|cookie|authorization|private[_-]?key|secret)\s*[:=]|\bBearer\s+[A-Za-z0-9._~-]{8,}/i.test(x) || /(?:\bgh[pousr]_[A-Za-z0-9]{10,}|\bsk-[A-Za-z0-9_-]{12,}|\bAKIA[0-9A-Z]{16}\b|\bnpm_[A-Za-z0-9]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)/i.test(x))){
     throw new Error('Checkpoint contains a possible credential; remove secrets before saving');
   }
   const now=new Date().toISOString();
