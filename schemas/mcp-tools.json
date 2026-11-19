@@ -349,6 +349,7 @@
               "add_hypothesis",
               "assess_hypothesis",
               "hypotheses",
+              "delete_incident",
               "side_questions",
               "record_side_question",
               "artifact_versions",
@@ -411,6 +412,10 @@
           "persist_rca": {
             "type": "boolean",
             "description": "Explicit opt-in to local private RCA text/experimental outcome retention. Never implied."
+          },
+          "confirm_deletion": {
+            "type": "boolean",
+            "description": "For delete_incident: confirm irreversible logical removal of incident plus hypothesis records; not cryptographic erasure."
           },
           "hypothesis_id": {
             "type": "string",
