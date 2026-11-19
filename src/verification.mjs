@@ -68,7 +68,7 @@ export function parseArtifact(text, filename){
   return {status:'inconclusive',assertions:0,reason:'Unsupported artifact type; require JUnit, TAP, or a2a-test-report-v1',cases:[]};
 }
 
-export function planVerification({index,impact,criteria=[]}){
+export function planVerification({index,impact,criteria=[],compact=false}){
   if(!Array.isArray(criteria)||criteria.length>40)throw new Error('criteria must be an array of at most 40 items');
   const seen=new Set();const plan=criteria.map(c=>{
     const item=normalizeAcceptanceCriterion(c);
