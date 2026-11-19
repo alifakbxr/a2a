@@ -107,17 +107,29 @@ export function assessRcaHypothesis(store,ws,root,revision,args){
   return {id:h.id,incident_id:h.incident_id,status,why_depth:h.why_depth,source_freshness:'current',
     linked_local_evidence:evidence,independently_attested:false,root_cause_verified:false,warning:RCA_WARNING};
 }
-export function listRcaHypotheses(store,ws,revision,limit=20,incidentId=null){
+export function listRcaHypotheses(store,ws,root,revision,limit=20,incidentId=null){
   const n=Math.max(1,Math.min(50,Number(limit)||20));
   const rows=incidentId?
     store.all('SELECT * FROM hypotheses WHERE workspace_id=? AND incident_id=? ORDER BY created_at DESC LIMIT ?',ws,incidentId,n):
     store.all('SELECT * FROM hypotheses WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',ws,n);
-  return {revision,items:rows.map(h=>{
+  const total=incidentId?
+    store.get('SELECT count(*) AS n FROM hypotheses WHERE workspace_id=? AND incident_id=?',ws,incidentId).n:
+    store.get('SELECT count(*) AS n FROM hypotheses WHERE workspace_id=?',ws).n;
+  return {revision,total,more_available:total>rows.length,items:rows.map(h=>{
     const fresh=Boolean(h.revision_id&&h.revision_id===revision);
     const assessedFresh=Boolean(h.assessed_revision_id&&h.assessed_revision_id===revision);
-    const status=!fresh||(h.status!=='untested'&&!assessedFresh)?'stale':h.status;
+    let evidenceIntact=true;
+    if(h.status==='locally_supported'||h.status==='refuted'){
+      try{
+        const ids=JSON.parse(h.evidence_ids_json||'[]');
+        if(!ids.length)throw Error('No linked evidence');
+        for(const id of ids)checkEvidence(store,ws,root,revision,id,h.expected_criterion_id,true);
+      }catch{evidenceIntact=false}
+    }
+    const status=!fresh||(h.status!=='untested'&&!assessedFresh)||!evidenceIntact?'stale':h.status;
     return {id:h.id,incident_id:h.incident_id,description:h.description,status,
       recorded_status:h.status,source_freshness:fresh?'current':'stale_or_unbound',
+      linked_evidence_intact:evidenceIntact,
       experiment:h.experiment,parent_hypothesis_id:h.parent_hypothesis_id||null,
       why_depth:h.why_depth||1,predicted_observation:h.predicted_observation||null,
       disconfirming_test:h.disconfirming_test||null,expected_criterion_id:h.expected_criterion_id||null,
@@ -128,10 +140,26 @@ export function listRcaHypotheses(store,ws,revision,limit=20,incidentId=null){
 }
 export function listRcaIncidents(store,ws,revision,limit=20){
   const rows=store.all('SELECT * FROM incidents WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',ws,Math.max(1,Math.min(50,Number(limit)||20)));
-  return {revision,items:rows.map(x=>({id:x.id,title:x.title,root_cause:x.root_cause,
+  const total=store.get('SELECT count(*) AS n FROM incidents WHERE workspace_id=?',ws).n;
+  return {revision,total,more_available:total>rows.length,items:rows.map(x=>({id:x.id,title:x.title,root_cause:x.root_cause,
     candidate_cause:x.root_cause||null,root_cause_verified:false,
     state:x.state==='evidence-linked'?'historical-evidence-linked-unverified':x.state,
     source_freshness:x.revision_id===revision?'current':'stale',
     paths:JSON.parse(x.related_paths_json),criteria:JSON.parse(x.criteria_json),
     evidence_ids:JSON.parse(x.evidence_ids_json),created_at:x.created_at})),warning:RCA_WARNING};
+}
+
+export function deleteRcaIncident(store,ws,{incident_id,persist_rca,confirm_deletion}){
+  consent(persist_rca);
+  if(confirm_deletion!==true)throw Error('Explicit confirm_deletion=true required to delete RCA history');
+  if(typeof incident_id!=='string'||!incident_id)throw Error('incident_id is required');
+  return store.transaction(()=>{
+    const exists=store.get('SELECT id FROM incidents WHERE workspace_id=? AND id=?',ws,incident_id);
+    if(!exists)throw Error('RCA incident not found in authorized workspace');
+    const count=store.get('SELECT count(*) AS n FROM hypotheses WHERE workspace_id=? AND incident_id=?',ws,incident_id).n;
+    store.run('DELETE FROM hypotheses WHERE workspace_id=? AND incident_id=?',ws,incident_id);
+    store.run('DELETE FROM incidents WHERE workspace_id=? AND id=?',ws,incident_id);
+    return {deleted:true,incident_id,hypotheses_deleted:count,other_evidence_preserved:true,
+      warning:'RCA rows removed logically. SQLite WAL, backups or filesystem remnants may retain older bytes; this is not cryptographic erasure.'};
+  });
 }
