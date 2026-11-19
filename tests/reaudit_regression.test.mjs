@@ -157,6 +157,21 @@ test('P1 #41: persisted acceptance plan retains omitted mandatory scenarios and 
     assert.equal(stale.scope_bound,true);
     assert.equal(stale.completion.counts.stale,2);
     assert.equal(stale.completion.fully_verified,false);
+    // Reissue the *same* required scope at the updated source revision rather
+    // than silently overriding or losing old required acceptance criteria.
+    const renewed=f.engine.verify({workspace:f.workspace,operation:'plan',
+      plan_id:plan.plan_id,persist_plan:true,criteria:[]});
+    assert.notEqual(renewed.plan_id,plan.plan_id);
+    assert.equal(renewed.reissued_from,plan.plan_id);
+    assert.equal(renewed.criteria.length,2);
+    assert.equal(renewed.completion.counts.not_tested,2);
+    assert.equal(renewed.completion.fully_verified,false);
+    assert.throws(()=>f.engine.verify({workspace:f.workspace,operation:'plan',
+      plan_id:plan.plan_id,persist_plan:true,criteria:[baseCriteria]}),/no replacement criteria/);
+    const renewedResult=f.engine.verify({workspace:f.workspace,operation:'assess',
+      plan_id:renewed.plan_id,criteria:[]});
+    assert.equal(renewedResult.completion.counts.not_tested,2);
+    assert.equal(renewedResult.scope_bound,true);
   }finally{f.end()}
 });
 
