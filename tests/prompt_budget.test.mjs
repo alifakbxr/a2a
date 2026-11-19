@@ -7,6 +7,7 @@ import {Engine} from '../src/engine.mjs';
 import {getCompactMode,setCompactMode,authorizeWorkspace} from '../src/security.mjs';
 import {handleHookEvent,ALWAYS_ON_POLICY} from '../scripts/hook.mjs';
 import {estimateTokens} from '../src/tokens.mjs';
+import {TOOLS,validateArgs} from '../src/tools.mjs';
 
 const read=relative=>fs.readFileSync(new URL('../'+relative,import.meta.url),'utf8');
 
@@ -122,4 +123,22 @@ test('Compact graph query preserves source coverage and explicitly discloses cli
     assert.ok(JSON.stringify(full).length>JSON.stringify(compact).length);
   }
  }finally{f.close()}
+});
+
+test('MCP schema byte budget and removed invalid parameters',()=>{
+  const bytes=Buffer.byteLength(JSON.stringify(TOOLS),'utf8');
+  assert.ok(bytes<=6500,'MCP tools/list schema too large: '+bytes+' bytes');
+  const schema=JSON.parse(read('schemas/mcp-tools.json'));
+  assert.deepEqual(schema.tools,TOOLS,'Published schema drifted from live tools');
+  assert.equal(TOOLS.length,4);
+  const ctx={workspace:process.cwd(),action:'inspect'};
+  for(const key of ['conversation_id','transcript_path']){
+    assert.throws(()=>validateArgs('a2a_context',{...ctx,[key]:'ignored'}),/Unknown argument/);
+  }
+  assert.throws(()=>validateArgs('a2a_evidence',{workspace:process.cwd(),operation:'list',version_number:1}),/Unknown argument/);
+  assert.throws(()=>validateArgs('a2a_context',{...ctx,workspace:'x'.repeat(1025)}),/too long/i);
+  assert.throws(()=>validateArgs('a2a_evidence',{workspace:process.cwd(),operation:'list',id:'x'.repeat(161)}),/too long/i);
+  assert.throws(()=>validateArgs('a2a_verify',{workspace:process.cwd(),operation:'plan',criteria:['x'.repeat(241)]}),/Invalid item|too long/i);
+  const allow=TOOLS.find(t=>t.name==='a2a_verify').inputSchema.properties.allow_stale;
+  assert.match(allow.description,/stale reports never pass/);
 });
