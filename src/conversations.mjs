@@ -1,7 +1,7 @@
 // Historical Antigravity usage reader. Purely local, read-only, and metadata-only.
 // Internal transcript token counters are not provider-verified billing figures.
 import fs from 'node:fs';
-import os from 'node:os';
+import {getHomeDir} from './security.mjs';
 import path from 'node:path';
 import {parseOfficialAgyUsage} from './tokens.mjs';
 
@@ -12,7 +12,7 @@ function add(a,b){for(const k of Object.keys(a))a[k]+=b[k]||0}
 export function localBrainRoots(){
   return process.env.ANTIGRAVITY_APP_DATA_DIR
     ? [path.join(path.resolve(process.env.ANTIGRAVITY_APP_DATA_DIR),'brain')]
-    : ['antigravity','antigravity-cli','antigravity-ide'].map(n=>path.join(os.homedir(),'.gemini',n,'brain'));
+    : ['antigravity','antigravity-cli','antigravity-ide'].map(n=>path.join(getHomeDir(),'.gemini',n,'brain'));
 }
 function isA2ACall(tc){
   const name=String(tc?.name||tc?.toolName||''),tool=String(tc?.args?.ToolName||''),server=String(tc?.args?.ServerName||'');
@@ -23,9 +23,15 @@ function isA2ACall(tc){
 }
 function safeLog(file,root){
   try{
-    if(!fs.lstatSync(file).isFile())return false; // reject symlinks
-    const real=fs.realpathSync(file),rel=path.relative(root,real);
-    return rel&&!rel.startsWith('..'+path.sep)&&rel!=='..'&&!path.isAbsolute(rel);
+    const base=fs.realpathSync(root),requested=path.resolve(file),rel=path.relative(path.resolve(root),requested);
+    if(!rel||rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel))return false;
+    let cursor=path.resolve(root);
+    for(const segment of rel.split(path.sep)){
+      cursor=path.join(cursor,segment);
+      if(fs.lstatSync(cursor).isSymbolicLink())return false;
+    }
+    const real=fs.realpathSync(requested);
+    return path.relative(base,real)===rel&&fs.statSync(real).isFile();
   }catch{return false}
 }
 function parseLocalLog(file,id){
