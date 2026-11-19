@@ -47,3 +47,8 @@ The four frozen source archives were privately recovered and fingerprinted. Nati
 5. One authorized `v2.0.1 → main` PR followed by fail-closed package publishing.
 
 Documentation: [index](docs/README.md), [security](docs/SECURITY.md), [release](docs/RELEASE.md), [5 Whys](docs/BEHAVIORAL_5_WHYS_V2_0_1.md). No amount of local CI can substitute for missing external evidence.
+
+## Adaptive RCA implementation candidate — 19 November 2026
+
+[PR #49](https://github.com/alifakbxr/a2a/pull/49) introduces source-fresh, opt-in incident and falsifiable hypothesis lifecycle within the existing four MCP tools, SQLite schema migrations, compact-scope risk suggestions, and real local JSON-RPC/stdio RCA integration tests. **This row describes work pending exact CI and post-merge checks; the historical 232/232 Node test count predates these changes.** [Issue #48](https://github.com/alifakbxr/a2a/issues/48) is the code-level implementation gate. Full installed Antigravity, STOCKROOM F01–F18, hardware/browser, independent causal diagnosis and provider-token A/B evidence remain external release gates in [#15](https://github.com/alifakbxr/a2a/issues/15). No merge to `main` or publication is authorized.
+
