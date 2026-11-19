@@ -151,3 +151,27 @@ test('IDE trusted workspace discovery rejects symlinked SQLite and oversized JSO
   fs.rmSync(tmp,{recursive:true,force:true});
  }
 });
+
+test('descriptor readers have an absolute byte cap even if a file grows after fstat',()=>{
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-growth-race-'));
+ const file=path.join(tmp,'report.json');
+ fs.writeFileSync(file,'{}');
+ const previous=fs.readSync;
+ let calls=0;
+ try{
+  // Simulate a concurrently growing file: each low-level read has more bytes
+  // available than its original fstat size. Never allocate or read past cap+1.
+  fs.readSync=(fd,buffer,offset,length,position)=>{
+    calls++;
+    buffer.fill(0x61,offset,offset+length);
+    return length;
+  };
+  const result=readSafeBytesFile(file,{maxBytes:128});
+  assert.equal(result.ok,false);
+  assert.equal(result.reason,'too_large');
+  assert.ok(calls>0&&calls<=2,'bounded reader must stop at 129 bytes');
+ }finally{
+  fs.readSync=previous;
+  fs.rmSync(tmp,{recursive:true,force:true});
+ }
+});
