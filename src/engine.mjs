@@ -331,7 +331,8 @@ export class Engine {
         }
         result=assessBrowserEvidence(report,{expectedRevision:s.revision,artifactChecks:checkList});
       }
-      const recordStatus=result.report_status==='stale'||result.status==='stale'?'inconclusive':'inconclusive';
+      // Local semantic/browser reports are never independent proof of execution.
+      const recordStatus='inconclusive';
       const evidenceId=uniqueId('ev');
       this.store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',
         evidenceId,s.wsId,s.revision,report?.scenario_id||'semantic-review',recordStatus,operation,artifact,sha256(bytes),
