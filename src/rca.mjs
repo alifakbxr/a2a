@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import {safeFile,sha256} from './security.mjs';
 import {uniqueId} from './storage.mjs';
+import {validateChangedPaths} from './graph.mjs';
 
 export const RCA_WARNING='Local named tests do not independently prove a root cause. Review competing explanations, source freshness and external behavior.';
 const SECRET=/(?:password|passwd|api[ _-]?key|(?:access[_ -]?|refresh[_ -]?)?token|cookie|authorization|private[_ -]?key|secret)\s*[:=]|\bBearer\s+[A-Za-z0-9._~-]{8,}/i;
@@ -35,6 +36,7 @@ export function recordRcaIncident(store,ws,root,revision,args){
   const candidate=optional(args.root_cause,'candidate cause',1400)||'';
   const paths=args.paths||[],criteria=args.criteria||[],evidenceIds=args.evidence_ids||[];
   if(!Array.isArray(paths)||paths.length>80||paths.some(x=>typeof x!=='string'||x.length>500))throw Error('Invalid RCA paths');
+  validateChangedPaths(paths);
   if(!Array.isArray(criteria)||criteria.length>40)throw Error('Invalid RCA criteria');
   const cleanCriteria=criteria.map(x=>validate(x,'criterion',1,160));
   if(!Array.isArray(evidenceIds)||evidenceIds.length>20||new Set(evidenceIds).size!==evidenceIds.length)throw Error('Invalid RCA evidence IDs');
