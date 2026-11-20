@@ -30,7 +30,7 @@ test('protected plugin workspaces cannot be authorized and MCP error never recom
   assert.throws(()=>requireAuthorizedWorkspace(plugin),/Protected workspace denied/);
   const err=classifyMcpFailure('a2a_context',new Error('Protected workspace denied; select an ordinary trusted project'));
   assert.equal(err.code,'workspace_access_denied');
-  assert.ok(!err.next_step.includes(' allow '));
+  assert.match(err.next_step,/Do not run allow/i);
   const grants=path.join(home,'.config','a2a','allowed-workspaces.json');
   fs.mkdirSync(path.dirname(grants),{recursive:true});
   fs.writeFileSync(grants,JSON.stringify({version:1,allowed:[plugin],revoked:[]}));
