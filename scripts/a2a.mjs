@@ -11,6 +11,7 @@ import {
   authorizeWorkspace,revokeWorkspace,dataDir,getHomeDir,requireAuthorizedWorkspace,isProtectedRoot,localAntigravityRpcUrl
 } from '../src/security.mjs';
 import {readOfficialAgyUsageFile} from '../src/tokens.mjs';
+import {diagnoseSkillDiscovery} from '../src/skill-discovery.mjs';
 import {scanConversationHistory,attachReportSize,formatConversationReport} from '../src/conversations.mjs';
 
 // Treat active session metadata as untrusted local input: no symlinks,
@@ -75,6 +76,7 @@ try{
       allowed_workspaces:loadAllowlist().filter(ws=>!isProtectedRoot(ws)),
       ignored_protected_grants:loadAllowlist().filter(isProtectedRoot).length,
       antigravity_workspaces:loadAntigravityWorkspaces(),
+      skill_discovery:diagnoseSkillDiscovery(),
       session_usage:{status:'not_collected',reason:'Doctor does not read internal conversation transcripts.'},
       network:'no outbound requests',
       shell_execution:'disabled',
