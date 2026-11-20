@@ -9,19 +9,39 @@ const KNOWN=new Set(['a2a_context','a2a_impact','a2a_verify','a2a_evidence','ver
 export function isA2AInvocation(call){
  const name=plain(call?.name);
  if(KNOWN.has(name))return name;
+ // Antigravity surfaces MCP calls as both a nested call_mcp_tool event and
+ // namespaced direct invocation strings. Normalize only known A2A namespaces.
+ const scoped=name.match(/^(?:a2a_a2a|a2a|verifykit_verifykit|verifykit)[/.:]([a-z_]+)$/);
+ const encoded=name.match(/^mcp__(?:a2a_a2a|a2a|verifykit_verifykit|verifykit)__([a-z_]+)$/);
+ if(scoped||encoded){
+   const tool=(scoped||encoded)[1];
+   return KNOWN.has(tool)?tool:'unknown-a2a-tool';
+ }
  if(name.startsWith('a2a_')||name.startsWith('verifykit_'))return 'unknown-a2a-tool';
  if(name!=='call_mcp_tool')return null;
- const tool=plain(call?.args?.ToolName),server=plain(call?.args?.ServerName);
- if(!(server.startsWith('a2a')||tool.startsWith('a2a_')||tool.startsWith('verifykit_')))return null;
+ const tool=plain(call?.args?.ToolName??call?.args?.tool_name),server=plain(call?.args?.ServerName??call?.args?.server_name);
+ if(!(server==='a2a'||server==='a2a_a2a'||server==='verifykit'||server==='verifykit_verifykit'||KNOWN.has(tool)))return null;
  return KNOWN.has(tool)?tool:'unknown-a2a-tool';
 }
 function resultOf(e){
  if(!e)return 'no-result';
- if(e.status==='ERROR'){
-  const excerpt=String(e.content||'').slice(0,4000);
-  if(/unknown argument|invalid (type|value|integer)|missing [a-z_]+/i.test(excerpt))return 'invalid-arguments';
-  if(/not authorized|authorization required|permission denied/i.test(excerpt))return 'authorization-denied';
-  return 'tool-error';
+ // A successful JSON-RPC transport can carry a *failed* MCP tool result.
+ // Bound parsing and never export the original response or local paths.
+ const excerpt=String(e.content||'').slice(0,4000);
+ let parsed=null;
+ try{parsed=JSON.parse(excerpt)}catch{}
+ if(parsed?.content?.[0]?.text&&typeof parsed.content[0].text==='string'){
+   try{parsed=JSON.parse(parsed.content[0].text.slice(0,4000))}catch{}
+ }
+ const code=String(parsed?.code??parsed?.error?.code??'');
+ const isError=e.status==='ERROR'||parsed?.isError===true||
+   parsed?.status==='error'||parsed?.error!==undefined;
+ if(isError){
+   if(/invalid[_ -]?(?:tool[_ -]?)?arguments?|invalid_args|^[-]32602$/i.test(code)||
+      /unknown argument|invalid (type|value|integer)|missing [a-z_]+/i.test(excerpt))return 'invalid-arguments';
+   if(/workspace[_ -]?(?:authorization|required|access|denied)|permission|protected/i.test(code)||
+      /not authorized|authorization required|permission denied|protected workspace/i.test(excerpt))return 'authorization-denied';
+   return 'tool-error';
  }
  if(e.status==='DONE')return 'succeeded';
  return 'incomplete';
