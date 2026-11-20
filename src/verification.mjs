@@ -8,6 +8,36 @@ import {discoverTestCommands,gitChanges} from './scanner.mjs';
 import {proposeRiskTests} from './risk-guidance.mjs';
 import {normalizeAcceptanceCriterion,acceptanceCompletion,localEvidencePolicy} from './acceptance-matrix.mjs';
 
+// Bounded structural guard: regex case extraction must never count cases outside
+// a complete JUnit document as passing assertions. Unsupported XML fails closed.
+function validJUnitStructure(xml){
+ const source=xml.replace(/^\\s*<\\?xml\\s+[^?]*\\?>/i,'').trim();
+ const stack=[];let rootSeen=false,completed=false,cursor=0;
+ const tags=/<(\\/?)([A-Za-z][A-Za-z0-9:_.-]*)([^<>]*?)>/g;
+ let match;
+ while((match=tags.exec(source))!==null){
+  const between=source.slice(cursor,match.index);
+  if(completed||between.includes('<')||(!stack.length&&between.trim()))return false;
+  const closing=match[1]==='/',name=match[2].toLowerCase();
+  const selfClosing=!closing&&/\\/\\s*$/.test(match[3]);
+  if(closing){
+   if(stack.pop()!==name)return false;
+   if(!stack.length)completed=true;
+  }else{
+   if(!stack.length){if(rootSeen||!['testsuite','testsuites'].includes(name))return false;rootSeen=true;}
+   if(name==='testcase'&&stack.at(-1)!=='testsuite')return false;
+   if(name==='testsuite'&&stack.length&&!['testsuite','testsuites'].includes(stack.at(-1)))return false;
+   if(name==='testsuites'&&stack.length)return false;
+   if(['failure','error','skipped'].includes(name)&&stack.at(-1)!=='testcase')return false;
+   if(!selfClosing)stack.push(name);
+   else if(!stack.length)completed=true;
+  }
+  cursor=tags.lastIndex;
+ }
+ const tail=source.slice(cursor);
+ return rootSeen&&completed&&!stack.length&&!tail.includes('<')&&!tail.trim();
+}
+
 export function parseArtifact(text, filename){
   const ext=filename.toLowerCase().split('.').at(-1), sample=text.slice(0,1200000);
   if(ext==='xml' && /<(?:testsuite|testsuites)\b/.test(sample)){
@@ -21,7 +51,7 @@ export function parseArtifact(text, filename){
       .replace(/<!\[CDATA\[[\s\S]*?\]\]>/g,'');
     if(/<!--|<!\[CDATA\[|<(?:system-out|system-err)\b/i.test(clean))
       return {status:'inconclusive',reason:'Incomplete XML comment or log content',assertions:0,cases:[]};
-    if(!/<\/testsuite\s*>/.test(clean)||/<testcase\b/i.test(clean)===false)
+    if(!validJUnitStructure(clean)||!/<\/testsuite\s*>/.test(clean)||/<testcase\b/i.test(clean)===false)
       return {status:'inconclusive',reason:'Incomplete JUnit XML',assertions:0,cases:[]};
     const attrs=text=>Object.fromEntries([...text.matchAll(/([A-Za-z][A-Za-z0-9_-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
       .map(m=>[m[1],m[2]??m[3]]));

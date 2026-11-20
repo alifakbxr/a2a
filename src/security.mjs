@@ -630,6 +630,7 @@ export function isWorkspaceAuthorized(ws){
 
 export function requireAuthorizedWorkspace(input){
   const ws=normalizeWorkspace(input);
+  if (isProtectedRoot(ws)) throw new Error('Protected workspace denied; select an ordinary trusted project');
   if (!isWorkspaceAuthorized(ws)) throw new Error('Workspace is not authorized. Run: node scripts/a2a.mjs allow "'+ws+'" (local user approval).');
   return ws;
 }
