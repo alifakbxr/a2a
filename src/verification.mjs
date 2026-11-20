@@ -11,15 +11,15 @@ import {normalizeAcceptanceCriterion,acceptanceCompletion,localEvidencePolicy} f
 // Bounded structural guard: regex case extraction must never count cases outside
 // a complete JUnit document as passing assertions. Unsupported XML fails closed.
 function validJUnitStructure(xml){
- const source=xml.replace(/^\\s*<\\?xml\\s+[^?]*\\?>/i,'').trim();
+ const source=xml.replace(/^\s*<\?xml\s+[^?]*\?>/i,'').trim();
  const stack=[];let rootSeen=false,completed=false,cursor=0;
- const tags=/<(\\/?)([A-Za-z][A-Za-z0-9:_.-]*)([^<>]*?)>/g;
+ const tags=/<(\/?)([A-Za-z][A-Za-z0-9:_.-]*)([^<>]*?)>/g;
  let match;
  while((match=tags.exec(source))!==null){
   const between=source.slice(cursor,match.index);
   if(completed||between.includes('<')||(!stack.length&&between.trim()))return false;
   const closing=match[1]==='/',name=match[2].toLowerCase();
-  const selfClosing=!closing&&/\\/\\s*$/.test(match[3]);
+   const selfClosing=!closing&&/\/\s*$/.test(match[3]);
   if(closing){
    if(stack.pop()!==name)return false;
    if(!stack.length)completed=true;
