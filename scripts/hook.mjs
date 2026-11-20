@@ -243,6 +243,52 @@ export function nativeProcessExitStatus(payload){
   return {status:codes[0]===0?'passed':'failed',exit_code:codes[0],reason:null};
 }
 
+
+function pendingTestFile(baseDir,payload){
+ const conv=sanitizeConversationId(payload?.conversationId),idx=payload?.stepIdx;
+ if(!conv||!Number.isSafeInteger(idx)||idx<0)return null;
+ return path.join(baseDir,'pending-tests',sha256(conv+':'+idx).slice(0,32)+'.json');
+}
+function reporterSnapshot(root,rel){
+ try{
+  const file=safeFile(root,rel),st=fs.statSync(file);
+  if(!st.isFile()||st.size>1200000)return null;
+  return {exists:true,hash:sha256(fs.readFileSync(file))};
+ }catch{return {exists:false}}
+}
+function recordPreTestRun(payload,baseDir){
+ const args=hookArgs(payload),cmd=args.CommandLine||args.commandLine||args.command;
+ if(!isDirectTestCommand(cmd))return;
+ const file=pendingTestFile(baseDir,payload);
+ if(!file)return;
+ const candidates=[args.Cwd||args.cwd,payload?.cwd,...(payload?.workspacePaths||[])].filter(v=>typeof v==='string');
+ let root=null;
+ for(const candidate of candidates){try{root=requireAuthorizedWorkspace(candidate);break}catch{}}
+ if(!root)return;
+ const reports={};
+ const cmdPath=cmd.replaceAll('\\','/');
+ for(const rel of CANDIDATE_ARTIFACTS){
+  if(cmdPath.includes(rel)||cmdPath.includes(path.posix.basename(rel)))
+   reports[rel]=reporterSnapshot(root,rel);
+ }
+ writeJsonSecure(file,{
+  kind:'native-test-preflight-v1',conversationId:sanitizeConversationId(payload.conversationId),
+  stepIdx:payload.stepIdx,workspace:root,command_hash:sha256(cmd),started_at:Date.now(),reports
+ });
+}
+function consumeTestPreflight(payload,baseDir,cmd,workspace){
+ const file=pendingTestFile(baseDir,payload);if(!file)return null;
+ const prior=safeLocalJson(file,32*1024);
+ try{fs.unlinkSync(file)}catch{}
+ if(prior?.kind!=='native-test-preflight-v1'
+    ||prior.conversationId!==sanitizeConversationId(payload?.conversationId)
+    ||prior.stepIdx!==payload.stepIdx||prior.workspace!==workspace
+    ||prior.command_hash!==sha256(cmd))return null;
+ const elapsed=Date.now()-prior.started_at;
+ if(!Number.isFinite(elapsed)||elapsed<0||elapsed>15*60*1000)return null;
+ return prior;
+}
+
 function recordCommandRun(payload, baseDir) {
   handleArtifactModification(payload, baseDir);
   const args=hookArgs(payload);
@@ -274,16 +320,21 @@ function recordCommandRun(payload, baseDir) {
     catch(error){debugLog('hook_source_revision',error)}finally{try{engine?.close()}catch{}}
   }
   const reportHashes={},reportBindings={};
+  const preflight=consumeTestPreflight(payload,baseDir,cmd,root);
   const reportArg=cmd.replaceAll('\\\\','/');const finishedAt=Date.now();
   for(const rel of exit.status==='passed'&&sourceRevision?CANDIDATE_ARTIFACTS:[]){
     try{
       const file=safeFile(root,rel);
       const stat=fs.statSync(file);
-      if(stat.size<=1200000&&stat.isFile()&&
+      const before=preflight?.reports?.[rel];
+      if(stat.size<=1200000&&stat.isFile()&&before&&
           (reportArg.includes(rel)||reportArg.includes(path.posix.basename(rel)))&&
-          stat.mtimeMs>=finishedAt-10*60*1000&&stat.mtimeMs<=finishedAt+2000){
-          reportHashes[rel]=sha256(fs.readFileSync(file));reportBindings[rel]=true;
-        }
+          stat.mtimeMs>=preflight.started_at-2000&&stat.mtimeMs<=finishedAt+2000){
+          const currentHash=sha256(fs.readFileSync(file));
+          if(before.exists===false||(before.exists===true&&before.hash!==currentHash)){
+            reportHashes[rel]=currentHash;reportBindings[rel]=true;
+          }
+      }
     }catch{}
   }
   // Clear positive provenance after unsuccessful or ambiguous runs. A pre-existing
@@ -312,6 +363,9 @@ export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
 
   if (event === 'SessionStart') {
     recordActiveSession(payload, baseDir);
+  } else if (event === 'PreToolUse') {
+    recordPreTestRun(payload, baseDir);
+    return {decision:'allow'}; // Defer to native Antigravity permission policy.
   } else if (event === 'PostToolUse') {
     recordCommandRun(payload, baseDir);
     return {};
