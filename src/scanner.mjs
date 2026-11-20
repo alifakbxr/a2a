@@ -27,7 +27,9 @@ export function isGeneratedA2AReport(rel,content){
 
 export function gitHead(root){const p=spawnSync('git',['rev-parse','HEAD'],{cwd:root,timeout:1500,encoding:'utf8',windowsHide:true});return p.status===0?p.stdout.trim():null}
 export function gitChanges(root){
-  const p=spawnSync('git',['status','--porcelain=v1','-z','--untracked-files=normal'],{cwd:root,timeout:4000,encoding:'utf8',windowsHide:true});
+  // git status may execute a repository-configured fsmonitor hook unless explicitly disabled.
+  // A2A only inspects source; repository trust must never imply permission to run hooks.
+  const p=spawnSync('git',['-c','core.fsmonitor=false','status','--porcelain=v1','-z','--untracked-files=normal'],{cwd:root,timeout:4000,encoding:'utf8',windowsHide:true});
   if(p.status!==0) return [];
   const parts=p.stdout.split('\0'),out=[];
   for(let i=0;i<parts.length;i++){
