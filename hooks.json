@@ -28,6 +28,18 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./scripts/hook.mjs",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }

@@ -89,11 +89,15 @@ test('verification: native-run report + source hashes permit local PASS; changed
   const xml='<testsuite tests="1" failures="0" errors="0" skipped="0"><testcase name="addition works"/></testsuite>';
   fs.writeFileSync(path.join(ws1,'report.xml'),xml);
   handleHookEvent({hookEventName:'SessionStart',conversationId:'conv-native-test-11',workspacePaths:[ws1],cwd:ws1},{baseDir:process.env.A2A_DATA_DIR});
-  const hook=handleHookEvent({hookEventName:'PostToolUse',conversationId:'conv-native-test-11',workspacePaths:[ws1],
+  const pre=handleHookEvent({hookEventName:'PreToolUse',stepIdx:12,conversationId:'conv-native-test-11',workspacePaths:[ws1],
+    toolCall:{name:'run_command',args:{Cwd:ws1,CommandLine:'pytest --junitxml=report.xml'}}},{baseDir:process.env.A2A_DATA_DIR});
+  assert.equal(pre.decision,'allow');
+  fs.writeFileSync(path.join(ws1,'report.xml'),xml+'\n'); // Simulate reporter writing new bytes during run.
+  const hook=handleHookEvent({hookEventName:'PostToolUse',stepIdx:12,conversationId:'conv-native-test-11',workspacePaths:[ws1],
     toolCall:{name:'run_command',args:{Cwd:ws1,CommandLine:'pytest --junitxml=report.xml'}},exitCode:0,error:''},{baseDir:process.env.A2A_DATA_DIR});
   assert.deepEqual(hook,{});
   const run=JSON.parse(fs.readFileSync(path.join(process.env.A2A_DATA_DIR,'last-test-run.json'),'utf8'));
-  assert.equal(run.report_hashes['report.xml'],sha256(xml));
+  assert.equal(run.report_hashes['report.xml'],sha256(xml+'\n'));
   assert.equal(run.source_hashes['src/math.js'],sha256(fs.readFileSync(path.join(ws1,'src','math.js'))));
   assert.equal(run.command,undefined,'Never persist raw shell commands');
   const store=new Store();t.after(()=>{store.close();x.cleanup()});const wsId=store.register(ws1);
