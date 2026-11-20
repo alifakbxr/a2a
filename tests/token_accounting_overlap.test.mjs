@@ -1,0 +1,27 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {scanConversationHistory,formatConversationReport,attachReportSize} from '../src/conversations.mjs';
+test('historic, worker and plugin overhead accounting never fabricates token consumption',t=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-overlap-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+ const brain=path.join(root,'brain');
+ const write=(id,records)=>{const dir=path.join(brain,id,'.system_generated','logs');fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'transcript.jsonl'),records.map(x=>JSON.stringify(x)).join('\n')+'\n')};
+ write('parent-session',[{type:'PLANNER_RESPONSE',step_index:1,input_tokens:70,cache_read_tokens:400,output_tokens:30,tool_calls:[{name:'call_mcp_tool',args:{ServerName:'a2a_a2a',ToolName:'a2a_impact'}}]}]);
+ write('worker-session',[{type:'SYSTEM_MESSAGE',content:'<subagent_reminder>worker</subagent_reminder>'},{type:'PLANNER_RESPONSE',step_index:1,input_tokens:90,cache_read_tokens:200,output_tokens:10}]);
+ const normal=scanConversationHistory({brainRoots:[brain]});
+ assert.equal(normal.usage_accounting.worker_conversations,0);
+ assert.equal(normal.usage_accounting.safe_to_combine_worker_and_parent_totals,true);
+ assert.equal(normal.historical_log_counters.input,70);
+ const full=scanConversationHistory({brainRoots:[brain],includeSubagents:true});
+ assert.equal(full.usage_accounting.parent_conversations,1);
+ assert.equal(full.usage_accounting.worker_conversations,1);
+ assert.equal(full.usage_accounting.overlapping_worker_accounting,'possible');
+ assert.equal(full.usage_accounting.safe_to_combine_worker_and_parent_totals,false);
+ assert.equal(full.usage_accounting.a2a_calls_detected,1);
+ assert.equal(full.usage_accounting.a2a_attributable_model_tokens,null);
+ assert.equal(full.usage_accounting.weekly_quota_consumption,null);
+ assert.ok(full.warnings.some(w=>w.includes('overlap')));
+ attachReportSize(full);assert.ok(formatConversationReport(full).includes('possible overlap'));
+});
