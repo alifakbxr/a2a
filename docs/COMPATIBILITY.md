@@ -53,3 +53,7 @@ The CI test does not have access to the user's Pop!_OS GUI session; a live Antig
 ### Skill inclusion versus plugin MCP availability
 
 An enabled plugin and four green MCP tools do not imply the A2A skill metadata is in the **current** agent context. Antigravity may exclude skills through a global `~/.gemini/config/skills.json`, workspace `.agents/skills.json`, or subagent context filtering. Run `node scripts/a2a.mjs doctor` to inspect the **global manifest only** (`skill_discovery`), then check `/skills` in the actual IDE/CLI session and `agy plugin validate --strict`. `/skills reload` refreshes CLI discovery without invoking an A2A MCP tool. Do not automatically remove exclusions or duplicate the skill in a second location. An `Excluded` indicator is not by itself proof of an MCP server outage or evidence that the model would choose A2A when included.
+
+### Native reporter provenance (PreToolUse + PostToolUse)
+
+A2A captures a bounded, private pre-run fingerprint only when a direct native test command declares a known report file. PostToolUse binds the reporter to the same conversation and tool step and requires it to be created or changed during that run; unchanged reports, missing preflight context and ambiguous executions remain unverified. This never auto-approves a command, reads model thinking, or treats a local named PASS as independent acceptance. The single-use fingerprint contains only hashed command identity and reporter hashes, not raw test logs or terminal arguments.

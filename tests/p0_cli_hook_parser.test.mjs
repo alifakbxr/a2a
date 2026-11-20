@@ -150,7 +150,11 @@ test('#52: spoofed test commands cannot grant verify_handoff even with existing 
        toolCall:{name:'run_command',args:{CommandLine:cmd,Cwd:x.work}},exitCode:0},{baseDir:x.data});
      assert.equal(verify().verified,false,cmd);
    }
-   handleHookEvent({hookEventName:'PostToolUse',conversationId:conv,workspacePaths:[x.work],
+   const pre=handleHookEvent({hookEventName:'PreToolUse',stepIdx:99,conversationId:conv,workspacePaths:[x.work],
+     toolCall:{name:'run_command',args:{CommandLine:'pytest --junitxml=report.xml',Cwd:x.work}}},{baseDir:x.data});
+   assert.equal(pre.decision,'allow');
+   fs.writeFileSync(path.join(x.work,'report.xml'),report+'\n');
+   handleHookEvent({hookEventName:'PostToolUse',stepIdx:99,conversationId:conv,workspacePaths:[x.work],
      toolCall:{name:'run_command',args:{CommandLine:'pytest --junitxml=report.xml',Cwd:x.work}},exitCode:0},{baseDir:x.data});
    assert.equal(verify().verified,true,'A genuine local direct test still counts as locally attested');
    handleHookEvent({hookEventName:'PostToolUse',conversationId:conv,workspacePaths:[x.work],

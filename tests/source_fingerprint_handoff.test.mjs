@@ -56,3 +56,29 @@ test('native test hook does not reattest an old report from unrelated command',(
   invalidateWorkspaceCache();fs.rmSync(f.dir,{recursive:true,force:true});
  }
 });
+
+test('Pre/Post native report correlation rejects an unchanged recent report',()=>{
+ const f=fixture(),oldHome=process.env.HOME,oldData=process.env.A2A_DATA_DIR;
+ try{
+  process.env.HOME=f.home;process.env.A2A_DATA_DIR=path.join(f.dir,'data');authorizeWorkspace(f.project);
+  fs.writeFileSync(path.join(f.project,'package.json'),'{"name":"test"}');
+  fs.writeFileSync(path.join(f.project,'report.xml'),'<testsuite tests="1" failures="0"><testcase name="old"/></testsuite>');
+  const old=(Date.now()-2*60*1000)/1000;
+  fs.utimesSync(path.join(f.project,'report.xml'),old,old);
+  const item={stepIdx:10,conversationId:'conv-report-reuse',workspacePaths:[f.project],
+   toolCall:{name:'run_command',args:{CommandLine:'pytest --junitxml=report.xml',Cwd:f.project}}};
+  handleHookEvent({...item,hookEventName:'PreToolUse'},{baseDir:process.env.A2A_DATA_DIR});
+  handleHookEvent({...item,hookEventName:'PostToolUse',exitCode:0},{baseDir:process.env.A2A_DATA_DIR});
+  const record=JSON.parse(fs.readFileSync(path.join(process.env.A2A_DATA_DIR,'last-test-run.json'),'utf8'));
+  assert.equal(record.report_hashes['report.xml'],undefined);
+  assert.equal(record.report_bindings['report.xml'],undefined);
+  // Same command and report cannot be replayed after the preflight has been consumed.
+  handleHookEvent({...item,hookEventName:'PostToolUse',exitCode:0},{baseDir:process.env.A2A_DATA_DIR});
+  const replay=JSON.parse(fs.readFileSync(path.join(process.env.A2A_DATA_DIR,'last-test-run.json'),'utf8'));
+  assert.equal(replay.report_bindings['report.xml'],undefined);
+ }finally{
+  if(oldHome===undefined)delete process.env.HOME;else process.env.HOME=oldHome;
+  if(oldData===undefined)delete process.env.A2A_DATA_DIR;else process.env.A2A_DATA_DIR=oldData;
+  invalidateWorkspaceCache();fs.rmSync(f.dir,{recursive:true,force:true});
+ }
+});
