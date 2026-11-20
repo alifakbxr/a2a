@@ -41,7 +41,7 @@ The `A2A_RELEASE_EVIDENCE_B64` manifest contains the usual `revision`, `evaluato
 }
 ```
 
-The second signature must cover precisely the UTF-8 bytes returned by `releaseApprovalPayload({release_target,revision,approved_at})` exported from `scripts/release-authorization.mjs`. It is intentionally separate from each scenario's `attestationPayload`, because those evidence signatures bind a scenario to a tested source revision, not necessarily to the package commit being published.
+The second signature must cover precisely the UTF-8 bytes returned by `releaseApprovalPayload({release_target,revision,approved_at,manifest_sha256})` exported from `scripts/release-authorization.mjs`. It is intentionally separate from each scenario's `attestationPayload`, because those evidence signatures bind a scenario to a tested source revision, not necessarily to the package commit being published.
 
 **Important:** The acceptance registry digest is over `JSON.stringify(registry)`, not pretty-printed file bytes. Read the actual registry JSON and sign the exact payload without modifying the fields afterwards. Test and reviewer public keys may be shared for verification; **never place private signing keys or raw Antigravity archives in the repository, workflows, or logs**.
 
@@ -68,3 +68,5 @@ An unconfigured GitHub repository is **correctly denied**. External GitHub secre
 ## Current candidate and behavioral scope (18 November 2026)
 
 The latest merged **behavioral implementation** documented here is [PR #36](https://github.com/alifakbxr/a2a/pull/36) on `v2.0.1`, commit `67ea5888caf61751952c8a7daa1eb222d738d4b6`, with [4/4 post-merge CI jobs passing](https://github.com/alifakbxr/a2a/actions/runs/44325007116). Six implementation issues #30–#35 are closed. The release authorization script is unchanged by that merge: it still requires an **approved `main` SHA**, independently controlled evaluator keys, signed frozen acceptance evidence, and a separate reviewer Ed25519 signature. **Passing behavioral CI does not satisfy any external F01–F18 receipt, live Antigravity, privacy review or human approval by itself.** [Issue #15](https://github.com/alifakbxr/a2a/issues/15) remains open and no publication was performed.
+
+**v2 signature protocol:** Sign `a2a-attestation-v2` evidence payloads including `evidence.outcome`. Build `manifest_sha256 = releaseManifestDigest(manifest)` *before* assigning `release_approval`; include this digest both in the detached approval record and `releaseApprovalPayload`. The approval binds all unsigned manifest data, including scenarios, evaluator and critical defects. Existing v1 receipts/approvals are not release eligible; missing `critical_defects` is rejected.

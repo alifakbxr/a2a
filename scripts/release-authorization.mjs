@@ -15,11 +15,18 @@ const isObject=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 const EXPECTED_REPO='alifakbxr/a2a';
 const REQUIRED_SCENARIOS=Array.from({length:18},(_,i)=>'F'+String(i+1).padStart(2,'0'));
 
-export function releaseApprovalPayload({release_target,revision,approved_at}){
+// Canonicalize the complete unsigned manifest, not only commit metadata.
+export function releaseManifestDigest(manifest){
+ const canonical=value=>Array.isArray(value)?value.map(canonical):
+   value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value;
+ const {release_approval,...unsigned}=manifest;
+ return crypto.createHash('sha256').update(JSON.stringify(canonical(unsigned))).digest('hex');
+}
+export function releaseApprovalPayload({release_target,revision,approved_at,manifest_sha256}){
  return JSON.stringify({
    schema:'a2a-release-approval-v1',
    repository:release_target.repository,commit_sha:release_target.commit_sha,
-   version:release_target.version,revision,
+   version:release_target.version,revision,manifest_sha256,
    acceptance_registry_sha256:release_target.acceptance_registry_sha256,
    real_antigravity_validation:release_target.real_antigravity_validation,
    privacy_reviewed:release_target.privacy_reviewed,
@@ -34,6 +41,8 @@ function validReleaseApproval(manifest,trustKeys){
     typeof approval.approved_at!=='string'||!Number.isFinite(Date.parse(approval.approved_at)))return false;
  const key=Object.hasOwn(keys,approval.key_id)?keys[approval.key_id]:null;
  if(typeof key!=='string')return false;
+ const digest=releaseManifestDigest(manifest);
+ if(approval.manifest_sha256!==digest)return false;
  const approvedAt=Date.parse(approval.approved_at);
  if(approvedAt>Date.now()+5*60_000||approvedAt<Date.now()-90*24*60*60_000)return false;
  try{
@@ -43,7 +52,7 @@ function validReleaseApproval(manifest,trustKeys){
    return signature.length===64&&crypto.verify(
      null,Buffer.from(releaseApprovalPayload({
        release_target:manifest.release_target,revision:manifest.revision,
-       approved_at:approval.approved_at
+       approved_at:approval.approved_at,manifest_sha256:digest
      })),publicKey,signature);
  }catch{return false}
 }

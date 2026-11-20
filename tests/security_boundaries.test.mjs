@@ -102,7 +102,7 @@ test('release config with insecure permissions fails closed with actionable diag
   else{fs.writeFileSync(trust,'{invalid');fs.writeFileSync(registry,'{invalid');}
   const manifest={revision:'unverified',evaluator:{independent:true,name:'external-fixture'},scenarios:[
    {id:'F01',requirement:'Independent scenario',verdict:'not-tested',critical:true,evidence:[]}
-  ]};
+  ],critical_defects:[]};
   fs.writeFileSync(path.join(work,'release.json'),JSON.stringify(manifest));
   engine=new Engine();
   const result=engine.verify({workspace:work,operation:'assess_release',artifact:'release.json'});

@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import path from 'node:path';
-import {assertPublishAuthorized,releaseApprovalPayload} from '../scripts/release-authorization.mjs';
+import {assertPublishAuthorized,releaseApprovalPayload,releaseManifestDigest} from '../scripts/release-authorization.mjs';
 import {attestationPayload} from '../scripts/evaluate-acceptance.mjs';
 
 const sha='a'.repeat(40);
@@ -41,10 +41,11 @@ function fixture(){
     }
   };
   const approved_at=new Date().toISOString();
+  const manifest_sha256=releaseManifestDigest(manifest);
   manifest.release_approval={
-    key_id:'reviewer',approved_at,
+    key_id:'reviewer',approved_at,manifest_sha256,
     signature:crypto.sign(null,Buffer.from(releaseApprovalPayload({
-      release_target:manifest.release_target,revision:manifest.revision,approved_at
+      release_target:manifest.release_target,revision:manifest.revision,approved_at,manifest_sha256
     })),reviewerPriv).toString('base64')
   };
   return {
@@ -78,6 +79,11 @@ test('publish gate rejects unapproved, divergent, forged, incomplete and wrong-r
     x=>{x.manifest.release_target.repeated_benchmark_verified=false},
     x=>{x.manifest.scenarios[0].evidence[0].signature='AA=='},
     x=>{x.manifest.scenarios[0].verdict='not-tested'},
+    x=>{x.manifest.scenarios[0].evidence[0].outcome='failed'},
+    x=>{delete x.manifest.critical_defects},
+    x=>{x.manifest.critical_defects.push({id:'NEW-DEFECT',status:'open'})},
+    x=>{x.manifest.evaluator.name='different-evaluator'},
+    x=>{x.manifest.scenarios[0].evidence[0].assertion_count=2},
     x=>{x.registry.scenarios.pop()},
     x=>{x.trustKeys={}},
     x=>{x.manifest.scenarios[0].requirement='Silently changed'},
@@ -132,4 +138,15 @@ test('publish CLI refuses missing authorization and emits no secret contents',()
   assert.equal(proc.status,1);
   assert.equal(proc.stdout.trim(),'');
   assert.match(proc.stderr,/Release authorization DENIED/);
+});
+
+test('genuine signed FAILED evidence relabeled PASS is not authorized',()=>{
+ const input=fixture();
+ const e=input.manifest.scenarios[0].evidence[0];
+ const keys=crypto.generateKeyPairSync('ed25519');
+ input.trustKeys.independent=keys.publicKey.export({type:'spki',format:'pem'}).toString();
+ e.outcome='failed';
+ e.signature=crypto.sign(null,Buffer.from(attestationPayload({revision:input.manifest.revision,scenarioId:'F01',evidence:e})),keys.privateKey).toString('base64');
+ e.outcome='passed';
+ assert.throws(()=>assertPublishAuthorized(input),Error);
 });
