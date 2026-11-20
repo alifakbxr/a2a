@@ -8,7 +8,7 @@ import pkg from '../package.json' with {type:'json'};
 import {
   allowlistPath,settingsPath,getA2AMode,setA2AMode,getCompactMode,setCompactMode,
   getAutoTrustMode,setAutoTrustMode,getArtifactAutoSnapshotMode,setArtifactAutoSnapshotMode,loadAllowlist,loadAntigravityWorkspaces,
-  authorizeWorkspace,revokeWorkspace,dataDir,getHomeDir,requireAuthorizedWorkspace,localAntigravityRpcUrl
+  authorizeWorkspace,revokeWorkspace,dataDir,getHomeDir,requireAuthorizedWorkspace,isProtectedRoot,localAntigravityRpcUrl
 } from '../src/security.mjs';
 import {readOfficialAgyUsageFile} from '../src/tokens.mjs';
 import {scanConversationHistory,attachReportSize,formatConversationReport} from '../src/conversations.mjs';
@@ -72,7 +72,8 @@ try{
       settings:settingsPath(),
       data_dir:dataDir(),
       allowlist:allowlistPath(),
-      allowed_workspaces:loadAllowlist(),
+      allowed_workspaces:loadAllowlist().filter(ws=>!isProtectedRoot(ws)),
+      ignored_protected_grants:loadAllowlist().filter(isProtectedRoot).length,
       antigravity_workspaces:loadAntigravityWorkspaces(),
       session_usage:{status:'not_collected',reason:'Doctor does not read internal conversation transcripts.'},
       network:'no outbound requests',

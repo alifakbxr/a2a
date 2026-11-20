@@ -10,10 +10,15 @@ export function classifyMcpFailure(toolName,error){
    required_parameters:spec?.inputSchema.required??[],
    next_step:'Inspect tools/list and retry with the documented parameter names and types. Do not guess aliases.'};
  }
+ if(/Protected workspace denied/i.test(msg)){
+  return {status:'error',code:'workspace_access_denied',
+   message:'Protected application configuration paths cannot be used as A2A project workspaces.',
+   next_step:'Choose an already trusted ordinary project. Do not run allow or retry this protected path.'};
+ }
  if(/Workspace is not authorized/i.test(msg)){
   return {status:'error',code:'workspace_authorization_required',
    message:'Workspace is not authorized for A2A.',
-   next_step:'Ask the user to trust the intended workspace in Antigravity or explicitly run a2a allow <workspace>. Never bypass authorization.'};
+   next_step:'Ask the user to trust the ordinary project in Antigravity, or use node <PLUGIN_ROOT>/scripts/a2a.mjs allow <workspace> from the installed plugin. Never bypass protected roots.'};
  }
  if(/protected root|system directory|Symlink access denied|sensitive file denied|escapes authorized|Path escapes|outside workspace|Permission denied/i.test(msg)){
   return {status:'error',code:'workspace_access_denied',
