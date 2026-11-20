@@ -287,7 +287,7 @@ function recordCommandRun(payload, baseDir) {
   });
 }
 
-export const ALWAYS_ON_POLICY = 'A2A Always-On (opt-in): Zero calls for clear/local tasks. For cross-file/auth/schema uncertainty, use one scoped a2a_context query (limit=5) OR a2a_impact(summary=true); no chains without new evidence. Native Antigravity edits/tests. Local PASS is not independent E2E. No automatic token stats, teamwork or verbose handoffs.';
+export const ALWAYS_ON_POLICY = 'A2A Always-On (opt-in): Native first; zero calls if clear. For cross-file/auth/schema uncertainty, use ONE a2a_context(workspace=<trusted project>,action=query,query=<symbol>,limit=5) OR a2a_impact(workspace=<trusted project>,changed=[<paths>],summary=true). Skip if native context suffices; no retries. Local PASS != E2E; no auto teamwork/tokens.';
 
 export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   if (!payload || typeof payload !== 'object') return {};

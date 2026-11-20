@@ -10,7 +10,7 @@ Antigravity performs edits, tests, browser work and approvals. A2A advises via *
 ## Call budget: 0 → 1 → only if needed
 
 - **0 calls:** clear file/task, typo, UI copy, isolated edit, normal debug with sufficient native context. Use native tools directly.
-- **1 targeted call:** unknown symbol → `a2a_context(action="query",query="specific symbol",limit=5)`; cross-file/auth/schema risk → `a2a_impact(changed=["actual/file"],summary=true)`. Choose **one**, not both by default.
+- **1 targeted call:** unknown symbol → `a2a_context(workspace="<trusted project absolute path>",action="query",query="specific symbol",limit=5)`; cross-file/auth/schema risk → `a2a_impact(workspace="<trusted project absolute path>",changed=["actual/file"],summary=true)`. Choose **one**, not both by default.
 - **Second call only for new uncertainty.** Do not chain inspect → query → skeleton → impact. Reuse until source or scope changes.
 - **High-risk behavior:** `a2a_verify(operation="plan")` only when an explicit acceptance matrix is valuable. Specify Given/When/Then, negative paths and evidence type; browser/visual cases need viewport, UI state and reference. Run tests using native tools. `assess` only with a real, named test report; a passing build is **not** visual/hardware/security/independent proof.
 - **Persistent acceptance is opt-in:** `persist_plan:true` stores scenario text locally; use returned `plan_id` for complete assessment. On source change, reissue the unchanged scope explicitly; pinned `source_revision` needs review.

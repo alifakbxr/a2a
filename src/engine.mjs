@@ -406,8 +406,8 @@ export class Engine {
     const wsId=s.wsId;
     if(operation==='tool_recovery')return classifyNativeToolFailure({error_class,error_hint,tool_family,retry_count});
     if(operation==='save_checkpoint'){
-      const conv=conversation_id||this.#resolveActiveConversationId();
-      if(conv==='default')throw new Error('An active conversation or explicit conversation_id is required');
+      if(!conversation_id)throw new Error('Explicit conversation_id is required to avoid cross-session checkpoint attribution');
+      const conv=conversation_id;
       const saved=saveRecoveryCheckpoint(this.store,wsId,{
         conversationId:conv,revision:s.revision,taskSummary:task_summary,
         completed,nextSteps:next_steps,decisions,pendingTests:pending_tests
@@ -462,7 +462,8 @@ export class Engine {
       return {conversation_id:convId,...(diffRes||{artifact_name,v1,v2,diff:''}),...(compact?{compact:true}:{})};
     }
     if(operation==='snapshot_artifact'||operation==='snapshot-artifact'){
-      const convId=conversation_id||id||this.#resolveActiveConversationId();
+      const convId=conversation_id||id;
+      if(!convId)throw new Error('Explicit conversation_id is required for an artifact snapshot');
       if(!artifact_path&&!artifact_name)throw new Error('artifact_path or artifact_name is required');
       const targetPath=artifact_path
         ? (path.isAbsolute(artifact_path)?artifact_path:path.resolve(s.root,artifact_path))

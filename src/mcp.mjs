@@ -28,7 +28,12 @@ function getActiveSession(){
     const file=path.join(engine.store.base,'active-session.json');
     const stat=fs.lstatSync(file);
     if(!stat.isFile()||stat.size>128*1024)return null;
-    const active=JSON.parse(fs.readFileSync(file,'utf8'))?.latest;
+    const data=JSON.parse(fs.readFileSync(file,'utf8'));
+    // This stdio server is shared across sessions. Never infer a calling client's
+    // session when recent parent/subagent or other project IDs coexist.
+    const identities=new Set(Object.values(data?.byWorkspace||{}).map(x=>x?.conversationId).filter(Boolean));
+    if(identities.size>1)return null;
+    const active=data?.latest;
     const workspace=active?.workspacePaths?.[0] || active?.cwd;
     return active?.conversationId && workspace ? {conversationId:active.conversationId,workspace} : null;
   }catch{return null}
