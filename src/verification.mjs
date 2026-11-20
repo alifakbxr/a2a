@@ -276,7 +276,7 @@ export function computeSourceFingerprint(root, changedFiles = []) {
   return sha256(fileHashes.join('\n'));
 }
 
-export function nativeRunProvenance(store,root,changedFiles,relReport,reportHash){
+export function nativeRunProvenance(store,root,changedFiles,relReport,reportHash,currentRevision){
   // This is a local hook-derived record, not a cryptographic attestation.
   if(!changedFiles.length || !store?.base)return {matched:false,reason:'No changed source files were bound to the native run'};
   try{
@@ -296,6 +296,8 @@ export function nativeRunProvenance(store,root,changedFiles,relReport,reportHash
     }
     const age=Date.now()-Date.parse(record.updatedAt||'');
     if(!Number.isFinite(age)||age< -2000||age>15*60*1000)return {matched:false,reason:'Native run is outside freshness window'};
+    if(!record.source_revision||record.source_revision!==currentRevision)return {matched:false,reason:'Native test run is not bound to the current complete source revision'};
+    if(record.report_bindings?.[relReport]!==true)return {matched:false,reason:'Report was not explicitly bound to the native test command'};
     if(record.report_hashes?.[relReport]!==reportHash)return {matched:false,reason:'Report hash differs from the last native test run'};
     for(const rel of changedFiles){
       const expected=record.source_hashes?.[rel];
@@ -445,7 +447,7 @@ export function verifyHandoff(store,wsId,root,rev,{
   const sourceFingerprint=computeSourceFingerprint(root,detectedChanged);
 
   const testsPassed=parsed.status==='passed'&&parsed.failed===0&&(parsed.assertions||0)>0;
-  const provenance=nativeRunProvenance(store,root,detectedChanged,relArtifact,hash);
+  const provenance=nativeRunProvenance(store,root,detectedChanged,relArtifact,hash,rev);
 
   let deliverableVerified=false;
   if(!hasExplicitCriteria){

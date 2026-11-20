@@ -6,6 +6,7 @@ import { dataDir, getA2AMode, getArtifactAutoSnapshotMode, getHomeDir, requireAu
 import { sanitizeConversationId, vettedTranscript } from '../src/tokens.mjs';
 import { Store } from '../src/storage.mjs';
 import {gitChanges} from '../src/scanner.mjs';
+import {Engine} from '../src/engine.mjs';
 import {CANDIDATE_ARTIFACTS} from '../src/verification.mjs';
 import {safeFile,sha256,debugLog} from '../src/security.mjs';
 
@@ -263,12 +264,26 @@ function recordCommandRun(payload, baseDir) {
   for(const rel of changed.slice(0,200)){
     try{sourceHashes[rel]=sha256(fs.readFileSync(safeFile(root,rel)))}catch{}
   }
-  const reportHashes={};
-  for(const rel of exit.status==='passed'?CANDIDATE_ARTIFACTS:[]){
+  // A successful command is not proof it generated an unrelated existing report.
+  // Only explicitly named, recently written reporter output is eligible for
+  // bounded local correlation; no independent execution attestation is implied.
+  let sourceRevision=null;
+  if(exit.status==='passed'){
+    let engine;
+    try{engine=new Engine();const state=engine.sync(root,{verifyIntegrity:true});if(state.source_integrity_complete)sourceRevision=state.revision;}
+    catch(error){debugLog('hook_source_revision',error)}finally{try{engine?.close()}catch{}}
+  }
+  const reportHashes={},reportBindings={};
+  const reportArg=cmd.replaceAll('\\\\','/');const finishedAt=Date.now();
+  for(const rel of exit.status==='passed'&&sourceRevision?CANDIDATE_ARTIFACTS:[]){
     try{
       const file=safeFile(root,rel);
       const stat=fs.statSync(file);
-      if(stat.size<=1200000 && stat.isFile())reportHashes[rel]=sha256(fs.readFileSync(file));
+      if(stat.size<=1200000&&stat.isFile()&&
+          (reportArg.includes(rel)||reportArg.includes(path.posix.basename(rel)))&&
+          stat.mtimeMs>=finishedAt-10*60*1000&&stat.mtimeMs<=finishedAt+2000){
+          reportHashes[rel]=sha256(fs.readFileSync(file));reportBindings[rel]=true;
+        }
     }catch{}
   }
   // Clear positive provenance after unsuccessful or ambiguous runs. A pre-existing
@@ -284,6 +299,8 @@ function recordCommandRun(payload, baseDir) {
     exit_code:exit.exit_code,
     source_hashes:exit.status==='passed'?sourceHashes:{},
     report_hashes:exit.status==='passed'?reportHashes:{},
+    report_bindings:exit.status==='passed'?reportBindings:{},
+    source_revision:exit.status==='passed'?sourceRevision:null,
   });
 }
 

@@ -57,7 +57,9 @@ function attestLocalNativeRun(f,rel){
     kind:'native-test-tool-completed',succeeded:true,
     workspace:f.workspace,conversationId,updatedAt:new Date().toISOString(),
     source_hashes:{'src/checkin.js':sha256(fs.readFileSync(path.join(f.workspace,'src','checkin.js')))},
-    report_hashes:{[rel]:sha256(fs.readFileSync(path.join(f.workspace,rel)))}
+    report_hashes:{[rel]:sha256(fs.readFileSync(path.join(f.workspace,rel)))},
+    report_bindings:{[rel]:true},
+    source_revision:f.engine.sync(f.workspace,{verifyIntegrity:true}).revision
   }));
 }
 

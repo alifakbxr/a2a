@@ -36,7 +36,7 @@ export class Engine {
       const graph=createGraph(index);
       this.store.persistIndex(wsId,revision,index.files.map(({text,...rest})=>rest),graph.nodes,graph.edges);
     }
-    return {root,wsId,revision,index,git,snapshot,skipped:index.skipped};
+    return {root,wsId,revision,index,git,snapshot,skipped:index.skipped,source_integrity_complete:index.integrityComplete!==false};
   }
   resolveMeta(workspace){
     const root=requireAuthorizedWorkspace(workspace),wsId=this.store.register(root);
@@ -129,7 +129,8 @@ export class Engine {
       coverage:{
         ...shortGraphSummary(this.store,s.wsId),
         skipped_files:s.skipped.length,
-        incomplete:s.skipped.some(x=>x==='index_limit_exceeded'||x==='index_byte_budget_exceeded'),
+        incomplete:s.skipped.length>0,
+        source_integrity_complete:s.source_integrity_complete,
       },
       read_only:true,
     };
@@ -219,7 +220,7 @@ export class Engine {
         fallback_test_candidates:res.fallback_test_candidates.slice(0,3),
         coverage:{...res.coverage,output_bounded:true},
         uncertainty:res.uncertainty,
-        incomplete_index:s.skipped.some(x=>x==='index_limit_exceeded'||x==='index_byte_budget_exceeded'),
+        incomplete_index:s.skipped.length>0,
         summary:true,
       };
     }
@@ -263,6 +264,7 @@ export class Engine {
   verify({workspace,operation='plan',criteria=[],changed=[],worker_name,artifact,allow_stale,persist_plan=false,plan_id=null}={}){
     const compact=getCompactMode();
     const s=this.sync(workspace,{verifyIntegrity:true});
+    if(!s.source_integrity_complete&&operation!=='plan')throw new Error('Source integrity incomplete; verification cannot make a freshness claim');
     if(operation==='plan'){
       validateChangedPaths(changed);
       let plannedCriteria=criteria;
@@ -403,6 +405,7 @@ export class Engine {
     // when presenting test evidence or historical run freshness.
     const needsLiveRevision=['list','runs','model_recovery','save_checkpoint','incidents','record_incident','add_hypothesis','assess_hypothesis','hypotheses'].includes(operation);
     const s=needsLiveRevision?this.sync(workspace,{verifyIntegrity:true}):(isReadOnly?this.resolveMeta(workspace):this.sync(workspace));
+    if(needsLiveRevision&&s.source_integrity_complete===false)throw new Error('Source integrity incomplete; evidence freshness cannot be verified');
     const wsId=s.wsId;
     if(operation==='tool_recovery')return classifyNativeToolFailure({error_class,error_hint,tool_family,retry_count});
     if(operation==='save_checkpoint'){

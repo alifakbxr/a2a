@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {sha256, MAX_INDEX_FILES, MAX_SOURCE_BYTES,shouldIgnore,safeFile} from './security.mjs';
@@ -42,29 +43,51 @@ export function gitChanges(root){
   }
   return [...new Set(out)].sort().slice(0,500);
 }
+// Hash moderately oversized first-party files without parsing them. Larger or
+// unreadable sources make verification explicitly incomplete instead of stale-PASS.
+function fingerprintOversizedSource(full,size){
+ if(size>32*1024*1024)return null;
+ const fd=fs.openSync(full,'r'),buffer=Buffer.allocUnsafe(65536),hash=crypto.createHash('sha256');
+ try{
+  let position=0;
+  while(position<size){
+   const n=fs.readSync(fd,buffer,0,Math.min(buffer.length,size-position),position);
+   if(n<=0)return null;
+   hash.update(buffer.subarray(0,n));position+=n;
+  }
+  if(fs.fstatSync(fd).size!==size)return null;
+  return hash.digest('hex');
+ }finally{fs.closeSync(fd)}
+}
+
 export function discover(root,{limit=MAX_INDEX_FILES,cachedFiles=null}={}){
-  const paths=[],skip=[],stack=[''];let scanned=0,totalBytes=0;const now=Date.now();
+  const paths=[],skip=[],skippedHashes=[],stack=[''];let scanned=0,totalBytes=0,integrityComplete=true;const now=Date.now();
   while(stack.length){const dir=stack.pop();let entries;try{entries=fs.readdirSync(path.join(root,dir),{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))}catch{continue}
     for(const ent of entries){const rel=(dir?dir+'/':'')+ent.name;
       if(shouldIgnore(rel)||ent.isSymbolicLink())continue;
       if(ent.isDirectory()){stack.push(rel);continue}
       if(!ent.isFile() || !(textName.test(rel)||manifestName.test(ent.name)))continue;
-      scanned++;if(scanned>limit){skip.push('index_limit_exceeded');stack.length=0;break}
-      try{const full=safeFile(root,rel);const st=fs.statSync(full);if(st.size>MAX_SOURCE_BYTES){skip.push('large:'+rel);continue}
-        if(totalBytes+st.size>32*1024*1024){skip.push('index_byte_budget_exceeded');stack.length=0;break}
+      scanned++;if(scanned>limit){skip.push('index_limit_exceeded');integrityComplete=false;stack.length=0;break}
+      try{const full=safeFile(root,rel);const st=fs.statSync(full);if(st.size>MAX_SOURCE_BYTES){
+          skip.push('large:'+rel);
+          const digest=fingerprintOversizedSource(full,st.size);
+          if(digest)skippedHashes.push(rel+':'+digest);else integrityComplete=false;
+          continue;
+        }
+        if(totalBytes+st.size>32*1024*1024){skip.push('index_byte_budget_exceeded');integrityComplete=false;stack.length=0;break}
         const cached=cachedFiles?.get(rel);
         if(cached && ent.name!=='package.json' && !/(^|\/)(?:reports?|test-results)\/[^/]+\.json$/i.test(rel) && cached.mtime_ms!=null && cached.mtime_ms===st.mtimeMs && cached.bytes===st.size && (now-st.mtimeMs)>1500){
           totalBytes+=st.size;
           paths.push({path:rel,hash:cached.hash,language:cached.language||detectLanguage(rel),bytes:st.size,mtime_ms:st.mtimeMs,text:null});
           continue;
         }
-        const buf=fs.readFileSync(full);totalBytes+=st.size;if(buf.includes(0)){skip.push('binary:'+rel);continue}
+        const buf=fs.readFileSync(full);totalBytes+=st.size;if(buf.includes(0)){skip.push('binary:'+rel);skippedHashes.push(rel+':'+sha256(buf));continue}
         if(isGeneratedA2AReport(rel,buf))continue;
         paths.push({path:rel,hash:sha256(buf),language:detectLanguage(rel),bytes:st.size,mtime_ms:st.mtimeMs,text:buf.toString('utf8')});
-      }catch{skip.push('unreadable:'+rel)}
+      }catch{skip.push('unreadable:'+rel);integrityComplete=false}
     }
   }
-  paths.sort((a,b)=>a.path.localeCompare(b.path));return {files:paths,skipped:skip};
+  paths.sort((a,b)=>a.path.localeCompare(b.path));return {files:paths,skipped:skip,skippedHashes,integrityComplete};
 }
 function buildLineStarts(text){
   const starts=[0];
@@ -184,4 +207,4 @@ export function discoverTestCommands(index,root=null){const names=new Set(index.
   const testFiles=index.files.filter(f=>isTestFile(f.path)).map(f=>f.path).slice(0,100);
   return {suggestions,testFiles,note:'Commands are candidates, not audited safe. Run only with Antigravity native permissions, after inspecting scripts.'};
 }
-export function snapshotOf(index){return sha256(index.files.map(f=>f.path+':'+f.hash).join('\n'))}
+export function snapshotOf(index){return sha256([...index.files.map(f=>f.path+':'+f.hash),...(index.skippedHashes||[]),index.integrityComplete===false?'source-integrity-incomplete':'source-integrity-complete'].sort().join('\n'))}

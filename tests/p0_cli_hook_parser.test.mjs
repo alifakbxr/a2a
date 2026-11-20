@@ -140,15 +140,18 @@ test('#52: spoofed test commands cannot grant verify_handoff even with existing 
   const store=new Store(x.data);
   try{
    const wsId=store.register(x.work);
-   const verify=()=>verifyHandoff(store,wsId,x.work,'rev',{
-     changed:['src/auth.js'],artifact:'report.xml',criteria:['auth safe']});
+   const verify=()=>{
+     const recent=JSON.parse(fs.readFileSync(path.join(x.data,'last-test-run.json'),'utf8'));
+     return verifyHandoff(store,wsId,x.work,recent.source_revision||'missing-revision',{
+       changed:['src/auth.js'],artifact:'report.xml',criteria:['auth safe']});
+    };
    for(const cmd of ['echo "npm test"','git commit -m "fix pytest"','npm test || true','pytest; echo ok']){
      handleHookEvent({hookEventName:'PostToolUse',conversationId:conv,workspacePaths:[x.work],
        toolCall:{name:'run_command',args:{CommandLine:cmd,Cwd:x.work}},exitCode:0},{baseDir:x.data});
      assert.equal(verify().verified,false,cmd);
    }
    handleHookEvent({hookEventName:'PostToolUse',conversationId:conv,workspacePaths:[x.work],
-     toolCall:{name:'run_command',args:{CommandLine:'npm test',Cwd:x.work}},exitCode:0},{baseDir:x.data});
+     toolCall:{name:'run_command',args:{CommandLine:'pytest --junitxml=report.xml',Cwd:x.work}},exitCode:0},{baseDir:x.data});
    assert.equal(verify().verified,true,'A genuine local direct test still counts as locally attested');
    handleHookEvent({hookEventName:'PostToolUse',conversationId:conv,workspacePaths:[x.work],
      toolCall:{name:'run_command',args:{CommandLine:'npm test || true',Cwd:x.work}},exitCode:0},{baseDir:x.data});
