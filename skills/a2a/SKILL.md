@@ -16,7 +16,7 @@ Antigravity performs edits, tests, browser work and approvals. A2A advises via *
 - **Persistent acceptance is opt-in:** `persist_plan:true` stores scenario text locally; use returned `plan_id` for complete assessment. On source change, reissue the unchanged scope explicitly; pinned `source_revision` needs review.
 - **Adaptive 5 Whys:** for recurring, regressed, high-risk or unclear bugs, native agent checks symptoms, 1–2 competing causes, falsifiers and a discriminating experiment. Ask 2–8 Whys only as evidence requires, not five MCP calls. Persist RCA only with consent: `a2a_evidence(record_incident|add_hypothesis|assess_hypothesis,persist_rca=true)`; require fresh exact named tests. `locally_supported` is **not** causal proof; retest after edits.
 - **Resume/error help only when needed:** `a2a_evidence(model_recovery|tool_recovery)`; checkpoints are unverified and source-revision bound. Never bypass permissions or retry identical tool failures.
-- **Teamwork:** native only, explicitly available, low-coupling, independent file ownership, user-approved. A2A never starts workers.
+- **Teamwork:** native, opt-in, independent ownership. A2A never launches workers.
 
 ## Safety and output
 
