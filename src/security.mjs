@@ -618,7 +618,9 @@ export function isWorkspaceAuthorized(ws){
       return true;
     }
   }
-  const agWorkspaces = loadAntigravityWorkspaces();
+  // Authorization is a security decision: bypass the UI discovery TTL so an
+  // IDE Workspace Trust revocation takes effect on the next A2A request.
+  const agWorkspaces = loadAntigravityWorkspaces({bypassCache:true});
   for (const a of agWorkspaces) {
     if (isProtectedRoot(a)) continue;
     if (isSameOrDescendantPath(a, canonical) || isSameOrDescendantPath(a, ws)) {

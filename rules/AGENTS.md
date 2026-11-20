@@ -1,2 +1,2 @@
 # A2A
-On-Demand: zero automatic calls. Default Compact. Prefer native tools; use one scoped A2A call only for meaningful uncertainty. Local test PASS is not independent E2E. Avoid redundant tool chains, token footers and automatic teamwork.
+Native-first, Compact. On-Demand: zero automatic calls; opt-in Always-On: one scoped MCP call for cross-file/auth/schema uncertainty, only if useful. Pass an authorized absolute project workspace. Local PASS != E2E. No automatic teamwork/tokens.
