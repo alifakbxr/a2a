@@ -12,7 +12,7 @@ const statuses=new Set(['passed','failed','partial','blocked','not-tested']);
 const types=new Set(['junit','tap','browser','security','performance','accessibility','manual','integration']);
 const digest=v=>typeof v==='string'&&/^[0-9a-f]{64}$/i.test(v);
 export function attestationPayload({revision,scenarioId,evidence}){
- return JSON.stringify({revision,scenario_id:scenarioId,type:evidence.type,reference:evidence.reference,checked_at:evidence.checked_at,artifact_sha256:evidence.artifact_sha256,assertion_count:evidence.assertion_count});
+ return JSON.stringify({schema:'a2a-attestation-v2',revision,scenario_id:scenarioId,outcome:evidence.outcome,type:evidence.type,reference:evidence.reference,checked_at:evidence.checked_at,artifact_sha256:evidence.artifact_sha256,assertion_count:evidence.assertion_count});
 }
 export function validateEvidenceSignature({revision,scenarioId,evidence,trustKeys={}}){
  if(!isObj(evidence)||evidence.outcome!=='passed'||evidence.revision!==revision||!types.has(evidence.type)||!digest(evidence.artifact_sha256)||!Number.isSafeInteger(evidence.assertion_count)||evidence.assertion_count<1||typeof evidence.reference!=='string'||!evidence.reference.trim()||typeof evidence.checked_at!=='string'||Number.isNaN(Date.parse(evidence.checked_at)))return false;
@@ -76,7 +76,8 @@ export function assessRelease(input,{trustKeys={},requiredScenarios=null}={}){
  }
  if(!scopeVerified)blockers.push({reason:'Independent frozen acceptance registry absent, invalid, or not fully matched'});
 
- const defects=Array.isArray(input.critical_defects)?input.critical_defects:[];
+ check(Array.isArray(input.critical_defects),'Explicit critical_defects inventory is required (use [] only after independent review)');
+ const defects=input.critical_defects;
  for(const d of defects){check(isObj(d)&&typeof d.id==='string'&&d.id.trim(),'Invalid critical defect record');if(d.status!=='resolved-and-retested')blockers.push({defect_id:d.id,reason:'Unresolved or unverified critical defect'});}
  const passed=results.filter(x=>x.verdict==='passed').length;
  const release_ready=scopeVerified&&passed===results.length&&blockers.length===0;
