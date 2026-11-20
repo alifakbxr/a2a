@@ -38,7 +38,7 @@ test('fabricated independent and all-green test report never passes release gate
   const fake={revision:rev,evaluator:{name:'untrusted-agent',independent:true},scenarios:[{
     id:'checkout',requirement:'True parallel stock checkout',critical:true,verdict:'passed',
     evidence:[{type:'integration',outcome:'passed',revision:rev,reference:'ci/job/1',checked_at:at,artifact_sha256:sha,assertion_count:100,key_id:'untrusted',signature:'a'.repeat(88)}]
-  }]};
+  }],critical_defects:[]};
   const out=assessRelease(fake);
   assert.equal(out.release_ready,false);
   assert.equal(out.scenarios.results[0].verdict,'not-tested');
@@ -48,7 +48,7 @@ test('even a signature does not prove a different scenario or revision',()=>{
   const keys=crypto.generateKeyPairSync('ed25519');
   const evidence={type:'security',outcome:'passed',revision:rev,reference:'ci/job/2',checked_at:at,artifact_sha256:sha,assertion_count:3,key_id:'ci'};
   evidence.signature=crypto.sign(null,Buffer.from(attestationPayload({revision:rev,scenarioId:'correct',evidence})),keys.privateKey).toString('base64');
-  const manifest={revision:rev,evaluator:{name:'ci',independent:true},scenarios:[{id:'different',requirement:'Tenant isolation',critical:true,verdict:'passed',evidence:[evidence]}]};
+  const manifest={revision:rev,evaluator:{name:'ci',independent:true},scenarios:[{id:'different',requirement:'Tenant isolation',critical:true,verdict:'passed',evidence:[evidence]}],critical_defects:[]};
   assert.equal(assessRelease(manifest,{trustKeys:{ci:keys.publicKey.export({type:'spki',format:'pem'})}}).release_ready,false);
 });
 
