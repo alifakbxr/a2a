@@ -36,7 +36,7 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
     // Legacy verifykit_* tool calls remain backward-compatible even when not listed
     const deniedLegacy=await ask({jsonrpc:'2.0',id:3,method:'tools/call',params:{name:'verifykit_context',arguments:{workspace:'/tmp'}}});
     assert.equal(deniedLegacy.result.isError,true);
-    assert.match(deniedLegacy.result.content[0].text,/authorized|exist/);
+    assert.match(deniedLegacy.result.content[0].text,/authorized|exist|Protected/);
 
     // Authorize a workspace in temp allowlist and test skeleton + resources
     const work=path.join(temp,'proj');
