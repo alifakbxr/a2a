@@ -1,6 +1,6 @@
 ---
 name: a2a
-description: Optional, low-overhead local context, impact, test evidence and recovery for Antigravity. Use only when native tools cannot resolve meaningful uncertainty.
+description: Retrieves cross-file code relationships and test evidence for complex Antigravity work, especially auth, payments, inventory, migrations and unknown symbols. Native-first, one targeted MCP call when it reduces meaningful uncertainty.
 ---
 
 # A2A — minimal-context workflow

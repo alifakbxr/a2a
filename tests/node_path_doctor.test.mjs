@@ -35,3 +35,27 @@ test('doctor exposes truthful runtime and read-only advisory fields',()=>{
  assert.equal(d.path_advisory===null||typeof d.path_advisory==='string',true);
  assert.equal(d.network,'no outbound requests');
 });
+
+test('skill discovery reports an explicit global exclusion without revealing any config contents',async()=>{
+ const fs=await import('node:fs'),os=await import('node:os'),path=await import('node:path');
+ const {diagnoseSkillDiscovery}=await import('../src/skill-discovery.mjs');
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-skill-discovery-'));
+ const before=process.env.HOME;
+ try{
+  process.env.HOME=root;
+  const dir=path.join(root,'.gemini','config');
+  fs.mkdirSync(dir,{recursive:true});
+  assert.equal(diagnoseSkillDiscovery().status,'no_global_manifest');
+  fs.writeFileSync(path.join(dir,'skills.json'),JSON.stringify({exclude:['a2a:a2a'],private_value:'SECRET_NOT_FOR_DIAGNOSTIC'}));
+  const denied=diagnoseSkillDiscovery();
+  assert.equal(denied.status,'excluded_by_global_manifest');
+  assert.equal(JSON.stringify(denied).includes('SECRET_NOT_FOR_DIAGNOSTIC'),false);
+  fs.writeFileSync(path.join(dir,'skills.json'),JSON.stringify({entries:[],exclude:['other-skill']}));
+  assert.equal(diagnoseSkillDiscovery().status,'not_excluded_by_global_manifest');
+  fs.writeFileSync(path.join(dir,'skills.json'),'{invalid');
+  assert.equal(diagnoseSkillDiscovery().status,'manifest_unavailable');
+ }finally{
+  if(before===undefined)delete process.env.HOME;else process.env.HOME=before;
+  fs.rmSync(root,{recursive:true,force:true});
+ }
+});

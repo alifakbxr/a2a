@@ -34,3 +34,20 @@ test('long transcript uses bounded next-event lookups',()=>{
  assert.equal(r.total_invocations,1500);
  assert.equal(r.counts.succeeded,1500);
 });
+
+test('namespaced Antigravity A2A MCP invocations are recognized without logging arguments',()=>{
+ for(const name of ['a2a_a2a/a2a_context','a2a/a2a_impact','mcp__a2a_a2a__a2a_verify']){
+   assert.ok(['a2a_context','a2a_impact','a2a_verify'].includes(isA2AInvocation({name})),name);
+ }
+ assert.equal(isA2AInvocation({name:'other_mcp/a2a_context'}),null);
+ const result=buildInterventionLedger([
+   {type:'PLANNER_RESPONSE',step_index:1,tool_calls:[{name:'a2a_a2a/a2a_context',args:{workspace:'/private/secret'}}]},
+   {type:'GENERIC',step_index:2,status:'DONE',content:'{"status":"error","code":"workspace_authorization_required","message":"Private path /private/secret"}'},
+   {type:'PLANNER_RESPONSE',step_index:3,tool_calls:[{name:'mcp__a2a_a2a__a2a_impact'}]},
+   {type:'GENERIC',step_index:4,status:'DONE',content:'{"isError":true,"content":[{"type":"text","text":"{\\\"status\\\":\\\"error\\\",\\\"code\\\":\\\"invalid_tool_arguments\\\"}"}]}'}
+ ]);
+ assert.equal(result.total_invocations,2);
+ assert.equal(result.counts['authorization-denied'],1);
+ assert.equal(result.counts['invalid-arguments'],1);
+ assert.equal(JSON.stringify(result).includes('/private/secret'),false);
+});
