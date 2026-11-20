@@ -21,7 +21,7 @@ A2A is language-agnostic in its **file, evidence, and MCP contracts**. Static sy
 
 ## Antigravity surface support
 
-- **IDE:** MCP tools & resources, `hooks.json` (`SessionStart`, targeted `PostToolUse`; no `PreInvocation`), skills, and `rules/AGENTS.md`; native browser testing remains under `/browser`.
+- **IDE:** MCP tools & resources, `hooks.json` (`SessionStart`, targeted `PreToolUse` only for native-test report correlation, targeted `PostToolUse`; no recurring `PreInvocation`), skills, and `rules/AGENTS.md`; native browser testing remains under `/browser`.
 - **App:** MCP/plugin contract; browser and orchestration remain native.
 - **CLI:** MCP/plugin contract and headless operation remain native (`antigravity-cli/settings.json` `trustedWorkspaces` supported, filtered by protected roots).
 - **SDK:** not used to proxy models or run third-party agents. A separately written SDK client could call this standard MCP server if supported.

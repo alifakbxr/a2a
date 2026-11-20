@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/alifakbxr/a2a/actions/workflows/ci.yml/badge.svg?branch=v2.0.1)](https://github.com/alifakbxr/a2a/actions/workflows/ci.yml) · [npm package](https://www.npmjs.com/package/@aliip/a2a) · [MIT License](LICENSE)
 
-> **Release status (18 November 2026):** The `v2.0.1` *development branch* contains the merged behavioral reliability work from [PR #36](https://github.com/alifakbxr/a2a/pull/36). Its local MCP/SQLite E2E and cross-platform Node CI passed (213 tests on Ubuntu Node 22; [post-merge run](https://github.com/alifakbxr/a2a/actions/runs/44325007116)). **It has not been promoted to `main`, published as a new 2.0.1 npm/GitHub release, or independently accepted in real Antigravity.** Existing registry versions, if any, can differ from this branch. See [release gate #15](https://github.com/alifakbxr/a2a/issues/15).
+> **Release status (20 November 2026):** `v2.0.1` is a **CI-validated development branch**, not a published or externally accepted release. Security/provenance and MCP adoption diagnostics were improved in [PRs #81–#86 and #88](https://github.com/alifakbxr/a2a/pulls?q=is%3Apr+is%3Amerged+base%3Av2.0.1). The combined [9-job Node 22/24/26 OS matrix](https://github.com/alifakbxr/a2a/actions/runs/44706443191) passed. **`main` has not changed; real Antigravity agent-selection evidence and independent F01–F18/browser/DB acceptance remain outstanding**, tracked by [#71](https://github.com/alifakbxr/a2a/issues/71) and [#15](https://github.com/alifakbxr/a2a/issues/15).
 
 ## What A2A does
 
@@ -159,3 +159,5 @@ For recurring regressions, concurrency/permission failures and ambiguous causes,
 ## v2.0.1 audit status (19 November 2026)
 
 The November audit's local implementation corrections (#50–#61) are integrated on the v2.0.1 branch: native hook/test provenance, strict JUnit/TAP assessment, MCP resource privacy, Node 22/24/26.13.1 CI, cross-platform filesystem safeguards, version-managed Node desktop PATH diagnostics, and bounded lower-overhead MCP schemas. Run node scripts/a2a.mjs doctor to see the actual Node binary and PATH advisory. **No live Antigravity installation acceptance or independently scored A/B benchmark is claimed.** The separate [release gate #15](https://github.com/alifakbxr/a2a/issues/15) blocks main and npm publication.
+
+**Live adoption caveat:** A2A MCP can be registered and callable even if the current Antigravity conversation excludes the `a2a:a2a` skill. The read-only `a2a doctor` `skill_discovery` field checks only the global `skills.json` exclusion list; verify actual session visibility with `/skills` and the plugin validation command. Neither an explicit manual MCP success nor a green CI matrix proves autonomous agent selection, reduced model token usage or independent application acceptance.
