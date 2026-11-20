@@ -51,3 +51,5 @@
 5. **Historical docs:** some preserve earlier PR numbers or observed pre-fix behavior for traceability; do not use those as installation/operation instructions over current contracts.
 
 Do not upload private user transcripts, credential-containing logs, or frozen application archives to this public repository.
+
+**20 Nov 2026 engineering audit:** P0 release signatures and Git execution boundary, malformed JUnit, source/report provenance, session/trust boundaries and protected workspace diagnostics have been corrected in merged PRs #81–#85; PR #86 improves safe MCP intervention measurement and plugin skill-exclusion diagnostics; PR #88 adds PreToolUse reporter correlation. Combined 9-job CI [passed](https://github.com/alifakbxr/a2a/actions/runs/44706443191). Live agent selection #71 and independent release acceptance #15 are **still open**; do not promote this branch.
