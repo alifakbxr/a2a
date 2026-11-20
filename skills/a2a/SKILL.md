@@ -24,4 +24,4 @@ Keep queries small; use Compact and never claim savings from estimates or auto-r
 
 Final report: **implemented / tested / failed / blocked / not tested**, with scoped evidence. Local results are not independent E2E; release [#15](https://github.com/alifakbxr/a2a/issues/15) remains open.
 
-CLI: `node scripts/a2a.mjs compact on|off`; `mode on-demand|always-on`; `artifact-autosnapshot on|off|status`. Not guaranteed IDE slash commands. [Docs](../../docs/README.md).
+Optional CLI: `node scripts/a2a.mjs`; see [Docs](../../docs/README.md).
