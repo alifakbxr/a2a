@@ -90,14 +90,14 @@ test('verification: native-run report + source hashes permit local PASS; changed
   fs.writeFileSync(path.join(ws1,'report.xml'),xml);
   handleHookEvent({hookEventName:'SessionStart',conversationId:'conv-native-test-11',workspacePaths:[ws1],cwd:ws1},{baseDir:process.env.A2A_DATA_DIR});
   const hook=handleHookEvent({hookEventName:'PostToolUse',conversationId:'conv-native-test-11',workspacePaths:[ws1],
-    toolCall:{name:'run_command',args:{Cwd:ws1,CommandLine:'npm test'}},exitCode:0,error:''},{baseDir:process.env.A2A_DATA_DIR});
+    toolCall:{name:'run_command',args:{Cwd:ws1,CommandLine:'pytest --junitxml=report.xml'}},exitCode:0,error:''},{baseDir:process.env.A2A_DATA_DIR});
   assert.deepEqual(hook,{});
   const run=JSON.parse(fs.readFileSync(path.join(process.env.A2A_DATA_DIR,'last-test-run.json'),'utf8'));
   assert.equal(run.report_hashes['report.xml'],sha256(xml));
   assert.equal(run.source_hashes['src/math.js'],sha256(fs.readFileSync(path.join(ws1,'src','math.js'))));
   assert.equal(run.command,undefined,'Never persist raw shell commands');
   const store=new Store();t.after(()=>{store.close();x.cleanup()});const wsId=store.register(ws1);
-  const good=verifyHandoff(store,wsId,ws1,'rev-a',{changed:['src/math.js'],artifact:'report.xml',criteria:['addition works']});
+  const good=verifyHandoff(store,wsId,ws1,run.source_revision,{changed:['src/math.js'],artifact:'report.xml',criteria:['addition works']});
   assert.equal(good.verified,true);
   fs.writeFileSync(path.join(ws1,'src','math.js'),'export const add=(a,b)=>a-b+0;\n');
   const compromised=verifyHandoff(store,wsId,ws1,'rev-b',{changed:['src/math.js'],artifact:'report.xml',criteria:['addition works'],allow_stale:true});
