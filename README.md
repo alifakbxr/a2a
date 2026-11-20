@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/alifakbxr/a2a/actions/workflows/ci.yml/badge.svg?branch=v2.0.1)](https://github.com/alifakbxr/a2a/actions/workflows/ci.yml) · [npm package](https://www.npmjs.com/package/@aliip/a2a) · [MIT License](LICENSE)
 
-> **Release status (20 November 2026):** `v2.0.1` is a **CI-validated development branch**, not a published or externally accepted release. Security/provenance and MCP adoption diagnostics were improved in [PRs #81–#86 and #88](https://github.com/alifakbxr/a2a/pulls?q=is%3Apr+is%3Amerged+base%3Av2.0.1). The combined [9-job Node 22/24/26 OS matrix](https://github.com/alifakbxr/a2a/actions/runs/44706443191) passed. **`main` has not changed; real Antigravity agent-selection evidence and independent F01–F18/browser/DB acceptance remain outstanding**, tracked by [#71](https://github.com/alifakbxr/a2a/issues/71) and [#15](https://github.com/alifakbxr/a2a/issues/15).
+> **Release status (20 November 2026):** `v2.0.1` is a **CI-validated development branch**, not a published or externally accepted release. Security/provenance and MCP adoption diagnostics were improved in [PRs #81–#86 and #88](https://github.com/alifakbxr/a2a/pulls?q=is%3Apr+is%3Amerged+base%3Av2.0.1). The combined [9-job Node 22/24/26 OS matrix](https://github.com/alifakbxr/a2a/actions/runs/44706443191) passed. **The v2.0.1 candidate has not been promoted to `main`; real Antigravity agent-selection evidence and independent F01–F18/browser/DB acceptance remain outstanding**, tracked by [#71](https://github.com/alifakbxr/a2a/issues/71) and [#15](https://github.com/alifakbxr/a2a/issues/15).
 
 ## What A2A does
 
