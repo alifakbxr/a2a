@@ -11,8 +11,8 @@ export function isA2AInvocation(call){
  if(KNOWN.has(name))return name;
  // Antigravity surfaces MCP calls as both a nested call_mcp_tool event and
  // namespaced direct invocation strings. Normalize only known A2A namespaces.
- const scoped=name.match(/^(?:a2a_a2a|a2a|verifykit_verifykit|verifykit)[/.:]([a-z_]+)$/);
- const encoded=name.match(/^mcp__(?:a2a_a2a|a2a|verifykit_verifykit|verifykit)__([a-z_]+)$/);
+ const scoped=name.match(/^(?:a2a_a2a|a2a|verifykit_verifykit|verifykit)[/.:]([a-z0-9_]+)$/);
+ const encoded=name.match(/^mcp__(?:a2a_a2a|a2a|verifykit_verifykit|verifykit)__([a-z0-9_]+)$/);
  if(scoped||encoded){
    const tool=(scoped||encoded)[1];
    return KNOWN.has(tool)?tool:'unknown-a2a-tool';
