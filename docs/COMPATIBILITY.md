@@ -57,3 +57,11 @@ An enabled plugin and four green MCP tools do not imply the A2A skill metadata i
 ### Native reporter provenance (PreToolUse + PostToolUse)
 
 A2A captures a bounded, private pre-run fingerprint only when a direct native test command declares a known report file. PostToolUse binds the reporter to the same conversation and tool step and requires it to be created or changed during that run; unchanged reports, missing preflight context and ambiguous executions remain unverified. This never auto-approves a command, reads model thinking, or treats a local named PASS as independent acceptance. The single-use fingerprint contains only hashed command identity and reporter hashes, not raw test logs or terminal arguments.
+
+### Eager core context vs lazy advanced MCP tools (issue #71)
+
+Antigravity defaults MCP tool definitions to **lazy**: a model must locate cached server schema files and call `call_mcp_tool`, even when a hook mentions the tool by name. The 21 Nov 2026 forensic archive contains 13 full transcripts, 227 planner responses and 611 native calls but **zero A2A/MCP calls** with an injected A2A Always-On policy in all 13; this proves no *observed invocation*, not that the tool was available to each model or that using it would have improved quality. Our original Always-On policy used direct `a2a_context(...)` syntax without explaining lazy tool discovery, a confirmed configuration/instruction mismatch.
+
+To make **one** high-value entrypoint directly discoverable, `mcp_config.json` now marks `a2a_context` **eager**; `a2a_impact`, `a2a_verify` and `a2a_evidence` stay lazy to avoid registering four schemas every turn. Eager increases the fixed per-turn schema/context footprint even when unused. Native-first and zero **actual calls** for simple tasks remain mandatory; eager must not be used to game intervention counts. Plugin settings may still disable MCP, and subagent MCP inheritance is controlled by Antigravity. To verify: upgrade installed plugin, restart parent/subagent sessions, inspect `/mcp` and `/skills` and run an eligible read-only audit without mentioning A2A. A full actual model-selection A/B must still be conducted independently; no performance gains are claimed from this static change.
+
+Official reference: https://antigravity.google/docs/mcp (Tool loading: lazy vs eager).

@@ -355,7 +355,7 @@ function recordCommandRun(payload, baseDir) {
   });
 }
 
-export const ALWAYS_ON_POLICY = 'A2A Always-On (opt-in): Native first; zero calls if clear. For cross-file/auth/schema uncertainty, use ONE a2a_context(workspace=<trusted project>,action=query,query=<symbol>,limit=5) OR a2a_impact(workspace=<trusted project>,changed=[<paths>],summary=true). Skip if native context suffices; no retries. Local PASS != E2E; no auto teamwork/tokens.';
+export const ALWAYS_ON_POLICY = 'A2A Always-On (opt-in): Native first; zero calls for clear tasks. For unresolved cross-file/auth/payment uncertainty, use the eager A2A context tool once (workspace=<trusted project>, action=query, query=<symbol>, limit=5). Other A2A tools are lazy: discover their schema first. No chains without new evidence. Native tests; local PASS is not E2E.';
 
 export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   if (!payload || typeof payload !== 'object') return {};
