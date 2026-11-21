@@ -6,7 +6,7 @@ const paths={type:'array',items:{type:'string',maxLength:500},maxItems:200};
 const BASE_SPECS = [
   {
     name:'context',
-    description:'Local context and token provenance, not billing.',
+    description:'Query cross-file auth, payment and inventory symbols.',
     inputSchema:{
       type:'object',
       additionalProperties:false,

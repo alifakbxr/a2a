@@ -2,8 +2,15 @@
   "mcpServers": {
     "a2a": {
       "command": "node",
-      "args": ["${PLUGIN_ROOT}/src/mcp.mjs"],
-      "timeoutSeconds": 90
+      "args": [
+        "${PLUGIN_ROOT}/src/mcp.mjs"
+      ],
+      "timeoutSeconds": 90,
+      "tools": {
+        "a2a_context": {
+          "eager": true
+        }
+      }
     }
   }
 }
