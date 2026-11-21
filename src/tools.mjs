@@ -6,7 +6,7 @@ const paths={type:'array',items:{type:'string',maxLength:500},maxItems:200};
 const BASE_SPECS = [
   {
     name:'context',
-    description:'Cross-file code graph and symbols for uncertain auth, payments, inventory, migrations or order lifecycles. Query by symbol before reading many files; local only, not test proof.',
+    description:'Query cross-file auth, payment and inventory symbols.',
     inputSchema:{
       type:'object',
       additionalProperties:false,
