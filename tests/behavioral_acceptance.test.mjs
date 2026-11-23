@@ -165,7 +165,7 @@ test('teamwork only suggested for explicitly independent file ownership with use
 
 test('four-tool contract accepts typed scenarios and remains bounded',()=>{
  const tools=TOOLS.map(x=>x.name);
- assert.deepEqual(tools,['a2a_context','a2a_impact','a2a_verify','a2a_evidence']);
+ assert.deepEqual(tools,['pilah_context','pilah_impact','pilah_verify','pilah_evidence']);
  assert.doesNotThrow(()=>validateArgs('a2a_verify',{workspace:'/tmp/not-authorized',operation:'plan',criteria:[visual]}));
  assert.doesNotThrow(()=>validateArgs('a2a_evidence',{workspace:'/tmp/not-authorized',operation:'tool_recovery',tool_family:'browser',error_hint:'context destroyed',retry_count:2}));
  assert.throws(()=>validateArgs('a2a_evidence',{workspace:'/tmp',operation:'tool_recovery',error_hint:'x'.repeat(500)}),/too long/i);
