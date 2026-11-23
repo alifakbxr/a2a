@@ -10,7 +10,22 @@ const KEY='a2a-context-guardian';
 const SCRIPT=fileURLToPath(import.meta.url);
 const LIMITS=Object.freeze({yellow:80,red:140,yellowCooldown:35,redCooldown:25});
 const hookFile=()=>path.join(getHomeDir(),'.gemini','config','hooks.json');
-const command=()=>`node "${SCRIPT}" hook`;
+const command=()=>{
+ if(/["\r\n#!/usr/bin/env node
+// Optional Antigravity PreInvocation advisor. Not registered until explicitly enabled.
+// No transcript reads, no model calls, no persistent user content or token estimates.
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {getHomeDir,readSafeBytesFile,readSafeJsonFile} from '../src/security.mjs';
+
+const KEY='a2a-context-guardian';
+const SCRIPT=fileURLToPath(import.meta.url);
+const LIMITS=Object.freeze({yellow:80,red:140,yellowCooldown:35,redCooldown:25});
+const hookFile=()=>path.join(getHomeDir(),'.gemini','config','hooks.json');
+%!]/.test(SCRIPT))throw new Error('Unsafe plugin path for hook command');
+ return `node "${SCRIPT}" hook`;
+};
 const owned=()=>({PreInvocation:[{type:'command',command:command(),timeout:5}]});
 
 export function adviseInvocation(p){
