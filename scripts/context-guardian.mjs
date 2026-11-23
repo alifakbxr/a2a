@@ -10,14 +10,30 @@ const KEY='a2a-context-guardian';
 const SCRIPT=fileURLToPath(import.meta.url);
 const LIMITS=Object.freeze({yellow:80,red:140,yellowCooldown:35,redCooldown:25});
 const hookFile=()=>path.join(getHomeDir(),'.gemini','config','hooks.json');
-export function guardianHookCommand(pluginFile=SCRIPT){
- if(typeof pluginFile!=='string'||pluginFile.length>4096||
-    [...pluginFile].some(char=>[34,36,96,37,33,10,13].includes(char.codePointAt(0))))
-  throw new Error('Unsafe plugin path for hook command');
- return 'node "' + pluginFile + '" hook';
+function safeCommandPath(value){
+ return typeof value==='string'&&value.length>0&&value.length<=4096&&path.isAbsolute(value)&&
+  ![...value].some(char=>char.codePointAt(0)<32||[34,36,96,37,33,127].includes(char.codePointAt(0)));
+}
+export function guardianHookCommand(pluginFile=SCRIPT,nodeBinary=process.execPath){
+ if(!safeCommandPath(pluginFile)||!safeCommandPath(nodeBinary))throw new Error('Unsafe plugin or Node binary path for hook command');
+ return '"' + nodeBinary + '" "' + pluginFile + '" hook';
 }
 const command=()=>guardianHookCommand();
 const owned=()=>({PreInvocation:[{type:'command',command:command(),timeout:5}]});
+function isOwnedGuardian(value){
+ if(!value||typeof value!=='object'||Array.isArray(value))return false;
+ const entry=value.PreInvocation;
+ if(!Array.isArray(entry)||entry.length!==1)return false;
+ const hook=entry[0];
+ if(!hook||typeof hook!=='object'||typeof hook.command!=='string')return false;
+ const cmd=hook.command;
+ const oldCommand='node "'+SCRIPT+'" hook';
+ const match=/^"([^"]+)" "([^"]+)" hook$/.exec(cmd);
+ const validNew=!!match&&match[2]===SCRIPT&&safeCommandPath(match[1])&&
+  ['node','node.exe'].includes(path.basename(match[1]).toLowerCase());
+ return (cmd===oldCommand||validNew)&&
+  JSON.stringify(value)===JSON.stringify({PreInvocation:[{type:'command',command:cmd,timeout:5}]});
+}
 
 export function adviseInvocation(p){
  if(!p||typeof p!=='object'||p.hookEventName&&p.hookEventName!=='PreInvocation')return {};
@@ -38,6 +54,8 @@ function readManifest(){
  const result=readSafeJsonFile(hookFile(),{maxBytes:128*1024,checkParentDir:true});
  if(result.reason==='missing')return {config:{},previous:null};
  if(!result.ok)throw new Error('Existing hooks manifest is unreadable or unsafe; no changes made.');
+ if(!result.value||typeof result.value!=='object'||Array.isArray(result.value))
+  throw new Error('Existing hooks manifest must be a JSON object; no changes made.');
  return {config:result.value,previous:result.bytes};
 }
 function ensureSafeParents(dir){
@@ -71,13 +89,16 @@ function saveManifest(config,previous){
 export function configureGuardian(action){
  if(!['status','enable','disable'].includes(action))throw Error('Expected status, enable or disable');
  const {config,previous}=readManifest(),present=Object.hasOwn(config,KEY);
- const expected=JSON.stringify(owned());
- const valid=present&&JSON.stringify(config[KEY])===expected;
+ const valid=present&&isOwnedGuardian(config[KEY]);
  if(action==='status')return {enabled:valid,conflict:present&&!valid,default_enabled:false,
   no_recurring_hook_when_disabled:!present,automatic_compaction:false};
  if(present&&!valid)throw Error('Guardian key is managed by another configuration; refusing to overwrite');
  if(action==='enable'){
-  if(!present){config[KEY]=owned();saveManifest(config,previous)}
+  const expected=owned();
+  // Explicit re-enable refreshes stale NVM Node binaries, including legacy PATH-based commands.
+  if(!present||JSON.stringify(config[KEY])!==JSON.stringify(expected)){
+   config[KEY]=expected;saveManifest(config,previous);
+  }
   return {enabled:true,automatic_compaction:false,restart_ide_recommended:true,
    note:'Opt-in PreInvocation advisory only; no active context-window token measurement.'};
  }
