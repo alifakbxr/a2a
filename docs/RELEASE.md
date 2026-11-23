@@ -37,7 +37,7 @@
 
 ## Honest status
 
-The repository includes a **working local MCP runtime and Antigravity plugin bundle** checked by Node automated tests, including a real local JSON-RPC/stdio MCP subprocess and SQLite E2E. The current candidate still needs a **fresh, installed Antigravity `agy plugin validate --strict .`** run before release; past validation reports do not substitute for that live check. The repository CI matrix tests Node 22 on Ubuntu, macOS and Windows and Node 24 on Ubuntu. This does not replace live Antigravity plugin installation and browser/HTTP/database verification.
+The repository includes a **working local MCP runtime and Antigravity plugin bundle** checked by Node automated tests, including a real local JSON-RPC/stdio MCP subprocess and SQLite E2E. The current candidate still needs a **fresh, installed Antigravity `agy plugin validate --strict .`** run before release; past validation reports do not substitute for that live check. The current repository CI matrix targets Node 22, 24 and 26.13.1 on Ubuntu, macOS and Windows (nine jobs). This does not replace live Antigravity plugin installation and browser/HTTP/database verification.
 
 ## v2.0.1 branch and promotion
 
@@ -58,3 +58,11 @@ On 18 November 2026, the original frozen STOCKROOM app archives were independent
 **Source:** [PR #36](https://github.com/alifakbxr/a2a/pull/36) merged to `v2.0.1` at `67ea5888caf61751952c8a7daa1eb222d738d4b6`. [Post-merge CI run #44325007116](https://github.com/alifakbxr/a2a/actions/runs/44325007116) completed **4/4 successful jobs**, with **213/213 Node tests** on Ubuntu Node 22. This includes local real MCP stdio/SQLite E2E for authorized/denied workspaces, typed criteria, negative false-PASS controls, checkpoint recovery and privacy. It **does not** prove Antigravity installed-plugin behavior, Figma/browser visual states, printer hardware, Laravel HTTP/database transactions, or any independent F01–F18 PASS.
 
 The behavioral [Five Whys](BEHAVIORAL_5_WHYS_V2_0_1.md) is recorded with root-cause hypotheses, mitigations, and falsifiable local tests. The complete current status is in [Build Status](../BUILD_STATUS.md) and [traceability](V2_0_1_TRACEABILITY.md). **Issue #15 is open: NO-GO until independent acceptance, privacy review, repeated benchmark and explicit human approval.**
+
+## 23 November 2026 — current release candidate hold
+
+The `v2.0.1` integration branch now includes source-level audit fixes through PR #103, including Guardian's opted-in absolute Node path, historical MCP attribution, and verification-planning route semantics. The original STOCKROOM Native/A2A Library ZIPs were recovered and compared against their recorded hashes; independent source lint passed 101/101 and 80/80 first-party PHP files respectively. PHPUnit and live application acceptance did **not** execute because necessary PHP extensions (including SQLite driver) were unavailable, and a real isolated database/browser test environment was not provisioned.
+
+Pending release blockers: issue #15 frozen F01–F18 HTTP/browser/DB negative controls, two-connection concurrency and full browser restarts, external signed acceptance and privacy review; #71 observed Antigravity parent/subagent A2A tool selection; #91 real Guardian overhead and behavior; #92 randomized ≥5 matched Native/A2A benchmark trials with official provider usage where possible. At development merge time PR #102 had 8/9 green jobs and PR #103 6/9 with unstarted macOS jobs; the full post-merge version-branch matrix is still required. See [build status](../BUILD_STATUS.md) for exact references.
+
+**Do not merge into `main` yet**, even with general permission to complete the project: this release's defined execution evidence is still missing. No automatic tag, npm publish or GitHub release.
