@@ -14,14 +14,14 @@ const at='2026-11-18T09:00:00Z';
 
 test('all independently developed MCP actions survive integration',()=>{
   const names=TOOLS.map(t=>t.name);
-  assert.deepEqual(names,['a2a_context','a2a_impact','a2a_verify','a2a_evidence']);
-  const verify=TOOLS.find(x=>x.name==='a2a_verify').inputSchema.properties.operation.enum;
+  assert.deepEqual(names,['pilah_context','pilah_impact','pilah_verify','pilah_evidence']);
+  const verify=TOOLS.find(x=>x.name==='pilah_verify').inputSchema.properties.operation.enum;
   for(const op of ['plan','assess','verify_handoff','assess_release','assess_semantic','assess_browser']){
     assert.ok(verify.includes(op),op);
-    assert.doesNotThrow(()=>validateArgs('a2a_verify',{workspace:'/authorized-project',operation:op}));
+    assert.doesNotThrow(()=>validateArgs('pilah_verify',{workspace:'/authorized-project',operation:op}));
   }
-  assert.doesNotThrow(()=>validateArgs('a2a_context',{workspace:'/authorized-project',action:'orchestration',task:{tier:'free',available_commands:['@subagent']}}));
-  assert.throws(()=>validateArgs('a2a_verify',{workspace:'/authorized-project',operation:'disable-security'}));
+  assert.doesNotThrow(()=>validateArgs('pilah_context',{workspace:'/authorized-project',action:'orchestration',task:{tier:'free',available_commands:['@subagent']}}));
+  assert.throws(()=>validateArgs('pilah_verify',{workspace:'/authorized-project',operation:'disable-security'}));
 });
 
 test('all known STOCKROOM critical risk domains remain in integrated plan',()=>{
