@@ -5,24 +5,24 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 const check=(v,m)=>{if(!v)throw new Error(m)};
 function plain(v){return String(v||'').replace(/^["']|["']$/g,'').slice(0,120)}
-const KNOWN=new Set(['a2a_context','a2a_impact','a2a_verify','a2a_evidence','verifykit_context','verifykit_impact','verifykit_verify','verifykit_evidence']);
+const KNOWN=new Set(['pilah_context','pilah_impact','pilah_verify','pilah_evidence','a2a_context','a2a_impact','a2a_verify','a2a_evidence','verifykit_context','verifykit_impact','verifykit_verify','verifykit_evidence']);
 export function isA2AInvocation(call){
  const name=plain(call?.name);
  const explicitServer=plain(call?.args?.ServerName??call?.args?.server_name??call?.serverName??call?.server_name);
- if(KNOWN.has(name))return !explicitServer||['a2a','a2a_a2a','verifykit','verifykit_verifykit'].includes(explicitServer)?name:null;
+ if(KNOWN.has(name))return !explicitServer||['pilah','pilah_pilah','a2a','a2a_a2a','verifykit','verifykit_verifykit'].includes(explicitServer)?name:null;
  // Antigravity surfaces MCP calls as both a nested call_mcp_tool event and
  // namespaced direct invocation strings. Normalize only known A2A namespaces.
- const scoped=name.match(/^(?:a2a_a2a|a2a|verifykit_verifykit|verifykit)[/.:]([a-z0-9_]+)$/);
- const encoded=name.match(/^mcp__(?:a2a_a2a|a2a|verifykit_verifykit|verifykit)__([a-z0-9_]+)$/);
- const eager=name.match(/^mcp_(?:a2a_a2a|a2a|verifykit_verifykit|verifykit)_([a-z0-9_]+)$/);
+ const scoped=name.match(/^(?:pilah_pilah|pilah|a2a_a2a|a2a|verifykit_verifykit|verifykit)[/.:]([a-z0-9_]+)$/);
+ const encoded=name.match(/^mcp__(?:pilah_pilah|pilah|a2a_a2a|a2a|verifykit_verifykit|verifykit)__([a-z0-9_]+)$/);
+ const eager=name.match(/^mcp_(?:pilah_pilah|pilah|a2a_a2a|a2a|verifykit_verifykit|verifykit)_([a-z0-9_]+)$/);
  if(scoped||encoded||eager){
    const tool=(scoped||encoded||eager)[1];
    return KNOWN.has(tool)?tool:'unknown-a2a-tool';
  }
- if(name.startsWith('a2a_')||name.startsWith('verifykit_'))return 'unknown-a2a-tool';
+ if(name.startsWith('pilah_')||name.startsWith('a2a_')||name.startsWith('verifykit_'))return 'unknown-a2a-tool';
  if(name!=='call_mcp_tool')return null;
  const tool=plain(call?.args?.ToolName??call?.args?.tool_name),server=plain(call?.args?.ServerName??call?.args?.server_name);
- if(!['a2a','a2a_a2a','verifykit','verifykit_verifykit'].includes(server))return null;
+ if(!['pilah','pilah_pilah','a2a','a2a_a2a','verifykit','verifykit_verifykit'].includes(server))return null;
  return KNOWN.has(tool)?tool:'unknown-a2a-tool';
 }
 function resultOf(e){
