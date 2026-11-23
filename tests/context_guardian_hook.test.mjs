@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {adviseInvocation} from '../scripts/context-guardian.mjs';
+import {adviseInvocation,guardianHookCommand} from '../scripts/context-guardian.mjs';
 
 const script=new URL('../scripts/context-guardian.mjs',import.meta.url);
 const sample=(steps,turn)=>({hookEventName:'PreInvocation',initialNumSteps:steps,invocationNum:turn});
@@ -69,4 +69,12 @@ test('conflicting guardian key and malformed global hooks fail closed without wr
   assert.notEqual(run('enable').status,0);
   assert.equal(fs.readFileSync(manifest,'utf8'),'{bad-json');
  }finally{fs.rmSync(home,{recursive:true,force:true});}
+});
+
+test('optional hook command rejects shell-expanded paths without installing hooks',()=>{
+ assert.equal(guardianHookCommand('/path with spaces/a2a.mjs'),'node "/path with spaces/a2a.mjs" hook');
+ for(const code of [34,36,96,37,33,10,13]){
+  const bad='/tmp/unsafe'+String.fromCharCode(code)+'script.mjs';
+  assert.throws(()=>guardianHookCommand(bad),/Unsafe plugin path/);
+ }
 });
