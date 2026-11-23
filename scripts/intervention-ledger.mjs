@@ -13,14 +13,15 @@ export function isA2AInvocation(call){
  // namespaced direct invocation strings. Normalize only known A2A namespaces.
  const scoped=name.match(/^(?:a2a_a2a|a2a|verifykit_verifykit|verifykit)[/.:]([a-z0-9_]+)$/);
  const encoded=name.match(/^mcp__(?:a2a_a2a|a2a|verifykit_verifykit|verifykit)__([a-z0-9_]+)$/);
- if(scoped||encoded){
-   const tool=(scoped||encoded)[1];
+ const eager=name.match(/^mcp_(?:a2a_a2a|a2a|verifykit_verifykit|verifykit)_([a-z0-9_]+)$/);
+ if(scoped||encoded||eager){
+   const tool=(scoped||encoded||eager)[1];
    return KNOWN.has(tool)?tool:'unknown-a2a-tool';
  }
  if(name.startsWith('a2a_')||name.startsWith('verifykit_'))return 'unknown-a2a-tool';
  if(name!=='call_mcp_tool')return null;
  const tool=plain(call?.args?.ToolName??call?.args?.tool_name),server=plain(call?.args?.ServerName??call?.args?.server_name);
- if(!(server==='a2a'||server==='a2a_a2a'||server==='verifykit'||server==='verifykit_verifykit'||KNOWN.has(tool)))return null;
+ if(!['a2a','a2a_a2a','verifykit','verifykit_verifykit'].includes(server))return null;
  return KNOWN.has(tool)?tool:'unknown-a2a-tool';
 }
 function resultOf(e){

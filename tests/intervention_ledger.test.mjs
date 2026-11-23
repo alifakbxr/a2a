@@ -51,3 +51,18 @@ test('namespaced Antigravity A2A MCP invocations are recognized without logging 
  assert.equal(result.counts['invalid-arguments'],1);
  assert.equal(JSON.stringify(result).includes('/private/secret'),false);
 });
+
+test('official Antigravity eager function naming is counted; foreign MCP is never attributed',()=>{
+ for(const name of ['mcp_a2a_a2a_a2a_context','mcp_a2a_a2a_a2a_impact','mcp_a2a_a2a_verify']){
+  assert.ok(isA2AInvocation({name}),name);
+ }
+ assert.equal(isA2AInvocation({name:'mcp_unrelated_a2a_context'}),null);
+ assert.equal(isA2AInvocation({name:'call_mcp_tool',args:{ServerName:'foreign',ToolName:'a2a_context'}}),null);
+ const r=buildInterventionLedger([
+  {type:'PLANNER_RESPONSE',step_index:1,tool_calls:[{name:'mcp_a2a_a2a_a2a_context'}]},
+  {type:'GENERIC',step_index:2,status:'DONE',content:'{}'},
+  {type:'PLANNER_RESPONSE',step_index:3,tool_calls:[{name:'call_mcp_tool',args:{ServerName:'other',ToolName:'a2a_context'}}]}
+ ]);
+ assert.equal(r.total_invocations,1);
+ assert.equal(r.counts.succeeded,1);
+});
