@@ -16,6 +16,9 @@ test('routing is bounded, precise, and never claims outcome',()=>{
  assert.equal(routeWorkflow({task:'cross-file',uncertainty:true}).proposal,'a2a_context');
  assert.equal(routeWorkflow({task:'change-impact',risk:'high',uncertainty:false}).proposal,'a2a_impact');
  assert.equal(routeWorkflow({task:'verification',risk:'critical',profile:'deep-review'}).proposal,'a2a_verify');
+ const plan=routeWorkflow({task:'verification',risk:'critical',profile:'deep-review',hasNamedEvidence:false});
+ assert.equal(plan.needs_named_test_evidence,false,'Creating a plan must not require a preexisting named test report');
+ assert.equal(plan.named_evidence_required_for_assessment,true,'A later assess must use an actual named report');
  assert.equal(routeWorkflow({task:'verification',risk:'critical',profile:'economy'}).proposal,'native-only');
  assert.equal(routeWorkflow({task:'recovery',risk:'high',profile:'deep-review'}).proposal,'a2a_evidence');
  assert.equal(routeWorkflow({task:'change-impact',risk:'high',scopeKnown:false}).proposal,'a2a_context');
