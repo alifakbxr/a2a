@@ -8,7 +8,7 @@ import {TOOLS} from '../src/tools.mjs';
 
 const root=path.resolve(fileURLToPath(new URL('../',import.meta.url)));
 const read=relative=>fs.readFileSync(path.join(root,relative),'utf8');
-const files=['README.md','BUILD_STATUS.md','skills/a2a/SKILL.md',
+const files=['README.md','BUILD_STATUS.md','skills/pilah/SKILL.md',
   ...fs.readdirSync(path.join(root,'docs')).filter(n=>n.endsWith('.md')).map(n=>'docs/'+n)];
 const content=Object.fromEntries(files.map(file=>[file,read(file)]));
 const pkg=JSON.parse(read('package.json')),plugin=JSON.parse(read('plugin.json'));
@@ -47,7 +47,7 @@ test('README, contracts, skill, plugin and CLI agree on version, four tools and 
  assert.equal(TOOLS.length,4);
  assert.equal(pkg.engines.node,'>=22.13.0');
  for(const name of TOOLS.map(x=>x.name)){
-   for(const file of ['README.md','docs/CONTRACTS.md','skills/a2a/SKILL.md']){
+   for(const file of ['README.md','docs/CONTRACTS.md','skills/pilah/SKILL.md']){
      assert.ok(content[file].includes(name),file+': missing '+name);
    }
  }
@@ -63,7 +63,7 @@ test('README, contracts, skill, plugin and CLI agree on version, four tools and 
 
 test('every operation declared in executable MCP schema appears in contracts',()=>{
  for(const tool of TOOLS){
-   const selector=tool.name==='a2a_context'?'action':'operation';
+   const selector=tool.name==='pilah_context'?'action':'operation';
    const ops=tool.inputSchema.properties[selector]?.enum||[];
    for(const operation of ops){
      assert.ok(contracts.includes(tick+operation+tick),'Contract omits '+tool.name+':'+operation);
@@ -87,7 +87,7 @@ test('published docs distinguish local proof, external release gate, and active 
  assert.ok(content['BUILD_STATUS.md'].includes('213/213'));
  assert.ok(content['BUILD_STATUS.md'].includes('4/4'));
  assert.ok(content['docs/SECURITY.md'].includes('explicitly saved local Markdown'));
- assert.ok(!content['skills/a2a/SKILL.md'].includes('not fixed by this workflow'));
+ assert.ok(!content['skills/pilah/SKILL.md'].includes('not fixed by this workflow'));
 });
 
 test('current documentation does not misstate closed audit issues or release readiness',()=>{
