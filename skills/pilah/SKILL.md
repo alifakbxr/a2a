@@ -19,4 +19,6 @@ Antigravity is the executor. PILAH is a small, read-first assistant, not a subst
 
 Native teamwork/subagents only when independent workstreams benefit and the user opts in. Never spawn teams or change model modes automatically. No extra plugins, background transcript scans, forced compaction, or unverified token-saving claims.
 
+For repetitive native operations, prefer a short, reviewable script with bounded, redacted output over repeated reads/calls. Check effects and permissions first; never bypass approval or sandboxing. Model routing, background sidecars and automatic prompt mutation are not PILAH features.
+
 **Legacy transition:** `a2a_*` MCP tool calls and `A2A_*` environment/data paths remain accepted for existing users. Default public tool inventory lists four `pilah_*` operations only.
