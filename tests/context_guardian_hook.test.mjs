@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {adviseInvocation} from '../scripts/context-guardian.mjs';
 
 const script=new URL('../scripts/context-guardian.mjs',import.meta.url);
@@ -28,7 +29,7 @@ test('opt-in hook installer preserves unrelated hooks; disabled costs no recurri
  const home=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-guardian-'));
  const manifest=path.join(home,'.gemini','config','hooks.json');
  const env={...process.env,HOME:home,USERPROFILE:home};
- const run=(arg,input)=>spawnSync(process.execPath,[new URL(script).pathname,arg],{env,encoding:'utf8',input,timeout:20000});
+ const run=(arg,input)=>spawnSync(process.execPath,[fileURLToPath(script),arg],{env,encoding:'utf8',input,timeout:20000});
  try{
   const defaultState=JSON.parse(run('status').stdout);
   assert.equal(defaultState.enabled,false);
@@ -56,7 +57,7 @@ test('conflicting guardian key and malformed global hooks fail closed without wr
  const home=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-guardian-deny-'));
  const manifest=path.join(home,'.gemini','config','hooks.json');
  const env={...process.env,HOME:home,USERPROFILE:home};
- const run=arg=>spawnSync(process.execPath,[new URL(script).pathname,arg],{env,encoding:'utf8',timeout:20000});
+ const run=arg=>spawnSync(process.execPath,[fileURLToPath(script),arg],{env,encoding:'utf8',timeout:20000});
  try{
   fs.mkdirSync(path.dirname(manifest),{recursive:true});
   const original='{"a2a-context-guardian":{"PreInvocation":[{"type":"command","command":"other-owner"}]}}';
