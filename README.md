@@ -1,10 +1,12 @@
 # A2A — Agent to Alif
 
+> **Current main-branch status (23 Nov 2026; supersedes older branch-freeze notes):** [PR #105](https://github.com/alifakbxr/a2a/pull/105) promoted `v2.0.1` into `main` at `733c0cb`. The [main merge CI](https://github.com/alifakbxr/a2a/actions/runs/45202036041) must be checked for its actual result. The original F01–F18 live acceptance, installed Antigravity agent-selection tests, Guardian overhead and controlled Native/A2A trials remain **unverified** in [main validation backlog](docs/MAIN_VALIDATION_BACKLOG.md). Old pre-main instructions in dated sections below are historical. **No package release was made.**
+
 <p align="center"><img src="assets/logo.svg" alt="A2A logo" width="90"></p>
 
 **Local-first engineering context, impact analysis, evidence-scoped verification, and transparent token diagnostics for Google Antigravity.**
 
-[![CI](https://github.com/alifakbxr/a2a/actions/workflows/ci.yml/badge.svg?branch=v2.0.1)](https://github.com/alifakbxr/a2a/actions/workflows/ci.yml) · [npm package](https://www.npmjs.com/package/@aliip/a2a) · [MIT License](LICENSE)
+[![CI](https://github.com/alifakbxr/a2a/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/alifakbxr/a2a/actions/workflows/ci.yml) · [npm package](https://www.npmjs.com/package/@aliip/a2a) · [MIT License](LICENSE)
 
 > **Release status (23 November 2026):** `v2.0.1` is a **CI-validated development branch**, not an independently accepted/published release. The current combined [9-job CI](https://github.com/alifakbxr/a2a/actions/runs/45165794296) passed across Ubuntu/macOS/Windows and Node 22/24/26.13.1. Improvements through [PR #98](https://github.com/alifakbxr/a2a/pull/98) include opt-in Context Guardian, native-first routing profiles, and accurate eager MCP intervention tracking. **The branch has not been promoted to `main`**, tagged or published. Live autonomous tool adoption [#71](https://github.com/alifakbxr/a2a/issues/71), full independently verified F01–F18 acceptance [#15](https://github.com/alifakbxr/a2a/issues/15), Guardian host overhead [#91](https://github.com/alifakbxr/a2a/issues/91), and matched routing benchmarks [#92](https://github.com/alifakbxr/a2a/issues/92) remain open. Unit/CI success is not external release authorization.
 
