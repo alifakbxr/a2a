@@ -1,2 +1,2 @@
 # PILAH
-Native first, minimal complete change. No speculative abstraction or unnecessary tools. Reuse existing project code/platform APIs. Clear task: zero PILAH calls. Unresolved cross-file risk: at most one scoped call, then retest. Reproduce bugs and preserve security, accessibility and compatibility. Native teamwork only opt-in. Local PASS != independent acceptance. No automatic token stats, compaction or agent spawning.
+Native first: zero calls for clear tasks. Prefer deletion, reuse and platform features over new code. For unclear cross-file risk, one scoped MCP call. Reproduce, test and simplify. Preserve security and compatibility. No automatic agents, compaction or token claims.
