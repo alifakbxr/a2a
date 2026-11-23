@@ -8,16 +8,16 @@ export function diagnoseSkillDiscovery(){
  const result=readSafeJsonFile(file,{maxBytes:64*1024,checkParentDir:true});
  if(!result.ok)return {
   status:result.reason==='missing'?'no_global_manifest':'manifest_unavailable',
-  note:'This does not establish whether the current IDE/CLI agent loaded the a2a skill. Check /skills and project exclusion manifests.'
+  note:'This does not establish whether the current IDE/CLI agent loaded the pilah skill. Check /skills and project exclusion manifests.'
  };
  const excludes=result.value.exclude;
  if(excludes!==undefined&&(!Array.isArray(excludes)||excludes.some(x=>typeof x!=='string')))
   return {status:'manifest_unavailable',note:'Global skill manifest exclusion format is not readable as a string array.'};
- const excluded=Array.isArray(excludes)&&excludes.some(x=>x==='a2a'||x==='a2a:a2a');
+ const excluded=Array.isArray(excludes)&&excludes.some(x=>x==='pilah'||x==='pilah:pilah'||x==='a2a'||x==='a2a:a2a');
  return {
   status:excluded?'excluded_by_global_manifest':'not_excluded_by_global_manifest',
   note:excluded
-   ?'A global skills.json exclusion names A2A. Inspect it in Antigravity; this diagnostic will never alter user preferences.'
+   ?'A global skills.json exclusion names PILAH/A2A. Inspect it in Antigravity; this diagnostic will never alter user preferences.'
    :'Workspace manifests, plugin-level exclusions, session-specific context and model activation remain unverified. Inspect /skills in Antigravity.'
  };
 }
