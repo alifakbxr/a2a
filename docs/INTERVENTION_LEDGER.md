@@ -19,3 +19,7 @@ Current behavioral reliability implementation is in [PR #36](https://github.com/
 ### Selection-vs-availability controls (21 November 2026)
 
 A complete local archive with 13 distinct full transcripts had 611 native tool calls and zero A2A calls despite 13 injected Always-On prompts; no bundled trace contained the earlier STOCKROOM Order audit. This is observational, not an independent benchmark. The new eager `a2a_context` registration ensures its full parameter schema *should* be exposed upfront to **enabled parent sessions** under documented Antigravity behavior; it does not guarantee any call or subagent inheritance. Compare high-risk cross-file tasks and a trivial negative control with the same model/effort, record `/mcp`/skill inclusion from the live host and **provider-reported** token usage. Do not infer correct/incorrect tool choice from counts alone.
+
+### Eager namespacing accuracy (issue #71)
+
+The ledger recognizes Antigravity's native eager function form `mcp_a2a_a2a_a2a_context` as well as plugin-qualified and lazy forms. A same-named `a2a_context` operation on an unrelated MCP server is **not** an A2A event. No raw arguments or private output is published. The observed counts remain diagnostic only, not proof of token savings or correct model selection.
