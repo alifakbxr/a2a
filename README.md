@@ -73,6 +73,8 @@ node scripts/a2a.mjs revoke /absolute/path/to/project
 node scripts/a2a.mjs inspect /absolute/path/to/project
 node scripts/a2a.mjs impact /absolute/path/to/project src/auth.js
 node scripts/a2a.mjs tokens --limit 5 --json
+node scripts/a2a.mjs context-health --conversation YOUR_CONVERSATION_ID
+node scripts/a2a.mjs context-health --conversation YOUR_CONVERSATION_ID --milestone-complete
 node scripts/a2a.mjs doctor
 ```
 
@@ -161,3 +163,7 @@ For recurring regressions, concurrency/permission failures and ambiguous causes,
 The November audit's local implementation corrections (#50–#61) are integrated on the v2.0.1 branch: native hook/test provenance, strict JUnit/TAP assessment, MCP resource privacy, Node 22/24/26.13.1 CI, cross-platform filesystem safeguards, version-managed Node desktop PATH diagnostics, and bounded lower-overhead MCP schemas. Run node scripts/a2a.mjs doctor to see the actual Node binary and PATH advisory. **No live Antigravity installation acceptance or independently scored A/B benchmark is claimed.** The separate [release gate #15](https://github.com/alifakbxr/a2a/issues/15) blocks main and npm publication.
 
 **Live adoption caveat:** A2A MCP can be registered and callable even if the current Antigravity conversation excludes the `a2a:a2a` skill. The read-only `a2a doctor` `skill_discovery` field checks only the global `skills.json` exclusion list; verify actual session visibility with `/skills` and the plugin validation command. Neither an explicit manual MCP success nor a green CI matrix proves autonomous agent selection, reduced model token usage or independent application acceptance.
+
+### Optional context-health advisor (issue #91: initial safe phase)
+
+`node scripts/a2a.mjs context-health --conversation <id> [--milestone-complete]` reads **one explicitly selected local session on demand** and provides a bounded context/milestone advisory. There is no recurring model hook, global configuration edit, background task, automatic `/compact`, token-spend estimate or claimed savings. The user must independently confirm that edits/tests are complete before supplying `--milestone-complete`. 80/140 planner steps are **heuristics**, not provider context limits. An automatic Context Guardian remains experimental under #91.
