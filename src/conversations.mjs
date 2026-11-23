@@ -1,7 +1,7 @@
 // Historical Antigravity usage reader. Purely local, read-only, and metadata-only.
 // Internal transcript token counters are not provider-verified billing figures.
 import fs from 'node:fs';
-import os from 'node:os';
+import {getHomeDir} from './security.mjs';
 import path from 'node:path';
 import {parseOfficialAgyUsage} from './tokens.mjs';
 
@@ -12,20 +12,41 @@ function add(a,b){for(const k of Object.keys(a))a[k]+=b[k]||0}
 export function localBrainRoots(){
   return process.env.ANTIGRAVITY_APP_DATA_DIR
     ? [path.join(path.resolve(process.env.ANTIGRAVITY_APP_DATA_DIR),'brain')]
-    : ['antigravity','antigravity-cli','antigravity-ide'].map(n=>path.join(os.homedir(),'.gemini',n,'brain'));
+    : ['antigravity','antigravity-cli','antigravity-ide'].map(n=>path.join(getHomeDir(),'.gemini',n,'brain'));
 }
+const A2A_TOOL_NAMES=new Set(['a2a_context','a2a_impact','a2a_verify','a2a_evidence',
+  'verifykit_context','verifykit_impact','verifykit_verify','verifykit_evidence']);
+const A2A_SERVERS=new Set(['a2a','a2a_a2a','verifykit','verifykit_verifykit']);
+const normalized=M=>String(M??'').trim().replace(/^["']|["']$/g,'');
 function isA2ACall(tc){
-  const name=String(tc?.name||tc?.toolName||''),tool=String(tc?.args?.ToolName||''),server=String(tc?.args?.ServerName||'');
-  if(/^(a2a_|verifykit_)/.test(name))return true;
-  if(/mcp/i.test(name)&&(/^(a2a_|verifykit_)/.test(tool)||/^a2a(?:_|$)/.test(server)))return true;
-  const cmd=name==='run_command'?String(tc?.args?.CommandLine||''):'';
-  return /(?:a2a\s+tokens|a2a\.mjs\s+tokens)/i.test(cmd);
+ const name=normalized(tc?.name||tc?.toolName);
+ const explicitServer=normalized(tc?.args?.ServerName??tc?.args?.server_name??tc?.serverName??tc?.server_name);
+ if(A2A_TOOL_NAMES.has(name))return !explicitServer||A2A_SERVERS.has(explicitServer);
+ for(const server of A2A_SERVERS){
+   for(const tool of A2A_TOOL_NAMES){
+     if(name===`mcp_${server}_${tool}`||name===`mcp__${server}__${tool}`||
+        name===`${server}/${tool}`)return true;
+   }
+ }
+ if(name==='call_mcp_tool'){
+   const server=normalized(tc?.args?.ServerName??tc?.args?.server_name);
+   const tool=normalized(tc?.args?.ToolName??tc?.args?.tool_name);
+   return A2A_SERVERS.has(server)&&A2A_TOOL_NAMES.has(tool);
+ }
+ // This counter measures actual A2A MCP use, not a CLI diagnostics call.
+ return false;
 }
 function safeLog(file,root){
   try{
-    if(!fs.lstatSync(file).isFile())return false; // reject symlinks
-    const real=fs.realpathSync(file),rel=path.relative(root,real);
-    return rel&&!rel.startsWith('..'+path.sep)&&rel!=='..'&&!path.isAbsolute(rel);
+    const base=fs.realpathSync(root),requested=path.resolve(file),rel=path.relative(path.resolve(root),requested);
+    if(!rel||rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel))return false;
+    let cursor=path.resolve(root);
+    for(const segment of rel.split(path.sep)){
+      cursor=path.join(cursor,segment);
+      if(fs.lstatSync(cursor).isSymbolicLink())return false;
+    }
+    const real=fs.realpathSync(requested);
+    return path.relative(base,real)===rel&&fs.statSync(real).isFile();
   }catch{return false}
 }
 function parseLocalLog(file,id){
@@ -173,6 +194,26 @@ export function scanConversationHistory({brainRoots=localBrainRoots(),dataDirPat
   if(skipped)warnings.push('Some files could not be read or exceeded scan limits. This report may not include your entire history.');
   if(partial)warnings.push('Some conversation logs are damaged or incomplete, so their local counts may be partial.');
   if(!sessions.length)warnings.push('No readable conversations were found in the local Antigravity history.');
+  const subagentSessions=sessions.filter(r=>r.subagent);
+  const parentSessions=sessions.filter(r=>!r.subagent);
+  if(subagentSessions.length)warnings.push('Included worker/subagent logs may overlap parent conversation usage. Do not add worker totals to parent totals or interpret their sum as billing.');
+  const usageAccounting={
+    source_priority:['official-cli-result','internal-local-log','unknown'],
+    official_conversations:officialSessions,
+    internal_only_conversations:internalSessions,
+    conversations_missing_counts:noCounts,
+    parent_conversations:parentSessions.length,
+    worker_conversations:subagentSessions.length,
+    overlapping_worker_accounting:subagentSessions.length?'possible':'excluded-from-aggregate',
+    safe_to_combine_worker_and_parent_totals:subagentSessions.length===0,
+    missing_or_partial_records:skipped+partial,
+    a2a_calls_detected:sessions.reduce((n,r)=>n+r.totals.a2a,0),
+    a2a_attributable_model_tokens:null,
+    current_in_progress_step_tokens:null,
+    weekly_quota_consumption:null,
+    measured_token_savings:null,
+    note:'Tool-call frequency is observable; model tokens caused by A2A are not independently attributable. Free Tier quota is not a fixed token budget.'
+  };
   const last=sessions[0]||null;
   return {
     title:'Antigravity conversation token usage',
@@ -192,6 +233,7 @@ export function scanConversationHistory({brainRoots=localBrainRoots(),dataDirPat
     recent_conversations:sessions.slice(0,Math.min(30,Math.max(1,limit))).map(view),
     a2a_calls_seen:sessions.reduce((n,r)=>n+r.totals.a2a,0),
     conversations_without_counts:noCounts,
+    usage_accounting:usageAccounting,
     self_report:{current_invocation:1,response_bytes:null,estimated_text_tokens:null,
       included_in_model_usage:false,note:'Running this report does not call Gemini. If an AI agent reads it, any additional model usage can only be observed after the model turn completes.'},
     warnings,
@@ -215,6 +257,8 @@ export function formatConversationReport(r){
     '- If cache reads are already included in input: '+num(logs.alternative_total_if_cache_included)+' tokens.',
     '- If cache reads are counted separately: '+num(logs.alternative_total_if_cache_separate)+' tokens.',
     '- Both figures are interpretations of local logs, not confirmed totals.',
+    '- Workers included: '+(r.usage_accounting?.worker_conversations??0)+(r.usage_accounting?.overlapping_worker_accounting==='possible'?' (possible overlap; do not sum with parent)':' (excluded by default)'),
+    "- A2A-specific model tokens: unknown; CLI counts do not isolate the plugin's contribution.",
     '',
   ];
   if(last){

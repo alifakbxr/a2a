@@ -1,30 +1,64 @@
-import { DatabaseSync } from 'node:sqlite';
+import { Database } from './sqlite-compat.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
-import {dataDir,sha256,safeArtifactPath,MAX_ARTIFACT_BYTES,realpathIfExists} from './security.mjs';
+import os from 'node:os';
+import {dataDir,sha256,safeArtifactPath,MAX_ARTIFACT_BYTES,realpathIfExists,readSafeBytesFile,getHomeDir,isSamePath} from './security.mjs';
 
 const DDL=fs.readFileSync(new URL('../schemas/database.sql',import.meta.url),'utf8');
 export class Store {
   constructor(base=dataDir()) {
-    this.base=path.resolve(base);fs.mkdirSync(this.base,{recursive:true,mode:0o700});
+    this.base=path.resolve(base);
+    // Never chmod a broad/shared directory if a mistaken environment override
+    // points storage at HOME, /tmp, filesystem root or an app configuration root.
+    // Treat both the OS account home and overridden HOME/USERPROFILE as protected;
+    // never chmod a user's home directory due to an environment override.
+    const homes=new Set([os.homedir(),getHomeDir()]);
+    const unsafe=[path.parse(this.base).root,os.tmpdir(),...[...homes].flatMap(home=>[
+      home,path.join(home,'.config'),path.join(home,'.gemini'),path.join(home,'.gemini','antigravity')
+    ])];
+    if(unsafe.some(p=>isSamePath(p,this.base)))throw new Error('A2A data directory must be a dedicated private directory');
+    fs.mkdirSync(this.base,{recursive:true,mode:0o700});
+    const dataStat=fs.lstatSync(this.base);
+    if(dataStat.isSymbolicLink()||!dataStat.isDirectory())throw new Error('A2A data directory must be a real directory');
+    if(process.platform!=='win32'&&(dataStat.mode&0o002)!==0)throw new Error('A2A data directory cannot be world-writable');
     try{fs.chmodSync(this.base,0o700)}catch{}
     const a2aFile=path.join(this.base,'a2a.sqlite');
     const legacyFile=path.join(this.base,'verifykit.sqlite');
+    const rejectUnsafeDbPath=(file)=>{
+      let st;try{st=fs.lstatSync(file)}catch(e){if(e.code==='ENOENT')return;throw e}
+      if(st.isSymbolicLink()||!st.isFile())throw new Error('Unsafe A2A database file type');
+    };
+    for(const file of [a2aFile,a2aFile+'-wal',a2aFile+'-shm',legacyFile])rejectUnsafeDbPath(file);
     if(!fs.existsSync(a2aFile) && fs.existsSync(legacyFile)){
       try{
-        const src=new DatabaseSync(legacyFile,{readOnly:true});
+        const src=new Database(legacyFile,{readOnly:true});
         try{src.prepare('VACUUM INTO ?').run(a2aFile)}finally{src.close()}
-      }catch{
-        try{fs.copyFileSync(legacyFile,a2aFile)}catch{}
+      }catch(e){
+        // Raw copies are not WAL-consistent; never silently migrate a partial DB.
+        throw new Error('Legacy A2A database migration failed; original database left unchanged');
       }
     }
     this.file=a2aFile;
-    this.db=new DatabaseSync(this.file);
-    this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=4000;');
+    this.db=new Database(this.file);
+    this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=4000; PRAGMA trusted_schema=OFF;');
     this.#ensureColumn('workspaces','current_revision_id','TEXT');
     this.#ensureColumn('files','mtime_ms','REAL');
     this.#ensureColumn('artifact_versions','workspace_id','TEXT');
+    // Upgrade old v2.0.1 RCA tables BEFORE applying DDL indexes that depend
+    // on newly added columns. Other user data and incidents are preserved.
+    this.#ensureColumn('incidents','signature_sha','TEXT');
+    for(const [column,type] of [
+      ['revision_id','TEXT'],['parent_hypothesis_id','TEXT'],
+      ['why_depth','INTEGER NOT NULL DEFAULT 1'],['predicted_observation','TEXT'],
+      ['disconfirming_test','TEXT'],['expected_criterion_id','TEXT'],
+      ['plan_id','TEXT'],['assessment_json',"TEXT NOT NULL DEFAULT '{}'"],
+      ['assessed_revision_id','TEXT'],['updated_at','TEXT']
+    ])this.#ensureColumn('hypotheses',column,type);
     this.db.exec(DDL);
+    // Existing v2.0.1 SQLite databases must upgrade in place, without
+    // deleting prior user checkpoints or requiring a new major DB schema.
+    this.#ensureColumn('recovery_checkpoints','decisions_json',"TEXT NOT NULL DEFAULT '[]'");
+    this.#ensureColumn('recovery_checkpoints','pending_tests_json',"TEXT NOT NULL DEFAULT '[]'");
     try{fs.chmodSync(this.file,0o600)}catch{}
     this.db.prepare("INSERT OR IGNORE INTO meta(key,value) VALUES('schema_version','1')").run();
     const actual=this.db.prepare("SELECT value FROM meta WHERE key='schema_version'").get()?.value;
@@ -138,6 +172,10 @@ export class Store {
     const sanitizedSummary=summary?String(summary).slice(0,2000):null;
     const existing=this.get('SELECT * FROM side_questions WHERE conversation_id=? AND workspace_id IS ?',conversationId,workspaceId);
     const sid=id||existing?.id||sha256((workspaceId||'unassigned')+':'+conversationId+':'+(parentConversationId||'')).slice(0,32);
+    // Explicit ids never grant ownership of a record in another workspace.
+    const byId=this.get('SELECT workspace_id FROM side_questions WHERE id=?',sid);
+    if(byId?.workspace_id!=null && byId.workspace_id!==workspaceId)
+      throw new Error('Side question ID belongs to another workspace');
     const now=new Date().toISOString();
     const createdAt=existing?.created_at||now;
     const metaJson=JSON.stringify(metadata||{});
@@ -153,7 +191,8 @@ export class Store {
          status=excluded.status,
          transcript_path=COALESCE(excluded.transcript_path,side_questions.transcript_path),
          metadata_json=excluded.metadata_json,
-         updated_at=excluded.updated_at`,
+         updated_at=excluded.updated_at
+       WHERE side_questions.workspace_id IS excluded.workspace_id OR side_questions.workspace_id IS NULL`,
       sid,workspaceId,conversationId,parentConversationId,sanitizedTitle,sanitizedQuestion,sanitizedSummary,status,transcriptPath,metaJson,createdAt,now
     );
     if(workspaceId){
@@ -162,6 +201,8 @@ export class Store {
       }catch{}
     }
     const saved=this.get('SELECT * FROM side_questions WHERE id=?',sid);
+    if(!saved||(saved.workspace_id!=null&&saved.workspace_id!==workspaceId))
+      throw new Error('Side question workspace ownership mismatch');
     return {...saved,metadata:JSON.parse(saved.metadata_json||'{}'),metadata_json:undefined};
   }
   listSideQuestions({workspaceId=null,parentConversationId=null,conversationId=null,limit=20}={}){
@@ -192,57 +233,68 @@ export class Store {
     const artifactName=path.basename(validPath);
     let rawContent=content;
     if(rawContent===null){
-      rawContent=fs.readFileSync(validPath,'utf8');
+      const read=readSafeBytesFile(validPath,{maxBytes:MAX_ARTIFACT_BYTES});
+      if(!read.ok)throw new Error('Artifact file is unsafe or too large');
+      rawContent=read.bytes.toString('utf8');
     }
     if(typeof rawContent!=='string'||Buffer.byteLength(rawContent)>MAX_ARTIFACT_BYTES){
       throw new Error(`Artifact content exceeds maximum allowed size (${MAX_ARTIFACT_BYTES/1024} KB)`);
     }
     const contentSha=sha256(rawContent);
-    const latest=this.get(
-      'SELECT * FROM artifact_versions WHERE workspace_id IS ? AND conversation_id=? AND artifact_name=? ORDER BY version_number DESC LIMIT 1',
-      workspaceId||null,conversationId,artifactName
-    );
-    if(latest && latest.content_sha===contentSha){
-      return {...latest,changed:false};
-    }
-    const versionNumber=latest?(latest.version_number+1):1;
-    const diff=latest?computeUnifiedDiff(latest.content,rawContent,`v${latest.version_number}`,`v${versionNumber}`):'';
-    const id=sha256(`${workspaceId||'unassigned'}:${conversationId}:${artifactName}:${versionNumber}:${contentSha}`).slice(0,32);
-    const now=new Date().toISOString();
-    this.run(
-      'INSERT INTO artifact_versions(id,workspace_id,conversation_id,artifact_name,version_number,content_sha,content,diff_from_previous,created_at) VALUES(?,?,?,?,?,?,?,?,?)',
-      id,workspaceId||null,conversationId,artifactName,versionNumber,contentSha,rawContent,diff,now
-    );
-    try{
-      const histDir=path.join(this.base,'artifact_history',workspaceId||'unassigned',conversationId);
-      fs.mkdirSync(histDir,{recursive:true,mode:0o700});
-      try{fs.chmodSync(histDir,0o700)}catch{}
-      const shadowPath=path.join(histDir,`${artifactName}.v${versionNumber}.md`);
-      fs.writeFileSync(shadowPath,rawContent,{encoding:'utf8',mode:0o600,flag:'wx'});
-
-      // Retention policy: Keep at most 10 versions per artifact
-      const excess=this.all(
-        'SELECT id, version_number FROM artifact_versions WHERE workspace_id IS ? AND conversation_id=? AND artifact_name=? ORDER BY version_number DESC LIMIT -1 OFFSET 10',
+    // Serialize version allocation and retention across concurrent processes.
+    // The database is the source of truth; filesystem shadows are best-effort.
+    let outcome,removedVersions=[];
+    this.transaction(()=>{
+      const latest=this.get(
+        'SELECT * FROM artifact_versions WHERE workspace_id IS ? AND conversation_id=? AND artifact_name=? ORDER BY version_number DESC LIMIT 1',
         workspaceId||null,conversationId,artifactName
       );
-      for(const oldRow of excess){
-        this.run('DELETE FROM artifact_versions WHERE id=?',oldRow.id);
-        const oldShadow=path.join(histDir,`${artifactName}.v${oldRow.version_number}.md`);
-        if(fs.existsSync(oldShadow)) try{fs.unlinkSync(oldShadow)}catch{}
+      if(latest&&latest.content_sha===contentSha){
+        outcome={...latest,changed:false};
+        return;
+      }
+      const versionNumber=latest?latest.version_number+1:1;
+      const diff=latest?computeUnifiedDiff(latest.content,rawContent,'v'+latest.version_number,'v'+versionNumber):'';
+      const id=sha256((workspaceId||'unassigned')+':'+conversationId+':'+artifactName+':'+versionNumber+':'+contentSha).slice(0,32);
+      const now=new Date().toISOString();
+      this.run(
+        'INSERT INTO artifact_versions(id,workspace_id,conversation_id,artifact_name,version_number,content_sha,content,diff_from_previous,created_at) VALUES(?,?,?,?,?,?,?,?,?)',
+        id,workspaceId||null,conversationId,artifactName,versionNumber,contentSha,rawContent,diff,now
+      );
+      // Keep retention independent of filesystem-shadow write success.
+      const excess=this.all(
+        'SELECT id,version_number FROM artifact_versions WHERE workspace_id IS ? AND conversation_id=? AND artifact_name=? ORDER BY version_number DESC LIMIT -1 OFFSET 10',
+        workspaceId||null,conversationId,artifactName
+      );
+      for(const oldRow of excess)this.run('DELETE FROM artifact_versions WHERE id=?',oldRow.id);
+      removedVersions=excess.map(x=>x.version_number);
+      outcome={
+        id,workspace_id:workspaceId||null,conversation_id:conversationId,artifact_name:artifactName,
+        version_number:versionNumber,content_sha:contentSha,diff_from_previous:diff,created_at:now,
+        changed:true,bytes:Buffer.byteLength(rawContent)
+      };
+    });
+    if(!outcome.changed)return outcome;
+    try{
+      const histDir=path.join(this.base,'artifact_history',workspaceId||'unassigned',conversationId);
+      // Create one component at a time; recursive mkdir would follow a
+      // pre-existing malicious symlink before we could inspect it.
+      let cursor=this.base;
+      for(const part of path.relative(this.base,histDir).split(path.sep)){
+        cursor=path.join(cursor,part);
+        try{fs.mkdirSync(cursor,{mode:0o700})}catch(e){if(e.code!=='EEXIST')throw e}
+        const stat=fs.lstatSync(cursor);
+        if(stat.isSymbolicLink()||!stat.isDirectory())throw Error('Unsafe artifact shadow path');
+      }
+      try{fs.chmodSync(histDir,0o700)}catch{}
+      const shadowPath=path.join(histDir,artifactName+'.v'+outcome.version_number+'.md');
+      try{fs.writeFileSync(shadowPath,rawContent,{encoding:'utf8',mode:0o600,flag:'wx'})}catch{}
+      for(const n of removedVersions){
+        const oldShadow=path.join(histDir,artifactName+'.v'+n+'.md');
+        try{fs.unlinkSync(oldShadow)}catch{}
       }
     }catch{}
-    return {
-      id,
-      workspace_id:workspaceId||null,
-      conversation_id:conversationId,
-      artifact_name:artifactName,
-      version_number:versionNumber,
-      content_sha:contentSha,
-      diff_from_previous:diff,
-      created_at:now,
-      changed:true,
-      bytes:Buffer.byteLength(rawContent)
-    };
+    return outcome;
   }
   listArtifactVersions({workspaceId=null,conversationId,artifactName=null,limit=50}={}){
     let sql="SELECT id,workspace_id,conversation_id,artifact_name,version_number,content_sha,created_at,LENGTH(content) AS bytes,(diff_from_previous IS NOT NULL AND diff_from_previous!='') AS has_diff FROM artifact_versions WHERE 1=1";
@@ -283,6 +335,10 @@ export class Store {
     }
     const row1=v1?this.getArtifactVersion({workspaceId,conversationId,artifactName,versionNumber:v1}):null;
     const row2=v2?this.getArtifactVersion({workspaceId,conversationId,artifactName,versionNumber:v2}):null;
+    // A nonexistent explicitly requested version is not an empty artifact:
+    // returning a diff against empty content could falsely imply a real history.
+    const missing_versions=[...(v1&&!row1?[v1]:[]),...(v2&&!row2?[v2]:[])];
+    if(missing_versions.length)return {artifact_name:artifactName,v1:v1||0,v2:v2||0,status:'version_not_found',missing_versions,diff:null};
     const content1=row1?.content||'';
     const content2=row2?.content||'';
     return {
@@ -294,7 +350,7 @@ export class Store {
   }
   scanAndSnapshotBrainArtifacts(conversationId,brainDir=null,{workspaceId=null,workspaceRoot=null}={}){
     if(!conversationId)return [];
-    const bDir=brainDir||path.join(process.env.HOME||'','.gemini/antigravity/brain',conversationId);
+    const bDir=brainDir||path.join(getHomeDir(),'.gemini','antigravity','brain',conversationId);
     if(!fs.existsSync(bDir))return [];
     const results=[];
     try{

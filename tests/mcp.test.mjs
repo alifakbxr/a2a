@@ -36,7 +36,7 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
     // Legacy verifykit_* tool calls remain backward-compatible even when not listed
     const deniedLegacy=await ask({jsonrpc:'2.0',id:3,method:'tools/call',params:{name:'verifykit_context',arguments:{workspace:'/tmp'}}});
     assert.equal(deniedLegacy.result.isError,true);
-    assert.match(deniedLegacy.result.content[0].text,/authorized|exist/);
+    assert.match(deniedLegacy.result.content[0].text,/authorized|exist|Protected/);
 
     // Authorize a workspace in temp allowlist and test skeleton + resources
     const work=path.join(temp,'proj');
@@ -58,6 +58,24 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
     const resRead=await ask({jsonrpc:'2.0',id:6,method:'resources/read',params:{uri:'a2a://status'}});
     const statusObj=JSON.parse(resRead.result.contents[0].text);
     assert.equal(statusObj.name,'a2a');
+    assert.equal(typeof statusObj.authorized_workspace_count,'number');
+    assert.equal(typeof statusObj.antigravity_workspace_count,'number');
+    assert.equal(typeof statusObj.data_dir_configured,'boolean');
+    assert.equal(typeof statusObj.active_workspace_authorized,'boolean');
+    assert.equal(statusObj.data_dir,undefined);
+    assert.equal(statusObj.authorized_workspaces,undefined);
+    assert.equal(statusObj.antigravity_workspaces,undefined);
+    assert.ok(!JSON.stringify(statusObj).includes(temp),'Status must never disclose HOME, data directories, or authorized workspace paths');
+
+    // resources/read previously passed raw authorization errors through JSON-RPC.
+    const notTrusted=path.join(temp,'untrusted');
+    fs.mkdirSync(notTrusted);
+    fs.writeFileSync(path.join(notTrusted,'package.json'),JSON.stringify({name:'untrusted'}));
+    fs.writeFileSync(path.join(temp,'db','active-session.json'),JSON.stringify({latest:{conversationId:'untrusted-session',workspacePaths:[notTrusted]}}));
+    const deniedResource=await ask({jsonrpc:'2.0',id:16,method:'resources/read',params:{uri:'a2a://side-questions'}});
+    assert.equal(deniedResource.error.code,-32000);
+    assert.ok(!JSON.stringify(deniedResource).includes(temp),'Denied resources must not echo the host path');
+
     const resUnknown=await ask({jsonrpc:'2.0',id:7,method:'resources/read',params:{uri:'a2a://missing'}});
     assert.equal(resUnknown.error.code,-32002);
 

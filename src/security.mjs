@@ -3,13 +3,79 @@ import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-import { DatabaseSync } from 'node:sqlite';
+import { Database } from './sqlite-compat.mjs';
 
 export const sha256 = (v) => crypto.createHash('sha256').update(v).digest('hex');
+// Opt-in diagnostics intentionally contain only stable error classes/codes, never paths,
+// raw messages, credentials, or stdout (which would corrupt MCP JSON-RPC framing).
+export function debugLog(scope,error){
+  if(process.env.A2A_DEBUG!=='1')return;
+  const label=String(scope).replace(/[^a-z0-9_-]/gi,'').slice(0,48);
+  const code=String(error?.code||error?.name||'unknown').replace(/[^a-z0-9_-]/gi,'').slice(0,48);
+  process.stderr.write('[A2A debug] '+label+': '+code+'\n');
+}
+
+// Bounded, descriptor-pinned metadata reader. Never follows a leaf symlink;
+// checks user-owned parent components when reading trusted configuration.
+export function readSafeBytesFile(filename,{maxBytes=128*1024,checkParentDir=false,requirePrivateMode=false}={}){
+  let fd=null;
+  try{
+    if(typeof filename!=='string'||!Number.isSafeInteger(maxBytes)||maxBytes<1)return {ok:false,reason:'invalid_path_or_limit'};
+    const target=path.resolve(filename);
+    if(checkParentDir){
+      const home=path.resolve(getHomeDir()),rel=path.relative(home,path.dirname(target));
+      if(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel))return {ok:false,reason:'outside_home'};
+      let cursor=home;
+      for(const seg of rel.split(path.sep).filter(Boolean)){
+        cursor=path.join(cursor,seg);
+        const st=fs.lstatSync(cursor);
+        if(st.isSymbolicLink()||!st.isDirectory())return {ok:false,reason:'symlink_parent'};
+      }
+    }
+    const before=fs.lstatSync(target);
+    if(before.isSymbolicLink()||!before.isFile())return {ok:false,reason:'unsafe_type'};
+    if(before.size>maxBytes)return {ok:false,reason:'too_large'};
+    if(requirePrivateMode&&process.platform!=='win32'&&(before.mode&0o022)!==0)
+      return {ok:false,reason:'unsafe_mode'};
+    fd=fs.openSync(target,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));
+    const st=fs.fstatSync(fd);
+    if(!st.isFile()||st.size>maxBytes)return {ok:false,reason:'too_large_or_unsafe'};
+    if(st.dev!==before.dev||st.ino!==before.ino)return {ok:false,reason:'changed_during_read'};
+    if(requirePrivateMode&&process.platform!=='win32'&&(st.mode&0o022)!==0)
+      return {ok:false,reason:'unsafe_mode'};
+    // A same-user writer can grow a file after fstat. Never use unbounded
+    // readFileSync(fd): read at most maxBytes+1 even during concurrent writes.
+    const chunks=[];let total=0;
+    while(total<=maxBytes){
+      const chunk=Buffer.allocUnsafe(Math.min(64*1024,maxBytes+1-total));
+      const length=fs.readSync(fd,chunk,0,chunk.length,null);
+      if(length===0)break;
+      chunks.push(chunk.subarray(0,length));total+=length;
+    }
+    if(total>maxBytes)return {ok:false,reason:'too_large'};
+    const after=fs.fstatSync(fd);
+    if(after.size!==st.size||after.mtimeMs!==st.mtimeMs||after.ctimeMs!==st.ctimeMs)
+      return {ok:false,reason:'changed_during_read'};
+    return {ok:true,bytes:Buffer.concat(chunks,total)};
+  }catch(error){
+    return {ok:false,reason:error?.code==='ENOENT'?'missing':error?.code==='ELOOP'?'symlink':'unreadable'};
+  }finally{if(fd!==null)try{fs.closeSync(fd)}catch{}}
+}
+export function readSafeJsonFile(filename,options={}){
+  const read=readSafeBytesFile(filename,options);
+  if(!read.ok)return read;
+  try{
+    const value=JSON.parse(read.bytes.toString('utf8'));
+    if(!value||typeof value!=='object'||Array.isArray(value))
+      return {ok:false,reason:'invalid_json'};
+    return {ok:true,value,bytes:read.bytes};
+  }catch{return {ok:false,reason:'invalid_json'}}
+}
+
 export const MAX_INDEX_FILES = 9000;
 export const MAX_SOURCE_BYTES = 160 * 1024;
-const BLOCKED_PARTS = new Set(['.git','node_modules','vendor','.next','.nuxt','.svelte-kit','.turbo','.parcel-cache','.dart_tool','.gradle','target','dist','build','coverage','.venv','venv','__pycache__','.pytest_cache','.mypy_cache','.ruff_cache','.idea','.vscode','.verifykit','.a2a','.cache','.terraform','.pnpm-store','.gitlab','.ssh','.aws','.kube','.gnupg','.config','.gemini','.claude','.cursor']);
-const SENSITIVE = /(^|\/)(\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|id_rsa|id_ed25519|.*\.pem|.*\.key|.*\.p12|.*\.pfx|secrets?(?:\..*)?|credentials?(?:\..*)?|.*\.sqlite(?:-wal|-shm)?|.*\.db|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|composer\.lock|Cargo\.lock|poetry\.lock|Gemfile\.lock|npm-shrinkwrap\.json)$/i;
+const BLOCKED_PARTS = new Set(['.git','node_modules','vendor','.next','.nuxt','.svelte-kit','.turbo','.parcel-cache','.dart_tool','.gradle','target','dist','build','coverage','.venv','venv','__pycache__','.pytest_cache','.mypy_cache','.ruff_cache','.idea','.vscode','.verifykit','.a2a','.cache','.terraform','.pnpm-store','.gitlab','.ssh','.aws','.kube','.gnupg','.docker','.azure','.gcloud','.config','.gemini','.claude','.cursor']);
+const SENSITIVE = /(^|\/)(\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|id_rsa|id_ed25519|id_ecdsa|id_dsa|\.htpasswd|\.pgpass|\.my\.cnf|\.vault-token|\.git-credentials|.*service[-_]account.*\.json|.*\.jks|.*\.keystore|.*\.kdbx|.*\.pem|.*\.key|.*\.p12|.*\.pfx|secrets?(?:\..*)?|credentials?(?:\..*)?|.*\.sqlite(?:-wal|-shm)?|.*\.db|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|composer\.lock|Cargo\.lock|poetry\.lock|Gemfile\.lock|npm-shrinkwrap\.json)$/i;
 const IGNORED_SUBPATHS = /(^|\/)storage\/logs(\/|$)/i;
 export const isSafeRelative = (rel) => typeof rel === 'string' && rel.length > 0 && rel.length <= 500 && !rel.includes('\0') && !path.isAbsolute(rel) && !rel.split(/[\\/]/).some(p=>p==='..') && !rel.startsWith('~');
 export const shouldIgnore = (rel) => {
@@ -54,13 +120,9 @@ export const settingsPath = () => {
 };
 
 function readSettings() {
-  try {
-    const file = settingsPath();
-    if (fs.existsSync(file)) {
-      return JSON.parse(fs.readFileSync(file, 'utf8')) || {};
-    }
-  } catch {}
-  return {};
+  const read=readSafeJsonFile(settingsPath(),{maxBytes:64*1024,checkParentDir:true});
+  if(!read.ok){if(read.reason!=='missing')debugLog('settings_read',read.reason);return {}}
+  return read.value;
 }
 
 function writeSettings(patch) {
@@ -68,13 +130,19 @@ function writeSettings(patch) {
   const parent = path.dirname(target);
   fs.mkdirSync(parent, { recursive: true, mode: 0o700 });
   const data = { ...readSettings(), ...patch, updatedAt: new Date().toISOString() };
-  const flags = fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC | (fs.constants.O_NOFOLLOW || 0);
-  const fd = fs.openSync(target, flags, 0o600);
-  try {
-    fs.fchmodSync(fd, 0o600);
-    fs.writeFileSync(fd, JSON.stringify(data, null, 2) + '\n');
-  } finally {
-    fs.closeSync(fd);
+  // Atomic replacement, unlike O_TRUNC, keeps a complete previous settings
+  // file if a process is interrupted midway through a write.
+  const temp=target+'.'+process.pid+'.'+crypto.randomUUID()+'.tmp';
+  const flags=fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|(fs.constants.O_NOFOLLOW||0);
+  let fd=null;
+  try{
+    fd=fs.openSync(temp,flags,0o600);
+    fs.writeFileSync(fd,JSON.stringify(data,null,2)+'\n');
+    fs.closeSync(fd);fd=null;
+    fs.renameSync(temp,target);
+  }finally{
+    if(fd!==null)fs.closeSync(fd);
+    try{fs.unlinkSync(temp)}catch{}
   }
   return data;
 }
@@ -91,7 +159,20 @@ export function getCompactMode() {
   const data = readSettings();
   if (typeof data.compact === 'boolean') return data.compact;
   if (data.compact === 'on' || data.compact === 'enabled' || data.compact === 'true') return true;
-  return false;
+  // New installs default to bounded responses. Explicit compact off is honored.
+  return true;
+}
+
+// Full-content Antigravity brain artifact retention is sensitive: default OFF.
+// Manual snapshot_artifact calls remain explicit and unaffected.
+export function getArtifactAutoSnapshotMode(){
+  return readSettings().artifact_auto_snapshot===true;
+}
+export function setArtifactAutoSnapshotMode(value){
+  if(value!==true&&value!==false&&value!=='on'&&value!=='off')throw new Error('Expected auto-snapshot on or off');
+  const enabled=value===true||value==='on';
+  writeSettings({artifact_auto_snapshot:enabled});
+  return enabled;
 }
 
 export function setCompactMode(val) {
@@ -193,6 +274,12 @@ export function isProtectedRoot(ws) {
   } else {
     if (canonical === home || home.startsWith(canonical.endsWith(path.sep) ? canonical : canonical + path.sep)) return true;
   }
+  // Deny descendants of credential/application state directories, not just
+  // the directory itself. Ordinary projects in Documents remain permitted.
+  for (const sensitive of ['.ssh','.aws','.gnupg','.config','.gemini','.docker','.azure','.gcloud']) {
+    const target=realpathIfExists(path.join(home,sensitive));
+    if (isSameOrDescendantPath(target,canonical)) return true;
+  }
   const protRoots = getProtectedRoots();
   if (protRoots.has(canonical)) return true;
   if (process.platform === 'win32' || process.platform === 'darwin') {
@@ -256,8 +343,9 @@ function parseJsonc(raw) {
 function extractWorkspaceFolderPaths(wsFilePath) {
   const results = [];
   try {
-    if (!fs.existsSync(wsFilePath) || !fs.statSync(wsFilePath).isFile()) return results;
-    const data = parseJsonc(fs.readFileSync(wsFilePath, 'utf8'));
+    const bytes=readSafeBytesFile(wsFilePath,{maxBytes:128*1024});
+    if(!bytes.ok)return results;
+    const data = parseJsonc(bytes.bytes.toString('utf8'));
     const folders = Array.isArray(data?.folders) ? data.folders : [];
     const baseDir = path.dirname(wsFilePath);
     for (const f of folders) {
@@ -284,24 +372,32 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
   if (autoTrust === 'off') return [];
 
   const home = getHomeDir();
-  const cacheKey = `${home}|${autoTrust}|${settingsPath()}`;
+  // The active SessionStart record is a cache input in active-only mode.
+  // A workspace switch must invalidate permissions without waiting for TTL.
+  let activeVersion='';
+  if(autoTrust==='active-only'){
+    try{
+      const stat=fs.lstatSync(path.join(dataDir(),'active-session.json'));
+      activeVersion=stat.isFile()&&!stat.isSymbolicLink()?`${stat.mtimeMs}:${stat.size}`:'unsafe';
+    }catch{activeVersion='missing'}
+  }
+  const cacheKey = `${home}|${autoTrust}|${settingsPath()}|${activeVersion}`;
   const now = Date.now();
   if (!bypassCache && workspaceCache && workspaceCache.key === cacheKey && (now - workspaceCache.ts) < WORKSPACE_CACHE_TTL_MS) {
     return workspaceCache.dirs;
   }
 
   const dirs = new Set();
-  const addPath = (rawPath, { requireMarker = true } = {}) => {
+  const visitedWorkspaces=new Set();
+  const addPath = (rawPath, { requireMarker = true, depth = 0 } = {}) => {
+    if(depth>1)return;
     if (!rawPath || typeof rawPath !== 'string') return;
-    if (rawPath.endsWith('.code-workspace')) {
-      for (const folder of extractWorkspaceFolderPaths(rawPath)) {
-        addPath(folder, { requireMarker });
-      }
-      return;
-    }
-    if (path.basename(rawPath) === 'workspace.json') {
-      for (const folder of extractWorkspaceFolderPaths(rawPath)) {
-        addPath(folder, { requireMarker });
+    if (rawPath.endsWith('.code-workspace') || path.basename(rawPath) === 'workspace.json') {
+      const absolute=path.resolve(rawPath);
+      if(visitedWorkspaces.has(absolute))return;
+      visitedWorkspaces.add(absolute);
+      for(const folder of extractWorkspaceFolderPaths(absolute)){
+        addPath(folder,{requireMarker,depth:depth+1});
       }
       return;
     }
@@ -322,10 +418,26 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
       ...(process.env.APPDATA ? [path.join(process.env.APPDATA, 'Antigravity IDE', 'User', 'globalStorage', 'state.vscdb')] : []),
     ];
     for (const dbFile of stateCandidates) {
-      if (!fs.existsSync(dbFile)) continue;
+      // SQLite takes a pathname, so conservatively refuse symlinked/oversized
+      // trust stores and user-controlled symlinked parent directories.
+      let safeDb=false;
+      try{
+        const leaf=fs.lstatSync(dbFile);
+        if(leaf.isFile()&&!leaf.isSymbolicLink()&&leaf.size<=64*1024*1024){
+          const rel=path.relative(path.resolve(home),path.dirname(path.resolve(dbFile)));
+          if(rel!=='.'&&rel!==''&&(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel)))continue;
+          let dir=path.resolve(home);safeDb=true;
+          for(const seg of rel.split(path.sep).filter(Boolean)){
+            dir=path.join(dir,seg);
+            const st=fs.lstatSync(dir);
+            if(!st.isDirectory()||st.isSymbolicLink()){safeDb=false;break}
+          }
+        }
+      }catch{}
+      if(!safeDb)continue;
       let db;
       try {
-        db = new DatabaseSync(dbFile, { readOnly: true });
+        db = new Database(dbFile, { readOnly: true });
         const row = db.prepare("SELECT value FROM ItemTable WHERE key='content.trust.model.key'").get();
         if (row?.value) {
           const parsed = JSON.parse(row.value);
@@ -339,8 +451,8 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
             if (raw) addPath(raw, { requireMarker: false });
           }
         }
-      } catch {} finally {
-        try { db?.close(); } catch {}
+      } catch(error) {debugLog('ide_trust_database',error)} finally {
+        try { db?.close(); } catch(error) {debugLog('ide_trust_close',error)}
       }
     }
   } catch {}
@@ -349,10 +461,10 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
   try {
     for (const appDir of ['antigravity-cli', 'antigravity', 'antigravity-ide']) {
       const cliSettings = path.join(home, '.gemini', appDir, 'settings.json');
-      if (!fs.existsSync(cliSettings)) continue;
+      const config=readSafeJsonFile(cliSettings,{maxBytes:128*1024,checkParentDir:true});
+      if(!config.ok)continue;
       try {
-        const content = JSON.parse(fs.readFileSync(cliSettings, 'utf8'));
-        const trusted = Array.isArray(content?.trustedWorkspaces) ? content.trustedWorkspaces : [];
+        const trusted = Array.isArray(config.value?.trustedWorkspaces) ? config.value.trustedWorkspaces : [];
         for (const p of trusted) {
           addPath(p, { requireMarker: false });
         }
@@ -360,25 +472,10 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
     }
   } catch {}
 
-  if (autoTrust === 'active-only' || autoTrust === 'project-markers') {
-    // 3. Running Antigravity processes with --add-dir=... (active sessions)
-    try {
-      if (process.platform === 'linux') {
-        const pids = fs.readdirSync('/proc').filter(p => /^\d+$/.test(p));
-        for (const pid of pids) {
-          try {
-            const cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
-            if (cmdline.includes('agy') || cmdline.includes('antigravity')) {
-              const matches = cmdline.matchAll(/--add-dir=([^\0]+)/g);
-              for (const match of matches) {
-                addPath(match[1], { requireMarker: false });
-              }
-            }
-          } catch {}
-        }
-      }
-    } catch {}
-  }
+  // Never grant workspace authorization from /proc command-line text.
+  // A separate, unrelated user process can spoof "agy --add-dir=<victim>"
+  // in its argv. Only IDE/CLI trust state, user allowlist, and narrowly
+  // reviewed project records are eligible authorization sources.
 
   if (autoTrust === 'project-markers') {
     // 4. ~/.gemini/config/projects/*.json (historical projects — require project marker)
@@ -388,8 +485,9 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
         for (const f of fs.readdirSync(projDir)) {
           if (!f.endsWith('.json')) continue;
           try {
-            const content = JSON.parse(fs.readFileSync(path.join(projDir, f), 'utf8'));
-            const resources = content?.projectResources?.resources || [];
+            const read=readSafeJsonFile(path.join(projDir,f),{maxBytes:128*1024,checkParentDir:true});
+            if(!read.ok)continue;
+            const resources = read.value?.projectResources?.resources || [];
             for (const res of resources) {
               if (res.folderUri && typeof res.folderUri === 'string' && res.folderUri.startsWith('file://')) {
                 try {
@@ -405,8 +503,9 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
     // 4. ~/.gemini/projects.json (historical projects — require project marker)
     try {
       const pJson = path.join(home, '.gemini', 'projects.json');
-      if (fs.existsSync(pJson)) {
-        const content = JSON.parse(fs.readFileSync(pJson, 'utf8'));
+      const read=readSafeJsonFile(pJson,{maxBytes:128*1024,checkParentDir:true});
+      if(read.ok){
+        const content=read.value;
         if (content?.projects && typeof content.projects === 'object') {
           for (const p of Object.keys(content.projects)) {
             addPath(p, { requireMarker: true });
@@ -437,64 +536,91 @@ export function loadAntigravityWorkspaces({ bypassCache = false } = {}) {
     } catch {}
   }
 
+  if(autoTrust==='active-only'){
+    // Active-only is an intersection of two independent local records:
+    // (1) an explicitly trusted Antigravity workspace and
+    // (2) the last bounded SessionStart workspace. A hook record by itself
+    // can NEVER authorize a new workspace.
+    const active=[];
+    try{
+      const sessionFile=path.join(dataDir(),'active-session.json');
+      const metadata=readSafeJsonFile(sessionFile,{maxBytes:128*1024});
+      if(metadata.ok){
+        const latest=metadata.value.latest;
+        const candidates=[...(Array.isArray(latest?.workspacePaths)?latest.workspacePaths.slice(0,32):[]),latest?.cwd];
+        for(const candidate of candidates){
+          if(typeof candidate!=='string'||!path.isAbsolute(candidate))continue;
+          const real=realpathIfExists(candidate);
+          if(!fs.existsSync(real)||!fs.statSync(real).isDirectory()||isProtectedRoot(real))continue;
+          if([...dirs].some(trusted=>isSameOrDescendantPath(trusted,real)))active.push(real);
+        }
+      }
+    }catch{}
+    dirs.clear();
+    for(const activeRoot of active)dirs.add(activeRoot);
+  }
   const sorted = [...dirs].sort();
   workspaceCache = { key: cacheKey, ts: now, dirs: sorted };
   return sorted;
 }
 
-export function loadAllowlist(){
-  try {
-    const stat = fs.lstatSync(allowlistPath());
-    if(!stat.isFile() || stat.isSymbolicLink()) return [];
-    const data = JSON.parse(fs.readFileSync(allowlistPath(),'utf8'));
-    return Array.isArray(data.allowed) ? data.allowed.filter(s=>typeof s==='string') : [];
-  } catch {return []}
+function readWorkspaceGrants(){
+  const file=allowlistPath();
+  try{
+    const read=readSafeJsonFile(file,{maxBytes:128*1024,checkParentDir:true});
+    if(!read.ok){
+      if(read.reason==='missing')return {allowed:[],revoked:[],valid:true};
+      throw Error('Unsafe workspace grants file');
+    }
+    const data=read.value;
+    if(!data||!Array.isArray(data.allowed)||!Array.isArray(data.revoked??[]))throw Error('Malformed workspace grants');
+    const validList=xs=>xs.every(x=>typeof x==='string'&&x.length<=1024&&path.isAbsolute(x));
+    const revoked=data.revoked??[];
+    if(!validList(data.allowed)||!validList(revoked))throw Error('Invalid workspace grants');
+    return {allowed:data.allowed,revoked,valid:true};
+  }catch(e){
+    if(e.code==='ENOENT')return {allowed:[],revoked:[],valid:true};
+    // A damaged grants file must never silently reactivate auto-trusted paths.
+    return {allowed:[],revoked:[],valid:false};
+  }
 }
+export function loadAllowlist(){return readWorkspaceGrants().allowed}
+export function loadRevokedWorkspaces(){return readWorkspaceGrants().revoked}
 
+// Normalize only documented macOS /private aliases (never arbitrary paths)
+// and the default case-insensitive OS families before comparing boundaries.
+function normalizedComparablePath(input){
+  let resolved=path.resolve(input);
+  if(process.platform==='darwin')
+    resolved=resolved.replace(/^\/private(?=\/(?:var|tmp|etc)(?:\/|$))/,'');
+  return process.platform==='win32'||process.platform==='darwin'?resolved.toLowerCase():resolved;
+}
+export function isSamePath(a,b){
+  return typeof a==='string'&&a.length>0&&typeof b==='string'&&b.length>0&&
+    normalizedComparablePath(a)===normalizedComparablePath(b);
+}
 export function isSameOrDescendantPath(parent, child) {
-  if (!parent || !child) return false;
-  const p = path.resolve(parent);
-  const c = path.resolve(child);
-  if (p === c) return true;
-
-  const pWithSep = p.endsWith(path.sep) ? p : p + path.sep;
-  if (c.startsWith(pWithSep)) return true;
-
-  // Case-insensitive check (Windows and macOS default filesystems)
-  if (process.platform === 'win32' || process.platform === 'darwin') {
-    const pLower = p.toLowerCase();
-    const cLower = c.toLowerCase();
-    const pLowerWithSep = pLower.endsWith(path.sep) ? pLower : pLower + path.sep;
-    if (cLower === pLower || cLower.startsWith(pLowerWithSep)) return true;
-  }
-
-  // macOS /private symlink alias check (/var -> /private/var, /tmp -> /private/tmp)
-  if (process.platform === 'darwin') {
-    const pPriv = p.startsWith('/private/') ? p : '/private' + p;
-    const cPriv = c.startsWith('/private/') ? c : '/private' + c;
-    const pPrivWithSep = pPriv.endsWith('/') ? pPriv : pPriv + '/';
-    if (cPriv === pPriv || cPriv.startsWith(pPrivWithSep)) return true;
-
-    const pNoPriv = p.startsWith('/private/') ? p.slice('/private'.length) : p;
-    const cNoPriv = c.startsWith('/private/') ? c.slice('/private'.length) : c;
-    const pNoPrivWithSep = pNoPriv.endsWith('/') ? pNoPriv : pNoPriv + '/';
-    if (cNoPriv === pNoPriv || cNoPriv.startsWith(pNoPrivWithSep)) return true;
-  }
-
-  return false;
+  if(typeof parent!=='string'||!parent||typeof child!=='string'||!child)return false;
+  const p=normalizedComparablePath(parent),c=normalizedComparablePath(child);
+  return c===p||c.startsWith(p.endsWith(path.sep)?p:p+path.sep);
 }
 
 export function isWorkspaceAuthorized(ws){
   if (isProtectedRoot(ws)) return false;
   const canonical = realpathIfExists(ws);
-  const allowed = loadAllowlist();
+  const grants=readWorkspaceGrants();
+  if(!grants.valid)return false;
+  if(grants.revoked.some(p=>isSameOrDescendantPath(p,canonical)||isSameOrDescendantPath(p,ws)))return false;
+  const allowed = grants.allowed;
   for (const a of allowed) {
     if (isProtectedRoot(a)) continue;
     if (isSameOrDescendantPath(a, canonical) || isSameOrDescendantPath(a, ws)) {
       return true;
     }
   }
-  const agWorkspaces = loadAntigravityWorkspaces();
+  // Authorization is a security decision: bypass the UI discovery TTL so an
+  // IDE Workspace Trust revocation takes effect on the next A2A request.
+  const agWorkspaces = loadAntigravityWorkspaces({bypassCache:true});
   for (const a of agWorkspaces) {
     if (isProtectedRoot(a)) continue;
     if (isSameOrDescendantPath(a, canonical) || isSameOrDescendantPath(a, ws)) {
@@ -506,26 +632,45 @@ export function isWorkspaceAuthorized(ws){
 
 export function requireAuthorizedWorkspace(input){
   const ws=normalizeWorkspace(input);
+  if (isProtectedRoot(ws)) throw new Error('Protected workspace denied; select an ordinary trusted project');
   if (!isWorkspaceAuthorized(ws)) throw new Error('Workspace is not authorized. Run: node scripts/a2a.mjs allow "'+ws+'" (local user approval).');
   return ws;
 }
-function writeAllowlist(allowed){
+function writeAllowlist(allowed,revoked=[]){
   const target=path.join(getHomeDir(), '.config', 'a2a', 'allowed-workspaces.json');
   const parent=path.dirname(target);fs.mkdirSync(parent,{recursive:true,mode:0o700});
-  const flags=fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_TRUNC|(fs.constants.O_NOFOLLOW||0);
-  const fd=fs.openSync(target,flags,0o600);
-  try{fs.fchmodSync(fd,0o600);fs.writeFileSync(fd,JSON.stringify({version:1,allowed},null,2)+'\n')}finally{fs.closeSync(fd)}
+  // A replace prevents partial/truncated grant files on interruption and never
+  // follows a symlink at the target pathname.
+  const temp=target+'.'+process.pid+'.'+crypto.randomUUID()+'.tmp';
+  const flags=fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|(fs.constants.O_NOFOLLOW||0);
+  let fd=null;
+  try{
+    fd=fs.openSync(temp,flags,0o600);
+    fs.writeFileSync(fd,JSON.stringify({version:1,allowed,revoked},null,2)+'\n');
+    fs.closeSync(fd);fd=null;
+    fs.renameSync(temp,target);
+  }finally{
+    if(fd!==null)fs.closeSync(fd);
+    try{fs.unlinkSync(temp)}catch{}
+  }
 }
 export function authorizeWorkspace(input) {
   const ws=normalizeWorkspace(input);
   if(isProtectedRoot(ws)) throw new Error('Refusing to authorize a protected root or system directory');
-  const allowed=[...new Set([...loadAllowlist(),ws])].sort();
-  writeAllowlist(allowed);
+  const current=readWorkspaceGrants();
+  if(!current.valid)throw new Error('Workspace grants file is invalid; repair it before allowing access');
+  const allowed=[...new Set([...current.allowed,ws])].sort();
+  const revoked=current.revoked.filter(x=>x!==ws);
+  writeAllowlist(allowed,revoked);
   return ws;
 }
 export function revokeWorkspace(input){
-  const ws=normalizeWorkspace(input);const allowed=loadAllowlist().filter(x=>x!==ws);
-  writeAllowlist(allowed);
+  const ws=normalizeWorkspace(input);
+  const current=readWorkspaceGrants();
+  if(!current.valid)throw new Error('Workspace grants file is invalid; cannot safely revoke access');
+  const allowed=current.allowed.filter(x=>x!==ws);
+  const revoked=[...new Set([...current.revoked,ws])].sort();
+  writeAllowlist(allowed,revoked);
   return allowed;
 }
 export function safeFile(root,rel,{mustExist=true}={}) {
@@ -549,6 +694,7 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
   const resolved = path.resolve(targetPath);
 
   let authorizedBoundary = null;
+  let trustedBrainArtifact=false;
   if (workspaceRoot) {
     try {
       const authWs = requireAuthorizedWorkspace(workspaceRoot);
@@ -561,9 +707,23 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
     const brainDir = path.resolve(getHomeDir(), '.gemini', 'antigravity', 'brain', conversationId);
     // Only top-level Markdown artifacts can be read from a conversation brain.
     // Never allow .system_generated or nested internal conversation content.
-    if (path.dirname(resolved) === brainDir && path.extname(resolved).toLowerCase()==='.md'
+    if (isSamePath(path.dirname(resolved),brainDir) && path.extname(resolved).toLowerCase()==='.md'
         && !path.basename(resolved).startsWith('.')) {
+      // The special brain exception does not rely on workspace approval.
+      // Every directory segment below HOME must therefore be a real directory,
+      // never a symlink that redirects private reads elsewhere.
+      let safeBrain=true;
+      let segment=getHomeDir();
+      for (const part of ['.gemini','antigravity','brain',conversationId]) {
+        segment=path.join(segment,part);
+        try {
+          const st=fs.lstatSync(segment);
+          if(st.isSymbolicLink()||!st.isDirectory()){safeBrain=false;break}
+        } catch {safeBrain=false;break}
+      }
+      if (!safeBrain)throw new Error('Symlink access denied for brain artifact');
       authorizedBoundary = brainDir;
+      trustedBrainArtifact=true;
     }
   }
   // No global allowlist fallback: authorization is bound to the *requested* workspace.
@@ -572,12 +732,13 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
     throw new Error('Path escapes authorized workspace or brain boundary');
   }
 
-  if (isProtectedRoot(resolved)) {
+  if (isProtectedRoot(resolved) && !trustedBrainArtifact) {
     throw new Error('Access to protected root denied');
   }
 
   const base = path.basename(resolved);
-  if (shouldIgnore(base) || /(?:^\.env|\.pem$|\.key$|\.sqlite|\.git$)/i.test(base)) {
+  const relativeInsideBoundary=trustedBrainArtifact?path.basename(resolved):path.relative(authorizedBoundary,resolved);
+  if (shouldIgnore(relativeInsideBoundary) || /(?:^\.env|\.pem$|\.key$|\.sqlite|\.git$)/i.test(base)) {
     throw new Error('Access to sensitive file denied');
   }
 
@@ -618,3 +779,15 @@ export function safeArtifactPath(workspaceRoot, conversationId, targetPath, { mu
   return resolved;
 }
 export function cleanError(error) {return String(error?.message||error).replace(/[\r\n\t]/g,' ').slice(0,400)}
+
+/**
+ * The refresh RPC carries an Antigravity CSRF token. Never send it to a
+ * non-loopback endpoint supplied through process environment variables.
+ */
+export function localAntigravityRpcUrl(address){
+  if(typeof address!=='string'||address.length>100)throw new Error('Invalid local language server address');
+  const match=/^(127\.0\.0\.1|localhost|\[::1\]):([0-9]{1,5})$/i.exec(address);
+  const port=match?Number(match[2]):0;
+  if(!match||port<1||port>65535)throw new Error('Language server must use a loopback host and valid port');
+  return 'http://'+match[1]+':'+port+'/exa.language_server_pb.LanguageServerService/RefreshMcpServers';
+}

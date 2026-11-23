@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
-import { dataDir } from './security.mjs';
+import { dataDir,getHomeDir } from './security.mjs';
 
 export const estimateTokens = (textOrBytes) => {
   if (typeof textOrBytes === 'string') {
@@ -359,7 +358,7 @@ function getBrainRoots() {
   if (process.env.ANTIGRAVITY_APP_DATA_DIR) {
     return [path.join(path.resolve(process.env.ANTIGRAVITY_APP_DATA_DIR), 'brain')];
   }
-  const home = os.homedir();
+  const home = getHomeDir();
   return ['antigravity', 'antigravity-cli', 'antigravity-ide'].map(d => path.join(home, '.gemini', d, 'brain'));
 }
 
@@ -378,68 +377,74 @@ function isSubagentTranscript(filePath) {
   }
 }
 
+// A transcript reference is metadata supplied by a hook or caller, not permission
+// to read arbitrary local files. Require the exact Antigravity brain layout.
+export function vettedTranscript(candidate,expectedId=null){
+  if(typeof candidate!=='string'||!candidate)return null;
+  const requested=path.resolve(candidate);
+  for(const brain of getBrainRoots()){
+    const base=path.resolve(brain);
+    const rel=path.relative(base,requested);
+    const seg=rel.split(path.sep);
+    if(seg.length!==4||!sanitizeConversationId(seg[0])||
+       seg[1]!=='.system_generated'||seg[2]!=='logs'||seg[3]!=='transcript.jsonl'||
+       (expectedId&&seg[0]!==expectedId))continue;
+    try{
+      // Reject symlinks at every descendant path component, including files.
+      let cursor=base;
+      for(const part of seg){
+        cursor=path.join(cursor,part);
+        if(fs.lstatSync(cursor).isSymbolicLink())throw Error('Symlink transcript denied');
+      }
+      const canonical=fs.realpathSync(requested);
+      const realRel=path.relative(fs.realpathSync(base),canonical);
+      if(realRel!==rel||!fs.statSync(canonical).isFile())continue;
+      return {convId:seg[0],logFile:canonical};
+    }catch{}
+  }
+  return null;
+}
 function resolveTranscriptTarget({ conversationId = null, transcriptPath = null, workspace = null, dataDirPath = null } = {}) {
   const cleanId = sanitizeConversationId(conversationId);
   if (conversationId && !cleanId) return null;
 
-  if (transcriptPath && typeof transcriptPath === 'string') {
-    try {
-      const resolved = fs.realpathSync(path.resolve(transcriptPath));
-      const inBrain = getBrainRoots().some(brain=>{
-        const canonical=fs.existsSync(brain)?fs.realpathSync(brain):path.resolve(brain);
-        const rel=path.relative(canonical,resolved);
-        return rel && rel!=='.' && rel!=='..' && !rel.startsWith('..'+path.sep) && !path.isAbsolute(rel);
-      });
-      if (inBrain && path.basename(resolved)==='transcript.jsonl' && fs.statSync(resolved).isFile()) {
-        const inferredId = cleanId || sanitizeConversationId(path.basename(path.dirname(path.dirname(path.dirname(resolved))))) || 'explicit';
-        return { convId: inferredId, logFile: resolved, source: 'explicit-transcript-path' };
-      }
-    } catch {}
-    return null;
+  if(transcriptPath){
+    const candidate=vettedTranscript(transcriptPath,cleanId);
+    return candidate?{...candidate,source:'explicit-transcript-path'}:null;
   }
-
-  if (cleanId) {
-    for (const brainDir of getBrainRoots()) {
-      const candidate = path.join(brainDir, cleanId, '.system_generated', 'logs', 'transcript.jsonl');
-      if (fs.existsSync(candidate)) {
-        return { convId: cleanId, logFile: candidate, source: 'explicit-conversation-id' };
-      }
+  if(cleanId){
+    for(const brain of getBrainRoots()){
+      const candidate=vettedTranscript(path.join(brain,cleanId,'.system_generated','logs','transcript.jsonl'),cleanId);
+      if(candidate)return {...candidate,source:'explicit-conversation-id'};
     }
     return null;
   }
-
-  const envId = sanitizeConversationId(process.env.ANTIGRAVITY_CONVERSATION_ID);
-  if (envId) {
-    for (const brainDir of getBrainRoots()) {
-      const candidate = path.join(brainDir, envId, '.system_generated', 'logs', 'transcript.jsonl');
-      if (fs.existsSync(candidate)) {
-        return { convId: envId, logFile: candidate, source: 'env-conversation-id' };
-      }
+  const envId=sanitizeConversationId(process.env.ANTIGRAVITY_CONVERSATION_ID);
+  if(envId){
+    for(const brain of getBrainRoots()){
+      const candidate=vettedTranscript(path.join(brain,envId,'.system_generated','logs','transcript.jsonl'),envId);
+      if(candidate)return {...candidate,source:'env-conversation-id'};
     }
   }
-
-  // Check active-session.json persisted by Antigravity hooks
-  try {
-    const base = dataDirPath || dataDir();
-    const sessionFile = path.join(base, 'active-session.json');
-    if (fs.existsSync(sessionFile)) {
-      const sessionData = JSON.parse(fs.readFileSync(sessionFile, 'utf8'));
-      const entry = (workspace && sessionData?.byWorkspace?.[workspace]) || sessionData?.latest;
-      const sid = sanitizeConversationId(entry?.conversationId);
-      if (entry?.transcriptPath && fs.existsSync(entry.transcriptPath)) {
-        return { convId: sid || 'hook-session', logFile: entry.transcriptPath, source: 'active-session-hook' };
-      }
-      if (sid) {
-        for (const brainDir of getBrainRoots()) {
-          const candidate = path.join(brainDir, sid, '.system_generated', 'logs', 'transcript.jsonl');
-          if (fs.existsSync(candidate)) {
-            return { convId: sid, logFile: candidate, source: 'active-session-hook' };
-          }
-        }
+  try{
+    const base=dataDirPath||dataDir();
+    const sessionFile=path.join(base,'active-session.json');
+    const stat=fs.lstatSync(sessionFile);
+    if(!stat.isFile()||stat.size>128*1024)return null;
+    const sessionData=JSON.parse(fs.readFileSync(sessionFile,'utf8'));
+    const entry=(workspace&&sessionData?.byWorkspace?.[workspace])||sessionData?.latest;
+    const sid=sanitizeConversationId(entry?.conversationId);
+    if(entry?.transcriptPath){
+      const candidate=vettedTranscript(entry.transcriptPath,sid);
+      if(candidate)return {...candidate,source:'active-session-hook'};
+    }
+    if(sid){
+      for(const brain of getBrainRoots()){
+        const candidate=vettedTranscript(path.join(brain,sid,'.system_generated','logs','transcript.jsonl'),sid);
+        if(candidate)return {...candidate,source:'active-session-hook'};
       }
     }
-  } catch {}
-
+  }catch{}
   // Never guess the most recent transcript: it may belong to another session.
   return null;
 }

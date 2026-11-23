@@ -12,9 +12,24 @@ CREATE INDEX IF NOT EXISTS edges_target ON edges(workspace_id,target);
 CREATE TABLE IF NOT EXISTS evidence (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, revision_id TEXT NOT NULL, criterion_id TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('passed','failed','blocked','inconclusive')), evidence_type TEXT NOT NULL, artifact_path TEXT NOT NULL, artifact_sha TEXT NOT NULL, metadata_json TEXT NOT NULL, created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS evidence_lookup ON evidence(workspace_id,criterion_id,created_at DESC);
 CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, revision_id TEXT NOT NULL, verdict TEXT NOT NULL, criteria_json TEXT NOT NULL, created_at TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS incidents (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, title TEXT NOT NULL, root_cause TEXT NOT NULL, state TEXT NOT NULL, revision_id TEXT NOT NULL, related_paths_json TEXT NOT NULL, criteria_json TEXT NOT NULL, evidence_ids_json TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS incidents (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, title TEXT NOT NULL, root_cause TEXT NOT NULL, state TEXT NOT NULL, revision_id TEXT NOT NULL, related_paths_json TEXT NOT NULL, criteria_json TEXT NOT NULL, evidence_ids_json TEXT NOT NULL, created_at TEXT NOT NULL, signature_sha TEXT);
 CREATE INDEX IF NOT EXISTS incidents_lookup ON incidents(workspace_id,created_at DESC);
-CREATE TABLE IF NOT EXISTS hypotheses (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, incident_id TEXT, description TEXT NOT NULL, status TEXT NOT NULL, experiment TEXT, evidence_ids_json TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS incidents_signature ON incidents(workspace_id,signature_sha,created_at DESC);
+CREATE TABLE IF NOT EXISTS hypotheses (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, incident_id TEXT, description TEXT NOT NULL, status TEXT NOT NULL, experiment TEXT, evidence_ids_json TEXT NOT NULL, created_at TEXT NOT NULL, revision_id TEXT, parent_hypothesis_id TEXT, why_depth INTEGER NOT NULL DEFAULT 1, predicted_observation TEXT, disconfirming_test TEXT, expected_criterion_id TEXT, plan_id TEXT, assessment_json TEXT NOT NULL DEFAULT '{}', assessed_revision_id TEXT, updated_at TEXT);
+CREATE INDEX IF NOT EXISTS hypotheses_incident ON hypotheses(workspace_id,incident_id,created_at DESC);
+-- Append-only local experimental interpretations. Never independent causal proof.
+CREATE TABLE IF NOT EXISTS rca_experiments (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL,
+  hypothesis_id TEXT NOT NULL,
+  revision_id TEXT NOT NULL,
+  outcome TEXT NOT NULL,
+  observation TEXT NOT NULL,
+  criterion_id TEXT NOT NULL,
+  evidence_ids_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS rca_experiments_history ON rca_experiments(workspace_id,hypothesis_id,created_at DESC);
 CREATE TABLE IF NOT EXISTS telemetry (workspace_id TEXT NOT NULL, tool_name TEXT NOT NULL, action TEXT NOT NULL, raw_scope_tokens INTEGER NOT NULL DEFAULT 0, response_tokens INTEGER NOT NULL DEFAULT 0, tokens_saved INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS telemetry_by_ws ON telemetry(workspace_id,created_at DESC);
 CREATE TABLE IF NOT EXISTS side_questions (id TEXT PRIMARY KEY, workspace_id TEXT, conversation_id TEXT NOT NULL, parent_conversation_id TEXT, title TEXT, question TEXT NOT NULL, summary TEXT, status TEXT NOT NULL DEFAULT 'resolved', transcript_path TEXT, metadata_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
@@ -26,3 +41,44 @@ CREATE INDEX IF NOT EXISTS artifact_v_lookup ON artifact_versions(conversation_i
 CREATE INDEX IF NOT EXISTS artifact_v_conv ON artifact_versions(conversation_id);
 CREATE INDEX IF NOT EXISTS artifact_v_ws ON artifact_versions(workspace_id);
 
+
+-- A2A model recovery: only sanitized model/category metadata, never raw errors.
+CREATE TABLE IF NOT EXISTS model_recovery_state (
+  workspace_id TEXT NOT NULL,
+  conversation_id TEXT NOT NULL,
+  model_name TEXT,
+  incident_category TEXT,
+  incident_confidence TEXT,
+  incident_at TEXT,
+  notice_signature TEXT,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(workspace_id, conversation_id)
+);
+CREATE INDEX IF NOT EXISTS model_recovery_recent ON model_recovery_state(workspace_id,updated_at DESC);
+-- Checkpoints are explicit opt-in summaries, not automatic transcript copies.
+CREATE TABLE IF NOT EXISTS recovery_checkpoints (
+  workspace_id TEXT NOT NULL,
+  conversation_id TEXT NOT NULL,
+  revision_id TEXT,
+  task_summary TEXT NOT NULL,
+  completed_json TEXT NOT NULL,
+  next_steps_json TEXT NOT NULL,
+  decisions_json TEXT NOT NULL DEFAULT '[]',
+  pending_tests_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(workspace_id, conversation_id)
+);
+CREATE INDEX IF NOT EXISTS recovery_recent ON recovery_checkpoints(workspace_id,updated_at DESC);
+
+-- Explicit opt-in, revision-bound acceptance plan scope for subsequent assess calls.
+CREATE TABLE IF NOT EXISTS acceptance_plans (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL,
+  revision_id TEXT NOT NULL,
+  manifest_sha TEXT NOT NULL,
+  criteria_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id)
+);
+CREATE INDEX IF NOT EXISTS acceptance_plans_recent ON acceptance_plans(workspace_id,created_at DESC);

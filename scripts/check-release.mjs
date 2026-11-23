@@ -9,6 +9,9 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const read=file=>JSON.parse(fs.readFileSync(path.join(root,file),'utf8'));
 
 const manifest=read('plugin.json');
+const pkg=read('package.json');
+assert.equal(pkg.version,manifest.version,'Package and plugin version must match');
+assert.match(fs.readFileSync(path.join(root,'.npmignore'),'utf8'),/(?:^|\n)benchmarks\/[^\n]*\n?/,'Benchmark evaluator is intentionally source-checkout-only');
 assert.match(manifest.name,/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 assert.match(manifest.version,/^\d+\.\d+\.\d+$/);
 assert.ok(manifest.displayName&&manifest.description&&manifest.license&&manifest.author);

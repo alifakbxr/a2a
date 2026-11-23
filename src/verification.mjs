@@ -1,55 +1,125 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import {safeFile,sha256} from './security.mjs';
+import {safeFile,sha256,readSafeBytesFile,readSafeJsonFile} from './security.mjs';
 import {uniqueId} from './storage.mjs';
 import {discoverTestCommands,gitChanges} from './scanner.mjs';
+
+import {proposeRiskTests} from './risk-guidance.mjs';
+import {normalizeAcceptanceCriterion,acceptanceCompletion,localEvidencePolicy} from './acceptance-matrix.mjs';
+
+// Bounded structural guard: regex case extraction must never count cases outside
+// a complete JUnit document as passing assertions. Unsupported XML fails closed.
+function validJUnitStructure(xml){
+ const source=xml.replace(/^\s*<\?xml\s+[^?]*\?>/i,'').trim();
+ const stack=[];let rootSeen=false,completed=false,cursor=0;
+ const tags=/<(\/?)([A-Za-z][A-Za-z0-9:_.-]*)([^<>]*?)>/g;
+ let match;
+ while((match=tags.exec(source))!==null){
+  const between=source.slice(cursor,match.index);
+  if(completed||between.includes('<')||(!stack.length&&between.trim()))return false;
+  const closing=match[1]==='/',name=match[2].toLowerCase();
+   const selfClosing=!closing&&/\/\s*$/.test(match[3]);
+  if(closing){
+   if(stack.pop()!==name)return false;
+   if(!stack.length)completed=true;
+  }else{
+   if(!stack.length){if(rootSeen||!['testsuite','testsuites'].includes(name))return false;rootSeen=true;}
+   if(name==='testcase'&&stack.at(-1)!=='testsuite')return false;
+   if(name==='testsuite'&&stack.length&&!['testsuite','testsuites'].includes(stack.at(-1)))return false;
+   if(name==='testsuites'&&stack.length)return false;
+   if(['failure','error','skipped'].includes(name)&&stack.at(-1)!=='testcase')return false;
+   if(!selfClosing)stack.push(name);
+   else if(!stack.length)completed=true;
+  }
+  cursor=tags.lastIndex;
+ }
+ const tail=source.slice(cursor);
+ return rootSeen&&completed&&!stack.length&&!tail.includes('<')&&!tail.trim();
+}
 
 export function parseArtifact(text, filename){
   const ext=filename.toLowerCase().split('.').at(-1), sample=text.slice(0,1200000);
   if(ext==='xml' && /<(?:testsuite|testsuites)\b/.test(sample)){
-    if(!/<\/testsuite>/.test(sample))return {status:'inconclusive',reason:'Incomplete JUnit XML',assertions:0,cases:[]};
-    const attrs=s=>Object.fromEntries([...s.matchAll(/([A-Za-z]+)="([^"]*)"/g)].map(x=>[x[1],x[2]]));
-    const caseTags=[...sample.matchAll(/<testcase\b([^>]*)>/g)].map(x=>({tag:x[0],at:x.index,a:attrs(x[1])}));
-    const unclosed=caseTags.some((v,i)=>!v.tag.endsWith('/>') && (()=>{const end=sample.indexOf('</testcase>',v.at),next=caseTags[i+1]?.at??Infinity;return end<0||end>=next})());
-    if(unclosed)return {status:'inconclusive',reason:'Unclosed JUnit testcase',assertions:caseTags.length,cases:[]};
-    const cases=caseTags.map((v,i)=>{
-      const end=sample.indexOf('</testcase>',v.at),next=caseTags[i+1]?.at??Infinity;
-      const body=v.tag.endsWith('/>')?'':end>=0&&end<next?sample.slice(v.at+v.tag.length,end):'';
-      const state=/<(?:failure|error)\b/.test(body)?'failed':/<skipped\b/.test(body)?'skipped':'passed';
-      return {name:v.a.name||'',state};
-    });
-    const rootMatch=sample.match(/<testsuites\b([^>]*)>/);
+    // A test report is untrusted local content. Fail closed on XML constructs
+    // outside the narrow JUnit schema, and strip non-structural log content
+    // BEFORE searching for testcase/failure tags.
+    if(/<!DOCTYPE\b|<!ENTITY\b/i.test(sample))return {status:'inconclusive',reason:'Unsupported XML entity or DTD',assertions:0,cases:[]};
+    const clean=sample
+      .replace(/<!--[\s\S]*?-->/g,'')
+      .replace(/<(?:system-out|system-err)\b[^>]*>[\s\S]*?<\/(?:system-out|system-err)\s*>/gi,'')
+      .replace(/<!\[CDATA\[[\s\S]*?\]\]>/g,'');
+    if(/<!--|<!\[CDATA\[|<(?:system-out|system-err)\b/i.test(clean))
+      return {status:'inconclusive',reason:'Incomplete XML comment or log content',assertions:0,cases:[]};
+    if(!validJUnitStructure(clean)||!/<\/testsuite\s*>/.test(clean)||/<testcase\b/i.test(clean)===false)
+      return {status:'inconclusive',reason:'Incomplete JUnit XML',assertions:0,cases:[]};
+    const attrs=text=>Object.fromEntries([...text.matchAll(/([A-Za-z][A-Za-z0-9_-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
+      .map(m=>[m[1],m[2]??m[3]]));
+    const tags=[...clean.matchAll(/<testcase\b([^>]*)>/g)];
+    const cases=[];let cursor=0;
+    for(const item of tags){
+      const tag=item[0],at=item.index;
+      if(at<cursor)return {status:'inconclusive',reason:'Overlapping or malformed JUnit testcases',assertions:cases.length,cases};
+      const attr=attrs(item[1]);
+      if(!attr.name)return {status:'inconclusive',reason:'JUnit testcase name absent',assertions:cases.length,cases};
+      const selfClosing=/\/\s*>$/.test(tag);
+      const close=selfClosing?at+tag.length:clean.indexOf('</testcase>',at+tag.length);
+      const next=clean.indexOf('<testcase',at+tag.length);
+      if(close<0||(!selfClosing&&next>=0&&next<close))
+        return {status:'inconclusive',reason:'Unclosed or nested JUnit testcase',assertions:cases.length,cases};
+      const body=selfClosing?'':clean.slice(at+tag.length,close);
+      cursor=selfClosing?at+tag.length:close+'</testcase>'.length;
+      const state=/<(?:failure|error)\b/i.test(body)?'failed':/<skipped\b/i.test(body)?'skipped':'passed';
+      cases.push({name:attr.name,state});
+    }
+    if(/<testcase\b/i.test(clean.slice(cursor))||/<!\[CDATA\[|<!--/.test(clean.slice(cursor)))
+      return {status:'inconclusive',reason:'Unparsed JUnit testcase',assertions:cases.length,cases};
+    const rootMatch=clean.match(/<testsuites\b([^>]*)>/);
     const rootAttrs=rootMatch?attrs(rootMatch[1]):{};
-    const suiteMatches=[...sample.matchAll(/<testsuite\b([^>]*)>/g)];
-    let expected=NaN, declaredFailed=0, declaredSkipped=0;
+    const suites=[...clean.matchAll(/<testsuite\b([^>]*)>/g)];
+    let expected=NaN,declaredFailed=0,declaredSkipped=0;
     if(rootAttrs.tests!==undefined){
       expected=Number(rootAttrs.tests);
       declaredFailed=Number(rootAttrs.failures||0)+Number(rootAttrs.errors||0);
       declaredSkipped=Number(rootAttrs.skipped||0);
-    }else if(suiteMatches.length>0){
-      let sumTests=0, hasTestsAttr=false;
-      for(const sm of suiteMatches){
-        const a=attrs(sm[1]);
-        if(a.tests!==undefined){hasTestsAttr=true;sumTests+=Number(a.tests)}
+    }else if(suites.length){
+      let sum=0,found=false;
+      for(const suite of suites){
+        const a=attrs(suite[1]);
+        if(a.tests!==undefined){found=true;sum+=Number(a.tests)}
         declaredFailed+=Number(a.failures||0)+Number(a.errors||0);
         declaredSkipped+=Number(a.skipped||0);
       }
-      expected=hasTestsAttr?sumTests:NaN;
+      expected=found?sum:NaN;
     }
-    const actualFailed=cases.filter(c=>c.state==='failed').length,actualSkipped=cases.filter(c=>c.state==='skipped').length;
-    if(!cases.length || !Number.isFinite(expected)||expected!==cases.length)return {status:'inconclusive',reason:'JUnit test count missing or does not match testcase elements',assertions:cases.length,cases};
-    if(declaredFailed!==actualFailed||declaredSkipped!==actualSkipped)return {status:'inconclusive',reason:'JUnit suite totals disagree with testcase outcomes',assertions:cases.length,cases};
-    return {status:actualFailed?'failed':actualSkipped===cases.length?'inconclusive':'passed',assertions:cases.length,failed:actualFailed,skipped:actualSkipped,format:'junit-xml',cases};
+    const failed=cases.filter(c=>c.state==='failed').length,skipped=cases.filter(c=>c.state==='skipped').length;
+    if(!cases.length||!Number.isSafeInteger(expected)||expected!==cases.length)
+      return {status:'inconclusive',reason:'JUnit count mismatch or missing',assertions:cases.length,cases};
+    if(!Number.isSafeInteger(declaredFailed)||!Number.isSafeInteger(declaredSkipped)
+      ||declaredFailed!==failed||declaredSkipped!==skipped)
+      return {status:'inconclusive',reason:'JUnit declared outcomes disagree with actual cases',assertions:cases.length,cases};
+    return {status:failed?'failed':skipped===cases.length?'inconclusive':'passed',
+      assertions:cases.length,failed,skipped,format:'junit-xml',cases};
   }
   if(/(?:^|\n)TAP version\s+\d+/.test(sample)||/^(?:ok|not ok)\s+\d+/m.test(sample)){
     const matches=[...sample.matchAll(/^(not ok|ok)\s+(\d+)\b(?:\s*-\s*([^\n#]*))?([^\n]*)$/gm)];
-    const cases=matches.map(m=>({name:(m[3]||'').trim(),state:m[1]==='not ok'?'failed':/#\s*SKIP\b/i.test(m[4]||'')?'skipped':'passed'}));
-    const expectedPlan=[...sample.matchAll(/^(\d+)\.\.(\d+)\s*$/gm)].at(-1);
-    if(!cases.length)return {status:'inconclusive',assertions:0,reason:'No TAP assertions',cases};
-    if(expectedPlan && Number(expectedPlan[2])-Number(expectedPlan[1])+1!==cases.length)return {status:'inconclusive',assertions:cases.length,reason:'TAP plan does not match assertions',cases};
+    const cases=matches.map(m=>({
+      name:(m[3]||'').trim(),
+      number:Number(m[2]),
+      state:m[1]==='not ok'?'failed':/#\s*(?:SKIP|TODO)\b/i.test(m[4]||'')?'skipped':'passed'
+    }));
+    if(/^\s*Bail out!\b/im.test(sample))
+      return {status:'failed',reason:'TAP bailout: run aborted',assertions:cases.length,cases};
+    const plans=[...sample.matchAll(/^(\d+)\.\.(\d+)\s*(?:#.*)?$/gm)];
+    if(plans.length!==1||Number(plans[0][1])!==1||Number(plans[0][2])<1)
+      return {status:'inconclusive',reason:'TAP plan missing or invalid',assertions:cases.length,cases};
+    const expected=Number(plans[0][2]);
+    if(!cases.length||!Number.isSafeInteger(expected)||expected!==cases.length
+      ||cases.some((c,i)=>c.number!==i+1))
+      return {status:'inconclusive',reason:'TAP assertions are missing, duplicated or out of order',assertions:cases.length,cases};
     const failed=cases.filter(c=>c.state==='failed').length,skipped=cases.filter(c=>c.state==='skipped').length;
-    return {status:failed?'failed':skipped===cases.length?'inconclusive':'passed',assertions:cases.length,failed,skipped,format:'tap',cases};
+    return {status:failed?'failed':skipped===cases.length?'inconclusive':'passed',
+      assertions:cases.length,failed,skipped,format:'tap',cases};
   }
   if(ext==='json'){
     try {
@@ -65,58 +135,119 @@ export function parseArtifact(text, filename){
   return {status:'inconclusive',assertions:0,reason:'Unsupported artifact type; require JUnit, TAP, or a2a-test-report-v1',cases:[]};
 }
 
-export function planVerification({index,impact,criteria=[]}){
+export function planVerification({index,impact,criteria=[],compact=false}){
   if(!Array.isArray(criteria)||criteria.length>40)throw new Error('criteria must be an array of at most 40 items');
   const seen=new Set();const plan=criteria.map(c=>{
-    if(typeof c!=='string' || c.length>160||!c.trim())throw new Error('Invalid criterion');
-    const id=sha256(c.trim().toLowerCase()).slice(0,20);if(seen.has(id))throw new Error('Duplicate criterion');seen.add(id);
-    return {id,description:c,status:'not_run',evidence_required:true};
+    const item=normalizeAcceptanceCriterion(c);
+    if(seen.has(item.id))throw new Error('Duplicate criterion');
+    seen.add(item.id);
+    return item;
   });
   const checks=discoverTestCommands(index);
-  return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,checks,execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
+  const riskGuidance=proposeRiskTests({paths:impact?.changed??[],criteria:plan.map(x=>[x.description,x.given,x.when,x.then].filter(Boolean).join(' ')),compact});
+  const highRisk=impact?.risk==='high'||riskGuidance.findings.some(x=>x.priority==='critical');
+  // Maintainer discipline is a bounded NOT-REVIEWED checklist, never a quality verdict.
+  // It costs no extra tool call and is omitted for unrelated/trivial tasks.
+  const maintainerReview=highRisk?{
+    status:'not-reviewed',
+    required_checks:[
+      'Reproduce defect; failing regression before fix, passing after',
+      'Minimal diff; preserve local conventions and public API compatibility',
+      'Test observable behavior and adversarial boundary, not test names',
+      'Review maintenance/performance cost; no unapproved dependencies'
+    ],
+    proof:'native-test-and-human-review-required'
+  }:null;
+  return {criteria:plan,impact:impact?{risk:impact.risk,related_tests:impact.related_tests,unknowns:impact.uncertainty}:null,risk_guidance:riskGuidance,...(maintainerReview?{maintainer_review:maintainerReview}:{}),checks,completion:acceptanceCompletion(plan,[],{planning:true}),execution:'Use existing Antigravity native terminal/browser with its permissions. A2A does not execute commands.',state:'not_run'};
 }
 function aggregate(results){if(results.some(r=>r.status==='failed'))return 'failed';if(results.some(r=>r.status==='blocked'))return 'blocked';if(results.length&&results.every(r=>r.status==='passed'))return 'passed';return 'inconclusive'}
-export function assessVerification(store,wsId,root,rev,criteria){
-  if(!Array.isArray(criteria)||criteria.length===0||criteria.length>40)throw new Error('Provide 1–40 criteria including artifact paths');
-  const ids=new Set();const results=[];
-  for(const c of criteria){if(!c || typeof c.id!=='string'||c.id.length>160||!c.id.trim()||ids.has(c.id))throw new Error('Invalid or duplicate criterion ID');ids.add(c.id);
-    let result={id:c.id,status:'inconclusive',reason:'No evidence artifact'};
+export function assessVerification(store,wsId,root,rev,criteria,{planId=null}={}){
+  // Either the entire verification run and its evidence records are committed,
+  // or none are. Invalid later criteria must never leave orphaned passed evidence.
+  return store.transaction(()=>{
+  if(!Array.isArray(criteria)||criteria.length>40||(!planId&&criteria.length===0))
+    throw new Error('Provide 1–40 criteria, or a persisted plan_id with optional evidence bindings');
+  let boundRevision=null,requested=criteria;
+  if(planId!==null){
+    if(typeof planId!=='string'||!/^apl-[A-Za-z0-9-]{8,100}$/.test(planId))throw new Error('Invalid plan_id');
+    const saved=store.get('SELECT * FROM acceptance_plans WHERE workspace_id=? AND id=?',wsId,planId);
+    if(!saved)throw new Error('Unknown or unauthorized acceptance plan');
+    if(sha256(saved.criteria_json)!==saved.manifest_sha)throw new Error('Acceptance plan integrity mismatch');
+    const authoritative=JSON.parse(saved.criteria_json);
+    if(!Array.isArray(authoritative)||authoritative.length===0||authoritative.length>40)throw new Error('Invalid persisted acceptance plan');
+    boundRevision=saved.revision_id;
+    const indexed=new Map();
+    for(const item of criteria){
+      if(!item||typeof item!=='object'||Array.isArray(item)||typeof item.id!=='string'||indexed.has(item.id))throw new Error('Invalid or duplicate plan evidence binding');
+      indexed.set(item.id,item);
+    }
+    const expected=new Set(authoritative.map(c=>c.id));
+    if([...indexed.keys()].some(id=>!expected.has(id)))throw new Error('Assessment criterion is not part of the persisted plan');
+    requested=authoritative.map(original=>{
+      const binding=indexed.get(original.id)||{};
+      // The persisted plan controls the meaning of acceptance. Caller may
+      // attach evidence but may not silently change its expected behavior.
+      for(const key of ['description','given','when','then','evidence_type','viewport','ui_state','reference','source_revision','negative']){
+        if(Object.hasOwn(binding,key)&&JSON.stringify(binding[key])!==JSON.stringify(original[key]))
+          throw new Error('Acceptance contract changed: '+key);
+      }
+      return {...original,...(typeof binding.artifact==='string'?{artifact:binding.artifact}:{}),
+        ...(typeof binding.test_name==='string'?{test_name:binding.test_name}:{}),
+        ...(binding.blocked===true?{blocked:true}:{})};
+    });
+  }
+  const ids=new Set(),results=[],plan=[];
+  for(const c of requested){
+    if(typeof c==='string')throw new Error('Assessment criteria require an explicit id and named test evidence');
+    const criterion=normalizeAcceptanceCriterion(c);
+    if(ids.has(criterion.id))throw new Error('Invalid or duplicate criterion ID');
+    ids.add(criterion.id);plan.push(criterion);
+    let result={id:criterion.id,status:criterion.contract==='acceptance-v1'?'not_tested':'inconclusive',reason:'No evidence artifact'};
     if(typeof c.artifact==='string'){
       const full=safeFile(root,c.artifact);const stat=fs.statSync(full);if(stat.size>1200000)throw new Error('Evidence report exceeds 1.2 MB');
       const bytes=fs.readFileSync(full),hash=sha256(bytes), parsed=parseArtifact(bytes.toString('utf8'),c.artifact);
       // An explicit test name prevents an arbitrary passing suite from proving an unrelated criterion.
       const matchName=typeof c.test_name==='string'?c.test_name.trim():'';
       let derivedStatus=parsed.status, reason=parsed.reason||null;
-      if(!matchName){derivedStatus='inconclusive';reason='test_name is required to bind the criterion to actual test cases; use * for the entire suite';}
+      if(!matchName){derivedStatus='inconclusive';reason='test_name is required to bind the criterion to actual test cases; use * only for legacy whole-suite checks';}
+      else if(criterion.contract==='acceptance-v1'&&matchName==='*'){derivedStatus='inconclusive';reason='Structured acceptance requires an exact named test case';}
       else if(matchName!=='*'){
         const selected=parsed.cases.filter(t=>t.name===matchName);
         if(!selected.length){derivedStatus='inconclusive';reason='Named test case was not found in report';}
         else if(selected.some(t=>t.state==='failed')){derivedStatus='failed';reason='Named test case failed';}
         else if(selected.some(t=>t.state==='skipped')){derivedStatus='inconclusive';reason='Named test case was skipped';}
         else if(parsed.status==='inconclusive'){derivedStatus='inconclusive';reason=parsed.reason||'Report incomplete';}
+        else if(parsed.status==='failed'){derivedStatus='failed';reason='The same test suite contains failures';}
         else {derivedStatus='passed';reason=null;}
       }
+      if((criterion.source_revision&&criterion.source_revision!==rev)||(boundRevision&&boundRevision!==rev)){
+        derivedStatus='stale';reason='Acceptance plan or explicit source revision differs from current workspace revision';
+      }
+      if(derivedStatus==='passed'&&!localEvidencePolicy(criterion).locally_attestable){
+        derivedStatus='inconclusive';reason=localEvidencePolicy(criterion).reason;
+      }
       const evidenceId=uniqueId('ev');
-      store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',evidenceId,wsId,rev,c.id,derivedStatus,parsed.format||'unknown',c.artifact,hash,JSON.stringify({assertions:parsed.assertions||0,failed:parsed.failed||0,skipped:parsed.skipped||0,reason,test_name:matchName,trust:'local-report-not-cryptographically-attested'}),new Date().toISOString());
-      result={id:c.id,status:derivedStatus,evidence_id:evidenceId,assertions:parsed.assertions||0,...(reason?{reason}:{})};
-    }else if(c.blocked===true){result={id:c.id,status:'blocked',reason:String(c.reason||'Required environment is unavailable').slice(0,240)}}
+      store.run('INSERT INTO evidence VALUES(?,?,?,?,?,?,?,?,?,?)',evidenceId,wsId,rev,criterion.id,derivedStatus==='stale'?'inconclusive':derivedStatus,parsed.format||'unknown',c.artifact,hash,JSON.stringify({assertions:parsed.assertions||0,failed:parsed.failed||0,skipped:parsed.skipped||0,reason,test_name:matchName,requested_evidence_type:criterion.evidence_type||'unspecified',trust:'local-report-not-cryptographically-attested'}),new Date().toISOString());
+      result={id:criterion.id,status:derivedStatus,evidence_id:evidenceId,assertions:parsed.assertions||0,...(reason?{reason}:{})};
+    }else if(c.blocked===true){result={id:criterion.id,status:'blocked',reason:'Required environment unavailable; no runnable evidence supplied'}}
+    if(boundRevision&&boundRevision!==rev){result={id:criterion.id,status:'stale',reason:'Persisted acceptance plan revision differs from current workspace source'};}
     results.push(result);
   }
   const verdict=aggregate(results),runId=uniqueId('run');store.run('INSERT INTO runs VALUES(?,?,?,?,?,?)',runId,wsId,rev,verdict,JSON.stringify(results),new Date().toISOString());
-  return {run_id:runId,revision:rev,verdict,criteria:results,limits:['Report parsing does not cryptographically attest the origin of artifacts.','PASSED means supplied machine-readable assertions passed in this revision; untested behaviors remain out of scope.']};
+  return {run_id:runId,revision:rev,verdict,criteria:results,plan_id:planId||null,scope_bound:Boolean(planId),scope_source_revision:boundRevision,completion:acceptanceCompletion(plan,results),proof_scope:'named-machine-test-assertions-only',release_ready:false,semantic_requirements_proven:false,limits:['A passing JUnit/TAP/JSON suite is NOT a release-readiness or semantic concurrency/offline/security verdict.','Only independently signed acceptance evidence via assess_release can report release eligibility.','Report parsing does not attest origin or test execution authenticity.',...(!planId?['Acceptance scope is unbound: omitted planned scenarios cannot be detected without plan_id.']:[])]};
+  });
 }
 export function listEvidence(store,wsId,root,currentRevision,{limit=20,id}={}){
-  const check=x=>{let artifact_intact=false;try{const p=safeFile(root,x.artifact_path);artifact_intact=sha256(fs.readFileSync(p))===x.artifact_sha}catch{};return {fresh:x.revision_id===currentRevision&&artifact_intact,artifact_intact}};
+  const check=x=>{let artifact_intact=false;try{const p=safeFile(root,x.artifact_path),bytes=readSafeBytesFile(p,{maxBytes:4*1024*1024});artifact_intact=bytes.ok&&sha256(bytes.bytes)===x.artifact_sha}catch{};return {fresh:x.revision_id===currentRevision&&artifact_intact,artifact_intact}};
   if(id){const e=store.get('SELECT * FROM evidence WHERE workspace_id=? AND id=?',wsId,id);if(!e)return {found:false};return {...e,...check(e),metadata:JSON.parse(e.metadata_json),metadata_json:undefined}}
   const n=Math.max(1,Math.min(50,Number(limit)||20));
   return {items:store.all('SELECT id,criterion_id,status,artifact_path,artifact_sha,revision_id,created_at FROM evidence WHERE workspace_id=? ORDER BY created_at DESC LIMIT ?',wsId,n).map(x=>{const state=check(x);return {id:x.id,criterion_id:x.criterion_id,status:x.status,artifact_path:x.artifact_path,revision_id:x.revision_id,created_at:x.created_at,...state}})};
 }
-export function freshness(store,wsId,root,revision){const items=store.all('SELECT id,revision_id,criterion_id,status,artifact_path,artifact_sha FROM evidence WHERE workspace_id=? ORDER BY created_at DESC LIMIT 30',wsId);return items.map(x=>{let artifact_intact=false;try{artifact_intact=sha256(fs.readFileSync(safeFile(root,x.artifact_path)))===x.artifact_sha}catch{};return {id:x.id,revision_id:x.revision_id,criterion_id:x.criterion_id,status:x.status,artifact_intact,fresh:x.revision_id===revision&&artifact_intact}})}
+export function freshness(store,wsId,root,revision){const items=store.all('SELECT id,revision_id,criterion_id,status,artifact_path,artifact_sha FROM evidence WHERE workspace_id=? ORDER BY created_at DESC LIMIT 30',wsId);return items.map(x=>{let artifact_intact=false;try{const bytes=readSafeBytesFile(safeFile(root,x.artifact_path),{maxBytes:4*1024*1024});artifact_intact=bytes.ok&&sha256(bytes.bytes)===x.artifact_sha}catch{};return {id:x.id,revision_id:x.revision_id,criterion_id:x.criterion_id,status:x.status,artifact_intact,fresh:x.revision_id===revision&&artifact_intact}})}
 
 export const CANDIDATE_ARTIFACTS = [
   'report.xml',
   'junit.xml',
-  'report.xml',
   'test-results.xml',
   'test-report.xml',
   'junit-report.xml',
@@ -145,16 +276,16 @@ export function computeSourceFingerprint(root, changedFiles = []) {
   return sha256(fileHashes.join('\n'));
 }
 
-export function nativeRunProvenance(store,root,changedFiles,relReport,reportHash){
+export function nativeRunProvenance(store,root,changedFiles,relReport,reportHash,currentRevision){
   // This is a local hook-derived record, not a cryptographic attestation.
   if(!changedFiles.length || !store?.base)return {matched:false,reason:'No changed source files were bound to the native run'};
   try{
     const sameWorkspace=(a,b)=>a&&b&&fs.realpathSync(a)===fs.realpathSync(b);
-    const file=path.join(store.base,'last-test-run.json');
-    const st=fs.statSync(file);
-    if(!st.isFile() || st.size>128*1024)return {matched:false,reason:'Native run metadata is unavailable'};
-    const record=JSON.parse(fs.readFileSync(file,'utf8'));
-    const active=JSON.parse(fs.readFileSync(path.join(store.base,'active-session.json'),'utf8'))?.latest;
+    const recordFile=readSafeJsonFile(path.join(store.base,'last-test-run.json'),{maxBytes:128*1024});
+    const activeFile=readSafeJsonFile(path.join(store.base,'active-session.json'),{maxBytes:128*1024});
+    if(!recordFile.ok||!activeFile.ok)return {matched:false,reason:'Native run metadata is missing or unsafe'};
+    const record=recordFile.value;
+    const active=activeFile.value.latest;
     if(!active?.conversationId || active.conversationId!==record.conversationId
        || !Array.isArray(active.workspacePaths)
        || !active.workspacePaths.some(w=>{try{return sameWorkspace(w,root)}catch{return false}})){
@@ -165,6 +296,8 @@ export function nativeRunProvenance(store,root,changedFiles,relReport,reportHash
     }
     const age=Date.now()-Date.parse(record.updatedAt||'');
     if(!Number.isFinite(age)||age< -2000||age>15*60*1000)return {matched:false,reason:'Native run is outside freshness window'};
+    if(!record.source_revision||record.source_revision!==currentRevision)return {matched:false,reason:'Native test run is not bound to the current complete source revision'};
+    if(record.report_bindings?.[relReport]!==true)return {matched:false,reason:'Report was not explicitly bound to the native test command'};
     if(record.report_hashes?.[relReport]!==reportHash)return {matched:false,reason:'Report hash differs from the last native test run'};
     for(const rel of changedFiles){
       const expected=record.source_hashes?.[rel];
@@ -266,10 +399,16 @@ export function verifyHandoff(store,wsId,root,rev,{
 
   let criteriaResults=[];
   const hasExplicitCriteria = Array.isArray(criteria) && criteria.length > 0;
+  const criteriaSeen=new Set();
   if(hasExplicitCriteria){
+    if(criteria.length>40)throw new Error('Too many handoff criteria');
     for(const c of criteria){
-      const cid=typeof c==='string'?c:c.id;
-      const testName=typeof c==='object'&&c.test_name?c.test_name.trim():(typeof c==='string'?c.trim():'*');
+      if(typeof c!=='string' && (!c||typeof c!=='object'||Array.isArray(c)))throw new Error('Invalid handoff criterion');
+      const typed=typeof c==='string'?null:normalizeAcceptanceCriterion(c);
+      const cid=typed?.id??c.trim();
+      if(!cid||criteriaSeen.has(cid))throw new Error('Invalid or duplicate handoff criterion ID');
+      criteriaSeen.add(cid);
+      const testName=typeof c==='object'&&typeof c.test_name==='string'?c.test_name.trim():(typeof c==='string'?c.trim():'*');
       let cStatus='passed';
       let cReason=null;
       if(testName==='*'){
@@ -288,7 +427,13 @@ export function verifyHandoff(store,wsId,root,rev,{
           cReason=`Test case "${testName}" was skipped`;
         }
       }
-      criteriaResults.push({id:cid,status:cStatus,...(cReason?{reason:cReason}:{})});
+      if(typed?.source_revision&&typed.source_revision!==rev){
+        cStatus='inconclusive';cReason='Handoff criterion source revision is stale';
+      }
+      if(cStatus==='passed'&&!localEvidencePolicy(typed).locally_attestable){
+        cStatus='inconclusive';cReason=localEvidencePolicy(typed).reason;
+      }
+      criteriaResults.push({id:cid,status:cStatus,...(typed?.evidence_type?{evidence_type:typed.evidence_type}:{}),...(cReason?{reason:cReason}:{})});
     }
     if(criteriaResults.some(r=>r.status==='failed')){
       derivedStatus='failed';
@@ -302,7 +447,7 @@ export function verifyHandoff(store,wsId,root,rev,{
   const sourceFingerprint=computeSourceFingerprint(root,detectedChanged);
 
   const testsPassed=parsed.status==='passed'&&parsed.failed===0&&(parsed.assertions||0)>0;
-  const provenance=nativeRunProvenance(store,root,detectedChanged,relArtifact,hash);
+  const provenance=nativeRunProvenance(store,root,detectedChanged,relArtifact,hash,rev);
 
   let deliverableVerified=false;
   if(!hasExplicitCriteria){
@@ -377,6 +522,8 @@ export function verifyHandoff(store,wsId,root,rev,{
   return {
     operation:'verify_handoff',
     verified,
+    verified_scope:verified?'local-named-machine-assertions-only':'none',
+    independently_attested:false,
     tests_passed:testsPassed,
     deliverable_verified:deliverableVerified,
     status:derivedStatus,
@@ -394,7 +541,7 @@ export function verifyHandoff(store,wsId,root,rev,{
     run_id:runId,
     evidence_id:evidenceId,
     summary:deliverableVerified
-      ?`Worker ${worker_name||'task'} deliverable verified: ${parsed.assertions} assertions passed (${parsed.skipped||0} skipped) with mapped acceptance criteria across ${detectedChanged.length} changed files.`
+      ?`Worker ${worker_name||'task'} local named test assertions verified (${parsed.assertions} passed, ${parsed.skipped||0} skipped). This is not independent deliverable or runtime acceptance.`
       :testsPassed
         ?`Worker ${worker_name||'task'} tests passed (${parsed.assertions} assertions), but deliverable is unverified: acceptance criteria must be mapped to test cases.`
         :`Worker ${worker_name||'task'} handoff unverified (${derivedStatus}): ${reason||'Test requirements not satisfied.'}`,

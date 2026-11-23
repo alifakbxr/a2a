@@ -21,3 +21,5 @@
 | Test reports forged | false success | parser trusts summary | no testcase check | no independent mapping | test source unverified | testcase counts and explicit report trust limitation |
 
 Each scenario should be evaluated via a failing baseline test, the proposed mitigation, and a repeat test. Do not claim broad model intelligence gains solely because isolated tool unit tests pass.
+
+**Historical baseline:** This matrix predates the behavioral audit. For present acceptance, recovery and the v2.0.1 implementation of six behavioral issues, see [Behavioral Five Whys](BEHAVIORAL_5_WHYS_V2_0_1.md) and [contracts](CONTRACTS.md). No Five Whys hypothesis is automatically a proven root cause.

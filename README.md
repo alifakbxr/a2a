@@ -1,124 +1,187 @@
-# A2A (Agent to Alif)
+# A2A — Agent to Alif
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/alifakbxr/a2a/main/assets/logo.svg" alt="A2A Logo" width="90" />
-</p>
+<p align="center"><img src="assets/logo.svg" alt="A2A logo" width="90"></p>
 
-<p align="center">
-  <strong>Local-First Code Intelligence, Impact Analysis, Token Telemetry & Verification for Google Antigravity.</strong>
-</p>
+**Local-first engineering context, impact analysis, evidence-scoped verification, and transparent token diagnostics for Google Antigravity.**
 
-<p align="center">
-  <a href="https://www.npmjs.com/package/@aliip/a2a"><img src="https://img.shields.io/npm/v/@aliip/a2a?color=blue&logo=npm" alt="npm version" /></a>
-  <a href="https://github.com/alifakbxr/a2a/actions"><img src="https://img.shields.io/badge/tests-44%2F44%20passed-brightgreen?logo=node.js" alt="Tests" /></a>
-  <a href="https://github.com/alifakbxr/a2a"><img src="https://img.shields.io/badge/Antigravity-native%20plugin-blueviolet" alt="Antigravity Plugin" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License" /></a>
-  <img src="https://img.shields.io/badge/dependencies-0%20external-success" alt="Zero External Dependencies" />
-</p>
+[![CI](https://github.com/alifakbxr/a2a/actions/workflows/ci.yml/badge.svg?branch=v2.0.1)](https://github.com/alifakbxr/a2a/actions/workflows/ci.yml) · [npm package](https://www.npmjs.com/package/@aliip/a2a) · [MIT License](LICENSE)
 
----
+> **Release status (23 November 2026):** `v2.0.1` is a **CI-validated development branch**, not an independently accepted/published release. The current combined [9-job CI](https://github.com/alifakbxr/a2a/actions/runs/45165794296) passed across Ubuntu/macOS/Windows and Node 22/24/26.13.1. Improvements through [PR #98](https://github.com/alifakbxr/a2a/pull/98) include opt-in Context Guardian, native-first routing profiles, and accurate eager MCP intervention tracking. **The branch has not been promoted to `main`**, tagged or published. Live autonomous tool adoption [#71](https://github.com/alifakbxr/a2a/issues/71), full independently verified F01–F18 acceptance [#15](https://github.com/alifakbxr/a2a/issues/15), Guardian host overhead [#91](https://github.com/alifakbxr/a2a/issues/91), and matched routing benchmarks [#92](https://github.com/alifakbxr/a2a/issues/92) remain open. Unit/CI success is not external release authorization.
 
-**A2A** elevates AI coding agents into deterministic, risk-aware, and evidence-driven software engineers. It replaces guessing and full-file context dumps with local graph indexing (`node:sqlite`), lexer-safe skeletonization, and strict machine verification gates.
+## What A2A does
 
----
+A2A augments the *native Antigravity agent*; it is not a model, terminal proxy, browser engine, security sandbox, or automatic guarantee of bug-free software. The model still writes code, runs approved native tools, and decides when to use A2A. A2A provides:
 
-## ⚡ Highlights
+- **Context:** source inventory, bounded graph/symbol queries, lexer-safe previews, conversation history and scoped token diagnostics.
+- **Impact:** reverse-dependency heuristics, affected files and related test candidates, including uncertainty.
+- **Verify:** risk-aware plans, structured Given/When/Then acceptance criteria, named JUnit/TAP/JSON assertion checks, browser/semantic evidence inspection, and independently signed release assessment.
+- **Evidence:** source-revision-aware history, artifacts/incidents, opt-in decision checkpoints, model failure recovery, and bounded native tool recovery guidance.
 
-- 📉 **Scoped code previews:** On-demand symbol queries and comment-stripped source previews can reduce output size, but net session savings require A/B evaluation. `a2a tokens` now reports **source-size estimates**, never invented savings.
-- 🔍 **Shift-Left Impact Analysis:** Maps reverse imports and dependent test suites *before* modifying code.
-- 🛡️ **The Iron Law of Verification:** Rejects task completion unless fresh machine test evidence (JUnit XML, TAP, or JSON) passes.
-- 🤝 **Subagent & Teamwork Gate:** Enforces test evidence on parallel `/teamwork` workers and subagents before handoff.
-- 🔒 **Zero-Trust & Local-First:** 0 outbound network calls, 0 cloud telemetry, and 0 external dependencies.
+**Four public MCP tools only:** `a2a_context`, `a2a_impact`, `a2a_verify`, `a2a_evidence`. Legacy `verifykit_*` aliases remain callable; listing requires the explicit `A2A_LEGACY_TOOL_ALIASES=1` flag.
 
----
+### Re-audit hardening (19 November 2026)
 
-## 🚀 Quickstart
+The follow-up [re-audit issues #38–#42](https://github.com/alifakbxr/a2a/pull/43) identified five coverage, privacy and recovery gaps. Handoff verification now applies the same evidence-type restrictions as local assessment: a named build cannot prove browser, visual, hardware, security or independent acceptance even with native-hook metadata. A native test hook records success only with an explicit unambiguous process exit code of zero; missing and failed status are **not success**. Permission-denied recovery takes priority over page IDs.
 
-Install with npm:
+**Optional complete-scope acceptance:** use `a2a_verify(operation="plan",persist_plan=true)` to retain a private, revision-bound plan and receive a `plan_id`. Pass that ID to `a2a_verify(operation="assess")` to include all required scenarios, including omitted ones as `not_tested`. If code changed, the bound plan is stale. Explicitly reissue the **unchanged scope** on the new source revision with `a2a_verify(operation="plan",plan_id="<previous-id>",persist_plan=true,criteria=[])`; this resets all scenarios to `not_tested` and does not verify test results. If a criterion explicitly pins `source_revision`, A2A refuses to reissue it onto different code: review that criterion and create a new plan with the updated revision. Standalone legacy assessment remains available but its coverage is **scope-unbound**; none can claim independently verified completion.
 
-```bash
-# Option 1: npm (Recommended)
-npm install -g @aliip/a2a && a2a doctor
+**Brain Markdown privacy:** automatic full-content edit-event snapshotting is now **OFF by default**. Manually enable with `node scripts/a2a.mjs artifact-autosnapshot on`; check status or turn it off with `artifact-autosnapshot status|off`. When enabled, local SQLite and shadow files may retain sensitive Markdown content; disabling does **not** delete previously saved data. `snapshot_artifact` remains an explicit, separate operation.
 
-# Option 2: Antigravity Chat Slash Command
-/plugin install alifakbxr/a2a
-```
+### Truthful completion
 
----
+A2A does **not** turn a successful build, a screenshot, an arbitrary test name or locally supplied JSON into proof of end-to-end behavior. A structured acceptance item declares a scenario, required evidence type and (for browser/visual cases) viewport, UI state and reference. Planning starts `not_tested`; local assessments report only the **named test assertions** actually present, with a `completion.fully_verified=false` summary. Browser, visual, hardware, security and independent acceptance cannot be established from a local build/test report. Real release approval is separate and fail-closed.
 
-## 🎮 Controls & Commands
+## Requirements and installation
 
-On-demand is the default for new installations. Existing Always-On settings remain unchanged; run `a2a mode on-demand` to opt out of extra proactive checks.
+- **Node.js >= 22.13.0** (built-in `node:sqlite`). The [extended CI matrix](https://github.com/alifakbxr/a2a/pull/47) validates Node 22/24 and **Node 26.13.1** on Ubuntu, macOS and Windows; Node 26 uses its current `sqlite.Database` API with an older-node fallback.
+- Google Antigravity with plugin/MCP support for IDE integration.
+- No third-party **runtime** npm dependencies and no automatic remote A2A telemetry service. The optional explicit `a2a stats` CLI command invokes an installed/authenticated `gh` client to read GitHub repository traffic; clone counts are **not verified plugin installations**.
 
-### In-Chat Slash Commands
-| Command | Action |
-| :--- | :--- |
-| `/a2a-always-on` | Enable **Always-On Mode** (proactive impact analysis & verification on every turn). |
-| `/a2a-on-demand` | Enable **On-Demand Mode** (activates only when explicitly prompted). |
-| `/a2a-toggle` | Instantly switch between Always-On and On-Demand. |
-| `/a2a-compact` | Toggle **Compact Mode** (high-density bullet output, zero conversational filler). |
-| `/a2a-status` | Display active mode, auto-trust policy, and health status. |
-| `/a2a tokens` | Display workspace and session token telemetry. |
-
-### Fast CLI Cheat Sheet
-```bash
-# Health check, active mode & telemetry
-node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs doctor
-
-# Pre-edit impact analysis
-node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs impact /path/to/workspace src/auth.ts
-
-# Lexer-safe comment stripping (token savings)
-node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs skeleton /path/to/workspace src/auth.ts
-
-# Verify subagent or teamwork handoff
-node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs verify-handoff /path/to/workspace --worker worker-1
-```
-
----
-
-## 🛠️ MCP Tools Reference
-
-| Tool | Action | Description |
-| :--- | :--- | :--- |
-| **`a2a_impact`** | `depth`, `changed` | Bounded static graph impact analysis, reverse dependencies, and test targets. |
-| **`a2a_context`** | `skeleton`, `inspect`, `query`, `tokens` | Comment-free AST skeletons, symbol lookups, and session token telemetry. |
-| **`a2a_verify`** | `plan`, `assess`, `verify_handoff` | Evaluates JUnit XML, TAP, or JSON reports, and validates subagent deliverables. |
-| **`a2a_evidence`** | `list`, `runs`, `incidents`, `side_questions` | Historical run verdicts, regression memory, and Antigravity `/btw` side questions. |
-
----
-
-
-### Token usage across all conversations
-
-A2A can read **older Antigravity conversations even if they were created before A2A was installed**. There is no background collection, no upload, and no need to re-run an old conversation.
+**To evaluate the current unpublished `v2.0.1` branch from source:**
 
 ```bash
-node scripts/a2a.mjs tokens                      # All available local conversations; plain-English report
-node scripts/a2a.mjs tokens --limit 5            # Show five recent conversations
-node scripts/a2a.mjs tokens --current            # Focus display on the latest conversation
-node scripts/a2a.mjs tokens --json               # Machine-readable report
-node scripts/a2a.mjs tokens --include-subagents  # Also include worker/subagent transcripts
-node scripts/a2a.mjs tokens --usage-file run.json # Attach actual CLI-reported usage for a captured run
+git clone https://github.com/alifakbxr/a2a.git
+cd a2a
+git checkout v2.0.1
+node --version
+npm test
+node scripts/check-release.mjs
+node scripts/a2a.mjs doctor
 ```
 
-A2A separates **official CLI token totals** from **internal log counters**, which are not validated as Gemini billing usage. The current session shows its latest *completed* model step where available; the actual context window and current in-progress model call are not directly observable. The report also estimates the size of its **own response** if passed back into Gemini, but never calls that estimate billable tokens.
+With the compatible Antigravity CLI available, you can additionally run `agy plugin validate --strict .` and inspect `agy plugin list`. These are **required live integration checks**, not tests this README claims to have executed on every user's machine. Configure/install this checkout as an Antigravity plugin using your installed Antigravity version's native plugin manager. The checked-in `plugin.json`, `mcp_config.json`, `hooks.json` and `skills/a2a/SKILL.md` define the integration.
 
-Inside Antigravity, `a2a_context(action="tokens", history_scope="all")` explicitly requests global history. The default `history_scope="current"` is restricted to the latest recorded conversation. Full explanation: [Conversation usage and privacy](docs/CONVERSATION_USAGE.md).
+The npm registry package can be used separately (`npm install -g @aliip/a2a`), but **do not assume its published version matches the `v2.0.1` source branch**. The CLI is available as `a2a` when installed globally, or `node scripts/a2a.mjs` from a checkout.
 
-## 📚 Deep Dives & Documentation
+## Operating modes
 
-- **[Token efficiency evaluation](docs/TOKEN_EFFICIENCY.md):** Reproducible A/B protocol; source-size comparisons are not net session savings.
-- **[Always-On 5 Whys](docs/ALWAYS_ON_5_WHYS.md):** Five causal scenarios, corrective changes, and acceptance checks.
+- **On-Demand (default):** do not call A2A unless requested or genuinely needed by a native workflow.
+- **Always-On (opt-in):** a bounded adaptive policy injected at `SessionStart`. Small tasks should still cause **zero** A2A calls.
+- **Compact (default on for new installations):** bounded responses with explicit truncation/omission markers; run `node scripts/a2a.mjs compact off` to request fuller output. Existing explicit settings are honored. Neither mode changes evidence truth or release eligibility.
+- **Workspace trust:** authorization is required; an explicit revocation takes precedence over auto-trust. No permission bypass.
 
-- 🏛️ **[Technical Architecture](docs/ARCHITECTURE.md):** Invariants, SQLite schema, and sequence diagrams.
-- 📜 **[Contracts & Data Dictionary](docs/CONTRACTS.md):** MCP schemas, SQLite tables, and verification constraints.
-- 🌐 **[Ecosystem Compatibility](docs/COMPATIBILITY.md):** Language support (Node, Go, PHP, Python, Rust, Java, Dart, Swift, .NET).
-- 🔐 **[Security & Threat Model](docs/SECURITY.md):** Protected roots, workspace allowlist, and zero-network boundary.
+```bash
+node scripts/a2a.mjs help
+node scripts/a2a.mjs mode on-demand
+node scripts/a2a.mjs mode always-on
+node scripts/a2a.mjs toggle
+node scripts/a2a.mjs compact on
+node scripts/a2a.mjs compact off  # optional: expand code/graph previews
+node scripts/a2a.mjs autotrust active-only
+node scripts/a2a.mjs allow /absolute/path/to/project
+node scripts/a2a.mjs revoke /absolute/path/to/project
+node scripts/a2a.mjs inspect /absolute/path/to/project
+node scripts/a2a.mjs impact /absolute/path/to/project src/auth.js
+node scripts/a2a.mjs tokens --limit 5 --json
+node scripts/a2a.mjs context-health --conversation YOUR_CONVERSATION_ID
+node scripts/a2a.mjs context-health --conversation YOUR_CONVERSATION_ID --milestone-complete
+node scripts/a2a.mjs doctor
+```
 
----
+> These are **verified CLI subcommand names**, not guaranteed Antigravity chat slash commands. The actual in-agent surface consists of the four MCP tools and plugin skill. Never infer that `/a2a-always-on`, `/a2a-toggle`, etc. are registered chat commands unless the installed Antigravity version exposes them.
 
-## 📄 License
+## MCP examples
 
-[MIT License](LICENSE) © 2026 **Alif Akbar** & Contributors.
-Made with ❤️ for Google Antigravity.
+**Typed verification plan** (input to `a2a_verify`; replace workspace and scenario):
+
+```json
+{
+  "workspace": "/absolute/path/to/project",
+  "operation": "plan",
+  "criteria": [
+    {
+      "id": "duplicate-checkin",
+      "description": "Repeated scan must not reprint",
+      "given": "The guest has already checked in",
+      "when": "The same QR code is scanned again",
+      "then": "No second print job is produced",
+      "evidence_type": "hardware",
+      "negative": true
+    }
+  ]
+}
+```
+
+The returned acceptance plan is `not_tested`. For a local machine report, use `operation="assess"` with explicit `artifact` and exact `test_name` on each criterion. A local printer-related test result does **not** attest a real printer run. For visual/browser plans, supply `viewport`, `ui_state`, and `reference` too.
+
+**Native recovery help** (input to `a2a_evidence`):
+
+```json
+{
+  "workspace": "/absolute/path/to/project",
+  "operation": "tool_recovery",
+  "tool_family": "browser",
+  "error_class": "context_lost",
+  "retry_count": 2
+}
+```
+
+Output is **guidance only**: no native tool interception, retries, file edits or bypasses. For long tasks, use `save_checkpoint` with `conversation_id`, `task_summary`, `completed`, `next_steps`, `decisions` and `pending_tests`; retrieve with `model_recovery`. Checkpoint notes are not verified facts, and changed source revisions make them stale.
+
+**Native teamwork:** `a2a_context(action="orchestration")` only recommends explicitly available native modes when low dependencies and **independent file ownership** are declared; user approval is always required, and A2A never launches workers.
+
+## Token accounting
+
+`a2a tokens` reads *available local* Antigravity conversation metadata, including historical sessions when explicitly requested. Internal log counts, source-size estimates, response-size estimates, provider-confirmed usage and actual cost **are different things**. Do not infer measured savings from shorter previews, local telemetry, or repeated reads. Official usage can be supplied with `--usage-file` after an eligible native headless run. See [token provenance](docs/TOKEN_PROVENANCE.md) and [A/B evaluation](docs/AB_EVALUATION.md).
+
+## Documentation
+
+Start at the [documentation index](docs/README.md). Key references:
+
+- [Current MCP and SQLite contracts](docs/CONTRACTS.md)
+- [Architecture](docs/ARCHITECTURE.md) · [Native-first workflow](docs/NATIVE_FIRST_WORKFLOW.md)
+- [Behavioral Five Whys and E2E boundaries](docs/BEHAVIORAL_5_WHYS_V2_0_1.md)
+- [Checkpoint and model/tool recovery](docs/CHECKPOINT_RECOVERY.md)
+- [Security, trust and privacy](docs/SECURITY.md)
+- [Independent acceptance](docs/INDEPENDENT_ACCEPTANCE_RUNBOOK.md) · [release authorization](docs/RELEASE_AUTHORIZATION.md)
+- [v2.0.1 change traceability](docs/V2_0_1_TRACEABILITY.md)
+
+**Unfinished external gates:** live Antigravity install/browser tests; actual independent STOCKROOM F01–F18 HTTP/browser/database cases; controlled repeated Native/A2A benchmarks; independent evidence/approval and explicit `main` promotion. Tracked in [issue #15](https://github.com/alifakbxr/a2a/issues/15). Green Node CI does not close these.
+
+## License
+
+[MIT](LICENSE) © 2026 Alif Akbar and contributors.
+
+### Low-token operating practice
+
+The plugin skill now uses **zero A2A calls for simple/native-solvable work** and normally **one scoped query OR impact summary** when uncertainty is material. Do not chain tools just to repeat information, invoke token reports after every step, or use a full skeleton before asking for a specific symbol. Typed verification and evidence recovery are used only when their distinct purposes require them. Always-On remains opt-in and only injects a short policy on `SessionStart`.
+
+Default Compact limits `a2a_context(action="skeleton")` to **4,800 preview characters total, 1,600 per file and six full previews**; additional requested files are disclosed as omitted. Compact `action="query"` returns at most **12 static relations**, with a truncation flag and original response count when clipped. These are **output budgets**, not a guarantee of lower model billing or better answers. For complex work requiring complete context, opt out with `compact off` and inspect the source natively. See [token measurement](docs/TOKEN_EFFICIENCY.md).
+
+### Node 26 + NVM on Linux
+
+If `which node` resolves to `~/.nvm/versions/node/v26.13.1/bin/node`, the Node runtime is suitable for A2A's tested core. Check the *actual* binary and SQLite API with `node scripts/a2a.mjs doctor` (look for `node_binary`, `sqlite_api`, `sqlite_version`). The plugin's MCP launcher invokes `node` via `PATH`, which might be different in Antigravity launched from the desktop. Check the IDE's environment when the plugin fails to start; do not assume the NVM binary visible in your terminal is also visible to the GUI. See [compatibility and validation](docs/COMPATIBILITY.md).
+
+## Adaptive 5 Whys for difficult bugs
+
+For recurring regressions, concurrency/permission failures and ambiguous causes, A2A's lean skill recommends **native, evidence-guided 5 Whys** rather than asking exactly five questions or issuing five tool calls. Antigravity records symptoms, competing explanations, a falsifying experiment and negative controls. RCA-lite can run with **zero additional A2A calls**; opt-in RCA-deep uses `a2a_evidence(record_incident|add_hypothesis|assess_hypothesis)` with `persist_rca:true` and exact source-fresh named-test evidence. Outcomes `locally_supported`, `refuted`, and `inconclusive` are not independent causal proof; an incident's `root_cause` remains **candidate-only**. View the [RCA workflow and examples](docs/ADAPTIVE_RCA_WORKFLOW.md). Release acceptance #15 remains open.
+
+**RCA history privacy:** Compact lists show at most eight entries and disclose additional records. To logically remove a saved RCA incident with its hypotheses, explicitly invoke `a2a_evidence(operation="delete_incident",persist_rca=true,confirm_deletion=true,incident_id="...")`; this does **not** delete independently stored test artifacts or securely erase database backups. [Details](docs/ADAPTIVE_RCA_WORKFLOW.md).
+
+## v2.0.1 audit status (19 November 2026)
+
+The November audit's local implementation corrections (#50–#61) are integrated on the v2.0.1 branch: native hook/test provenance, strict JUnit/TAP assessment, MCP resource privacy, Node 22/24/26.13.1 CI, cross-platform filesystem safeguards, version-managed Node desktop PATH diagnostics, and bounded lower-overhead MCP schemas. Run node scripts/a2a.mjs doctor to see the actual Node binary and PATH advisory. **No live Antigravity installation acceptance or independently scored A/B benchmark is claimed.** The separate [release gate #15](https://github.com/alifakbxr/a2a/issues/15) blocks main and npm publication.
+
+**Live adoption caveat:** A2A MCP can be registered and callable even if the current Antigravity conversation excludes the `a2a:a2a` skill. The read-only `a2a doctor` `skill_discovery` field checks only the global `skills.json` exclusion list; verify actual session visibility with `/skills` and the plugin validation command. Neither an explicit manual MCP success nor a green CI matrix proves autonomous agent selection, reduced model token usage or independent application acceptance.
+
+### Optional context-health advisor (issue #91: initial safe phase)
+
+`node scripts/a2a.mjs context-health --conversation <id> [--milestone-complete]` reads **one explicitly selected local session on demand** and provides a bounded context/milestone advisory. This **on-demand command** has no recurring hook or background task; a separate, explicitly enabled Guardian can install one native `PreInvocation` hook (details below). Neither path performs automatic `/compact`, estimates billing or claims savings. The user must independently confirm that edits/tests are complete before supplying `--milestone-complete`. 80/140 planner steps are **heuristics**, not provider context limits. Automated advising is opt-in, while empirical per-turn overhead and live host benefit are still under evaluation in #91.
+
+### One-shot, non-executing routing profiles (issue #92)
+
+Use `node scripts/a2a.mjs route --profile economy --task cross-file --risk high --uncertain` for **explicit** native-first advice. Options are `economy`, `balanced` (baseline), and `deep-review`. This does **not** change the model, choose Antigravity subscription tiers, call MCP tools, spawn agents, alter global settings, or prove token savings. A trivial task always chooses **native-only**, even under deep-review. A scoped uncertain task proposes **at most one** initial A2A call; suggestions remain subject to workspace trust and live model discretion. See [issue #92](https://github.com/alifakbxr/a2a/issues/92) for the matched Native/A2A host benchmark required to validate any benefit.
+
+### Context Guardian opt-in (never enabled by default)
+
+```sh
+node scripts/context-guardian.mjs status
+node scripts/context-guardian.mjs enable   # Explicitly enable one A2A-owned PreInvocation hook
+node scripts/context-guardian.mjs disable  # Remove only that hook
+```
+
+The installer edits `~/.gemini/config/hooks.json` **only** on explicit enable/disable; it preserves unrelated hooks and fails closed on malformed or conflicting configurations. The hook records the absolute Node binary used during explicit enable to avoid desktop/NVM PATH differences; re-run `enable` after changing or removing that Node binary. Non-object hook manifests are rejected without modification. Antigravity may require a restart to reload hooks. When enabled, A2A reads native invocation/step metadata (not transcript content) and occasionally injects **ephemeral, non-actioning milestone advice**. Thresholds 80/140 steps are UX heuristics, **not context capacity estimates**. Never compact in the middle of unfinished code/tests. Activating this hook adds a Node process at each model invocation; there are **no provider-token or latency savings measurements** yet. Keep it disabled if you do not need the guidance.
+
+### 23 November 2026 follow-up audit
+
+Development fixes [#100](https://github.com/alifakbxr/a2a/pull/100)–[#103](https://github.com/alifakbxr/a2a/pull/103) are merged to `v2.0.1`. An original-archive check reran 181/181 first-party PHP syntax checks (Native 101, A2A 80); this **does not** certify any of F01–F18. PR #102/#103 development merges used a documented pending-macOS CI exception, not a 9/9 result. Live installed Antigravity adoption, Context Guardian per-invocation overhead, repeated Native/A2A benchmark and independent F01–F18 acceptance remain pending. **NO-GO for `main` and publication.** See [build status](BUILD_STATUS.md) and [gate #15](https://github.com/alifakbxr/a2a/issues/15).

@@ -67,3 +67,7 @@
 - [Google Antigravity — Rules](https://antigravity.google/docs/rules/)
 - [Google Antigravity — Hooks](https://antigravity.google/docs/hooks)
 - [Google Antigravity — Build plugins](https://antigravity.google/docs/build-plugins/)
+
+## Current v2.0.1 behavioral alignment
+
+The historical Always-On improvements remain present: on-demand by default, tiny rule, no PreInvocation, scope-limited summary and no invented token savings. [Behavioral PR #36](https://github.com/alifakbxr/a2a/pull/36) subsequently added **typed Given/When/Then acceptance with evidence types**, **source-fresh explicit checkpoint decisions**, nonexecuting native tool failure guidance, and a stricter independence requirement for parallel teamwork recommendations. Only request these optional tools when they materially reduce uncertainty; never transform the 71.5% repeated-read *path* statistic into a measured token saving. A green local report does not make `completion.fully_verified` true. Live IDE and controlled performance benefits are still open in [issue #15](https://github.com/alifakbxr/a2a/issues/15).

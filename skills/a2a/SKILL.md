@@ -1,26 +1,27 @@
 ---
 name: a2a
-description: A2A plugin management, scoped code intelligence, verification, and token diagnostics; use for explicit /a2a requests.
+description: Retrieves cross-file code relationships and test evidence for complex Antigravity work, especially auth, payments, inventory, migrations and unknown symbols. Native-first, one targeted MCP call when it reduces meaningful uncertainty.
 ---
 
-# A2A · Native-first
+# A2A — minimal-context workflow
 
-A2A is optional intelligence for Antigravity, not a replacement for its native editor, test runner, browser or agents.
+Antigravity performs edits, tests, browser work and approvals. A2A advises via **four** MCP tools; it never executes native tools or launches workers. Default: **On-Demand + Compact**.
 
-## Modes
-- `/a2a on-demand` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs mode on-demand` (default)
-- `/a2a always-on` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs mode always-on` (adaptive, opt-in)
-- `/a2a toggle` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs toggle`
-- `/a2a compact [on|off|toggle|status]` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs compact <value>`
-- `/a2a status` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs doctor`
-- `/a2a tokens` → `node ~/.gemini/config/plugins/a2a/scripts/a2a.mjs tokens` (all locally available historical conversations; plain-English summary, `--json` optional)
+## Call budget: 0 → 1 → only if needed
 
-## Always-On decision policy
-1. **Skip** A2A for trivial, docs, styles, isolated edits, analysis-only or when native tools already answer the question.
-2. For cross-module or high-risk changes, call `a2a_impact` **once** with `summary=true`. If its output is sufficient, do not call extra A2A context tools. Request full detail only when necessary; uncertainty remains mandatory.
-3. For unfamiliar symbols, use `a2a_context(action="query", query="...")`. Use `action="skeleton"` only for preliminary navigation; never repeat the same content with a native full-file read unless implementations are needed.
-4. For testable behavior changes, run relevant native tests then assess the existing machine report **once** via `a2a_verify(operation="assess", criteria=[...])`. Skip forced machine reports for research/documentation-only tasks.
-5. For worker code handoffs, use `a2a_verify(operation="verify_handoff", criteria=[...])` on relevant evidence. Native Teamwork orchestration remains responsible for choosing workers.
-6. Do not invoke token telemetry, repeat output summaries, or append an A2A footer unless explicitly requested. Preserve errors, uncertainty, freshness and unresolved checks.
+- **0 calls:** clear file/task, typo, UI copy, isolated edit, normal debug with sufficient native context. Use native tools directly.
+- **1 targeted call:** unresolved cross-file question → eager `a2a_context(workspace="<trusted project absolute path>",action="query",query="specific symbol",limit=5)`; for change impact, discover lazy `a2a_impact` schema and use `changed=["actual/file"],summary=true`. Choose **one**.
+- **Second call only for new uncertainty.** Do not chain inspect → query → skeleton → impact. Reuse until source or scope changes.
+- **High-risk behavior:** `a2a_verify(operation="plan")` only when an explicit acceptance matrix is valuable. Specify Given/When/Then, negative paths and evidence type; browser/visual cases need viewport, UI state and reference. Run tests using native tools. `assess` only with a real, named test report; a passing build is **not** visual/hardware/security/independent proof.
+- **Persistent acceptance is opt-in:** `persist_plan:true` stores scenario text locally; use returned `plan_id` for complete assessment. On source change, reissue the unchanged scope explicitly; pinned `source_revision` needs review.
+- **Adaptive 5 Whys:** for recurring, regressed, high-risk or unclear bugs, native agent checks symptoms, 1–2 competing causes, falsifiers and a discriminating experiment. Ask 2–8 Whys only as evidence requires, not five MCP calls. Persist RCA only with consent: `a2a_evidence(record_incident|add_hypothesis|assess_hypothesis,persist_rca=true)`; require fresh exact named tests. `locally_supported` is **not** causal proof; retest after edits.
+- **Resume/error help only when needed:** `a2a_evidence(model_recovery|tool_recovery)`; checkpoints are unverified and source-revision bound. Never bypass permissions or retry identical tool failures.
+- **Teamwork:** native, opt-in, independent ownership. A2A never launches workers.
 
-Use `a2a_evidence` only when incident history or artifact history materially helps. Token savings in A2A are *source/output size estimates*, not measured task-level reductions. See [evaluation protocol](../../docs/TOKEN_EFFICIENCY.md).
+## Safety and output
+
+Keep queries small; use Compact and never claim savings from estimates or auto-request token stats. Do not store credentials. Full brain Markdown auto-snapshots are **off**; enabling retention requires explicit user consent.
+
+Final report: **implemented / tested / failed / blocked / not tested**, with scoped evidence. Local results are not independent E2E; release [#15](https://github.com/alifakbxr/a2a/issues/15) remains open.
+
+Optional CLI: `node scripts/a2a.mjs`; see [Docs](../../docs/README.md).

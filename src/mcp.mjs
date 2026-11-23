@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import pkg from '../package.json' with {type:'json'};
 import path from 'node:path';
 import readline from 'node:readline';
 import {Engine} from './engine.mjs';
 import {getListedTools,validateArgs} from './tools.mjs';
 import {dataDir,getA2AMode,getCompactMode,getAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces,requireAuthorizedWorkspace} from './security.mjs';
 import {getSessionTokenUsage} from './tokens.mjs';
+import {classifyMcpFailure} from './mcp-diagnostics.mjs';
 
-const server={name:'a2a',version:'2.0.0'}, engine=new Engine();
+const server={name:'a2a',version:pkg.version}, engine=new Engine();
 const io=readline.createInterface({input:process.stdin,crlfDelay:Infinity,terminal:false});
 const answer=(id,result,error)=>{
   const message={jsonrpc:'2.0',id,...(error?{error:{code:error.code||-32603,message:String(error.message||error).slice(0,300)}}:{result})};
@@ -15,7 +17,7 @@ const answer=(id,result,error)=>{
 };
 
 const RESOURCES = [
-  {uri:'a2a://status',name:'A2A Status',description:'Current A2A mode, compact mode, auto-trust policy, and authorized workspaces.',mimeType:'application/json'},
+  {uri:'a2a://status',name:'A2A Status',description:'Current A2A modes and redacted workspace counts; no local paths.',mimeType:'application/json'},
   {uri:'a2a://tokens/session',name:'A2A Session Diagnostics',description:'Local session event counts only; model token totals require official Antigravity CLI JSON output.',mimeType:'application/json'},
   {uri:'a2a://workspace/summary',name:'A2A Workspace Summary',description:'Active workspace graph coverage and estimated source inventory; not model token usage.',mimeType:'application/json'},
   {uri:'a2a://side-questions',name:'A2A Side Questions',description:'Recorded Antigravity side questions (/btw) and exploration notes.',mimeType:'application/json'},
@@ -24,8 +26,14 @@ const RESOURCES = [
 function getActiveSession(){
   try{
     const file=path.join(engine.store.base,'active-session.json');
-    if(!fs.existsSync(file))return null;
-    const active=JSON.parse(fs.readFileSync(file,'utf8'))?.latest;
+    const stat=fs.lstatSync(file);
+    if(!stat.isFile()||stat.size>128*1024)return null;
+    const data=JSON.parse(fs.readFileSync(file,'utf8'));
+    // This stdio server is shared across sessions. Never infer a calling client's
+    // session when recent parent/subagent or other project IDs coexist.
+    const identities=new Set(Object.values(data?.byWorkspace||{}).map(x=>x?.conversationId).filter(Boolean));
+    if(identities.size>1)return null;
+    const active=data?.latest;
     const workspace=active?.workspacePaths?.[0] || active?.cwd;
     return active?.conversationId && workspace ? {conversationId:active.conversationId,workspace} : null;
   }catch{return null}
@@ -38,9 +46,14 @@ function readResource(uri){
       mode:getA2AMode(),
       compact_mode:getCompactMode(),
       auto_trust:getAutoTrustMode(),
-      data_dir:dataDir(),
-      authorized_workspaces:loadAllowlist(),
-      antigravity_workspaces:loadAntigravityWorkspaces(),
+      data_dir_configured:fs.existsSync(dataDir()),
+      authorized_workspace_count:loadAllowlist().length,
+      antigravity_workspace_count:loadAntigravityWorkspaces().length,
+      active_workspace_authorized:(()=>{
+        const active=getActiveSession();
+        if(!active)return false;
+        try{requireAuthorizedWorkspace(active.workspace);return true}catch{return false}
+      })(),
     };
   }
   if(uri==='a2a://tokens/session'){
@@ -61,7 +74,7 @@ function readResource(uri){
     if(!activeWs)return {status:'no_active_workspace',reason:'Open an authorized workspace in a session first.'};
     return engine.context({workspace:activeWs,action:'inspect'});
   }
-  throw Object.assign(new Error('Resource not found: '+String(uri||'')),{code:-32002});
+  throw Object.assign(new Error('Resource not found'),{code:-32002});
 }
 
 function route(req){
@@ -107,10 +120,18 @@ io.on('line',(line)=>{
   if(line.length>180000){answer(null,null,{code:-32600,message:'Request too large'});return}
   let req;
   try{req=JSON.parse(line)}catch{answer(null,null,{code:-32700,message:'Parse error'});return}
-  if(!req || Array.isArray(req)){answer(null,null,{code:-32600,message:'Invalid JSON-RPC request'});return}
-  if(req.id===undefined){try{if(req.method!=='notifications/initialized'&&req.method!=='notifications/cancelled')route(req)}catch{}return}
+  if(!req || typeof req!=='object' || Array.isArray(req)){answer(null,null,{code:-32600,message:'Invalid JSON-RPC request'});return}
+  if(req.id!==undefined && req.id!==null && typeof req.id!=='string' && typeof req.id!=='number'){
+    answer(null,null,{code:-32600,message:'Invalid JSON-RPC id'});return;
+  }
+  // JSON-RPC notifications have no response and MUST NOT run data-changing tool handlers.
+  if(req.id===undefined)return;
   try{answer(req.id,route(req))}catch(e){
-    if(req.method==='tools/call'){answer(req.id,{content:[{type:'text',text:JSON.stringify({status:'error',message:String(e.message||e).slice(0,350)})}],isError:true});return}
+    if(req.method==='tools/call'){answer(req.id,{content:[{type:'text',text:JSON.stringify(classifyMcpFailure(req.params?.name,e))}],isError:true});return}
+    if(req.method==='resources/read' && e?.code!==-32002 && e?.code!==-32602){
+      const safe=classifyMcpFailure('resources/read',e);
+      answer(req.id,null,{code:-32000,message:safe.code+': '+safe.message});return;
+    }
     answer(req.id,null,e);
   }
 });

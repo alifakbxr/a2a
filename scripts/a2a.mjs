@@ -1,13 +1,33 @@
 #!/usr/bin/env node
+import fs from 'node:fs';
+import path from 'node:path';
 import {Engine} from '../src/engine.mjs';
+import {sqliteApiName} from '../src/sqlite-compat.mjs';
+import {nodeVersionManagerAdvisory} from '../src/node-runtime.mjs';
+import pkg from '../package.json' with {type:'json'};
 import {
   allowlistPath,settingsPath,getA2AMode,setA2AMode,getCompactMode,setCompactMode,
-  getAutoTrustMode,setAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces,
-  authorizeWorkspace,revokeWorkspace,dataDir,requireAuthorizedWorkspace
+  getAutoTrustMode,setAutoTrustMode,getArtifactAutoSnapshotMode,setArtifactAutoSnapshotMode,loadAllowlist,loadAntigravityWorkspaces,
+  authorizeWorkspace,revokeWorkspace,dataDir,getHomeDir,requireAuthorizedWorkspace,isProtectedRoot,localAntigravityRpcUrl
 } from '../src/security.mjs';
 import {readOfficialAgyUsageFile} from '../src/tokens.mjs';
+import {diagnoseSkillDiscovery} from '../src/skill-discovery.mjs';
 import {scanConversationHistory,attachReportSize,formatConversationReport} from '../src/conversations.mjs';
+import {assessContextHealth} from '../src/context-health.mjs';
+import {routeWorkflow} from '../src/workflow-router.mjs';
 
+// Treat active session metadata as untrusted local input: no symlinks,
+// oversized data or non-object payloads. This may describe a *different*
+// workspace and is never a substitute for workspace authorization.
+function readActiveSession(base){
+  try{
+    const file=path.join(base,'active-session.json');
+    const st=fs.lstatSync(file);
+    if(!st.isFile()||st.isSymbolicLink()||st.size>128*1024)return null;
+    const data=JSON.parse(fs.readFileSync(file,'utf8'));
+    return data&&typeof data==='object'&&!Array.isArray(data)?data.latest||null:null;
+  }catch{return null}
+}
 const [cmd,...argv]=process.argv.slice(2);
 function print(obj){process.stdout.write(JSON.stringify(obj,null,2)+'\n')}
 if(!cmd||['help','--help','-h'].includes(cmd)){
@@ -21,6 +41,8 @@ Commands:\n  doctor                     show runtime, workspace permissions, act
   revoke <absolute-workspace> revoke one project
   inspect <workspace>        index project & show code graph coverage
   tokens [--json] [--limit 10] [--conversation ID] [--include-subagents] [--usage-file output.json] read all Antigravity conversation usage locally
+  context-health --conversation ID [--milestone-complete] read-only milestone advice (no recurring hook)
+  route --profile economy|balanced|deep-review --task simple|cross-file|change-impact|verification|recovery [--risk low|medium|high|critical] [--uncertain] [--unknown-scope] non-executing native-first recommendation
   skeleton <workspace> <file...>   strip comments via lexer and estimate preview size reduction
   context <workspace> <query> query symbols and feature relations
   impact <workspace> [paths...] analyze impact & calculate tokens affected
@@ -30,6 +52,7 @@ Commands:\n  doctor                     show runtime, workspace permissions, act
   evidence <workspace>       list verified evidence and regression history
   side-questions [workspace] [--conv <id>] [--parent <id>] list recorded Antigravity side questions (/btw)
   artifacts [list|diff|show|snapshot] [file] [--conv <id>] [--v1 N] [--v2 M] version & diff brain artifacts
+  artifact-autosnapshot [status|on|off]  explicit opt-in for retaining full brain Markdown on edit events
   refresh [serverName]       hot-reload A2A MCP server via Antigravity Language Server RPC
   stats                      view install metrics, clone traffic & unique users from GitHub
   mcp                        start A2A stdio server via src/mcp.mjs`);process.exit(0);
@@ -39,18 +62,25 @@ try{
     print({
       name:'a2a',
       title:'A2A',
-      version:'2.0.0',
+      version:pkg.version,
       node:process.versions.node,
       node_requirement:'>=22.13.0',
       sqlite:'node:sqlite',
+      sqlite_api:sqliteApiName,
+      sqlite_version:process.versions.sqlite||null,
+      node_binary:process.execPath,
+      ...nodeVersionManagerAdvisory(process.execPath),
       mode:getA2AMode(),
       compact_mode:getCompactMode()?'enabled':'disabled',
+      artifact_auto_snapshot:getArtifactAutoSnapshotMode()?'enabled':'disabled',
       auto_trust:getAutoTrustMode(),
       settings:settingsPath(),
       data_dir:dataDir(),
       allowlist:allowlistPath(),
-      allowed_workspaces:loadAllowlist(),
+      allowed_workspaces:loadAllowlist().filter(ws=>!isProtectedRoot(ws)),
+      ignored_protected_grants:loadAllowlist().filter(isProtectedRoot).length,
       antigravity_workspaces:loadAntigravityWorkspaces(),
+      skill_discovery:diagnoseSkillDiscovery(),
       session_usage:{status:'not_collected',reason:'Doctor does not read internal conversation transcripts.'},
       network:'no outbound requests',
       shell_execution:'disabled',
@@ -72,6 +102,11 @@ try{
     else if(target==='toggle'){print({compact:setCompactMode('toggle')?'enabled':'disabled'});}
     else {print({compact:setCompactMode(target)?'enabled':'disabled'});}
   }
+  else if(cmd==='artifact-autosnapshot'){
+    const setting=argv[0]||'status';
+    if(setting==='status')print({artifact_auto_snapshot:getArtifactAutoSnapshotMode()?'enabled':'disabled',note:'Automatic full-content brain Markdown retention is opt-in; default off.'});
+    else print({artifact_auto_snapshot:setArtifactAutoSnapshotMode(setting)?'enabled':'disabled',note:'Stored snapshots are private local content; existing history is not deleted when disabled.'});
+  }
   else if(cmd==='autotrust'){
     const target=argv[0];
     if(!target||target==='status'){print({auto_trust:getAutoTrustMode()});}
@@ -86,7 +121,7 @@ try{
     if(!addr||!csrf){
       print({status:'skipped',serverName,reason:'ANTIGRAVITY_LS_ADDRESS or ANTIGRAVITY_CSRF_TOKEN not set'});
     }else{
-      const url=`http://${addr}/exa.language_server_pb.LanguageServerService/RefreshMcpServers`;
+      const url=localAntigravityRpcUrl(addr);
       const res=await fetch(url,{
         method:'POST',
         headers:{'Content-Type':'application/json','x-codeium-csrf-token':csrf},
@@ -94,7 +129,7 @@ try{
         signal:AbortSignal.timeout(5000),
       });
       const body=await res.text();
-      if(!res.ok) throw new Error(`RefreshMcpServers failed (${res.status}): ${body.slice(0,200)}`);
+      if(!res.ok) throw new Error(`RefreshMcpServers failed (${res.status}); inspect Antigravity local diagnostics`);
       let parsed=null;try{parsed=body?JSON.parse(body):{}}catch{parsed=body}
       print({status:'refreshed',serverName,response:parsed});
     }
@@ -128,6 +163,36 @@ try{
     }catch(err){
       print({error:'Failed to fetch GitHub traffic stats',details:err.message});
     }
+  }
+  else if(cmd==='route'){
+    const q={};
+    for(let i=0;i<argv.length;i++){
+      const arg=argv[i];
+      if(arg==='--profile'||arg==='--task'||arg==='--risk'){
+        if(!argv[i+1])throw new Error('Missing route value: '+arg);
+        q[arg.slice(2)]=argv[++i];
+      }else if(arg==='--uncertain')q.uncertainty=true;
+      else if(arg==='--unknown-scope')q.scopeKnown=false;
+      else if(arg==='--named-evidence')q.hasNamedEvidence=true;
+      else throw new Error('Unknown route option: '+arg);
+    }
+    print(routeWorkflow(q));
+  }
+  else if(cmd==='context-health'){
+    let conversationId=null,milestoneComplete=false;
+    for(let i=0;i<argv.length;i++){
+      const arg=argv[i];
+      if(arg==='--conversation')conversationId=argv[++i];
+      else if(arg.startsWith('--conversation='))conversationId=arg.slice(15);
+      else if(arg==='--milestone-complete')milestoneComplete=true;
+      else throw new Error('Invalid context-health argument. Use --conversation ID [--milestone-complete]');
+    }
+    if(!conversationId||!/^[a-zA-Z0-9._-]{4,128}$/.test(conversationId))throw new Error('Provide an explicit valid --conversation ID');
+    const report=scanConversationHistory({dataDirPath:dataDir(),conversationId,limit:1,includeSubagents:true});
+    const entry=report.recent_conversations.find(x=>x.conversation_id===conversationId);
+    print(entry?assessContextHealth({steps:entry.steps,complete:entry.complete,milestoneComplete}):
+      {status:'insufficient_evidence',automatic_compaction:false,active_context_tokens:null,measured_token_savings:null,
+       recommendation:'No complete local transcript found for the explicit conversation ID.'});
   }
   else if(cmd==='tokens'){
     let format='text',limit=10,conversationId=null,includeSubagents=false;
@@ -229,22 +294,9 @@ try{
           else if(restArgs[i].startsWith('--v2=')){v2=Number(restArgs[i].slice(5));}
           else if(!artifactName&&!restArgs[i].startsWith('-')){artifactName=restArgs[i];}
         }
-        if(!convId){
-          try{
-            const sf=path.join(engine.store.base,'active-session.json');
-            if(fs.existsSync(sf)){
-              const d=JSON.parse(fs.readFileSync(sf,'utf8'));
-              convId=d?.latest?.conversationId||null;
-            }
-          }catch{}
-          if(!convId) convId=process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
-        }
-        let activeWorkspace=null;
-        try {
-          const sf=path.join(engine.store.base,'active-session.json');
-          const sess=JSON.parse(fs.readFileSync(sf,'utf8'));
-          activeWorkspace=sess?.latest?.workspacePaths?.[0]||null;
-        }catch{}
+        const active=readActiveSession(engine.store.base);
+        if(!convId)convId=active?.conversationId||process.env.ANTIGRAVITY_CONVERSATION_ID||'default';
+        const activeWorkspace=Array.isArray(active?.workspacePaths)?active.workspacePaths[0]:null;
         const root=requireAuthorizedWorkspace(workspaceArg||activeWorkspace||process.cwd());
         const wsId=engine.store.register(root);
         if(action==='list'){
@@ -260,7 +312,7 @@ try{
           result=row||{status:'not_found'};
         }else if(action==='snapshot'){
           if(!artifactName)throw new Error('artifact name or path required for snapshot');
-          const targetPath=path.isAbsolute(artifactName)?artifactName:path.join(process.env.HOME||'','.gemini/antigravity/brain',convId,artifactName);
+          const targetPath=path.isAbsolute(artifactName)?artifactName:path.join(getHomeDir(),'.gemini/antigravity/brain',convId,artifactName);
           result=engine.evidence({workspace:root,operation:'snapshot_artifact',conversation_id:convId,artifact_path:targetPath});
         }
       }

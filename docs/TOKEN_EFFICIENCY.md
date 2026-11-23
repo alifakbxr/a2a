@@ -44,3 +44,28 @@ Source inventory is estimated from UTF-8 file sizes, not from the live Gemini to
 For matched runs, define `net_difference_pct = 100 * (total_tokens_A2A - total_tokens_native)/total_tokens_native`. Positive values mean more reported tokens; negative values mean fewer. A2A cannot calculate this without **both** runs.
 
 Do not publish token-savings percentages, cache savings, or 0% false-positive completion until independently verified end-to-end.
+
+## Behavioral-audit interpretation (18 November 2026)
+
+The private Antigravity history showed repeated reads of the same path in a session, but these reads may be justified after edits. The value **does not measure wasted tokens** or establish net A2A savings. Checkpoint/acceptance changes from [PR #36](https://github.com/alifakbxr/a2a/pull/36) are intended to reduce repeated, ungrounded exploration and overclaims, but the effect requires actual matched A/B experiments, not documentation or microbenchmarks. The release blocker remains [#15](https://github.com/alifakbxr/a2a/issues/15).
+
+## Low-token skill and MCP budgets — 19 November 2026
+
+[Issue #44](https://github.com/alifakbxr/a2a/issues/44) addresses unnecessary instruction/context overhead on the `v2.0.1` development branch. The policy is **zero calls for trivial work; normally one targeted query OR bounded impact summary**; subsequent calls require new uncertainty or actual machine evidence. The skill no longer carries repeated CLI lists, chronological security incidents or release history.
+
+| Static text surface | Before | Revised | Scope |
+| --- | ---: | ---: | --- |
+| `skills/a2a/SKILL.md` | 5,658 characters | 2,792 characters | **51%** less text if the complete skill is loaded |
+| `rules/AGENTS.md` | 382 | 241 characters | Tiny permanent instruction |
+| Always-On `SessionStart` message | 622 | 324 characters | Injected only when opt-in; zero on default On-Demand |
+
+**Combined static character footprint:** 6,662 → 3,357 (**49.6% lower**), equivalent to roughly 1,753 → 883 local **chars/3.8 estimates**, *not* live Gemini billed tokens or cumulative session usage. Actual injection behavior depends on the installed IDE and which prompt surfaces are loaded. Do not add these numbers to provider usage or call them net savings.
+
+**MCP output limits in default Compact (new installations):**
+
+- `a2a_context(action="skeleton")`: 4,800 total skeleton characters; max 1,600 per file; up to six file previews, remaining entries marked `skipped: true`. Keep source revision, omitted/truncated counts and `estimated_preview_only`.
+- `a2a_context(action="query",limit=5)`: prefer an exact symbol. In Compact, at most twelve relation rows. If clipped, `relations_truncated:true` and `relations_before_compaction` describe **the retrieved query response**, not the entire graph.
+- `a2a_impact(summary=true)`: bounded eight affected paths and five related tests with risk, coverage and uncertainty preserved. This pre-existing summary remains the preferred impact call.
+- Full outputs remain available via **explicit** `node scripts/a2a.mjs compact off`; existing explicit settings are preserved. Do not infer correctness from truncated previews.
+
+**Quality gates:** automated tests enforce character budgets, default On-Demand injection neutrality, default Compact behavior, skeleton omission disclosure, relation trimming and non-fabricated token estimates. These tests measure **local output sizes only**. To prove usage benefit, run matched Native vs A2A model/effort/tasks with official provider usage and independent acceptance; F01–F18 and real installed Antigravity validation remain in [issue #15](https://github.com/alifakbxr/a2a/issues/15).

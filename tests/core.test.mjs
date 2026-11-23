@@ -77,6 +77,8 @@ test('symbol query and relationship graph provide source-backed location',()=>wi
 }));
 test('impact finds reverse import dependencies and suggested tests',()=>withEngine((e,root)=>{
   const r=e.impact({workspace:root,changed:['src/auth.js']});assert.ok(r.affected.some(n=>n.path==='src/page.js'));assert.ok(r.affected.some(n=>n.path==='tests/auth.test.js'));assert.ok(r.related_tests.includes('tests/auth.test.js'));
+  assert.equal(r.coverage.graph_visit_limit_reached,false);
+  assert.ok(!r.uncertainty.some(x=>x.includes('Graph visit limit reached')));
 }));
 test('risk elevates sensitive area and never claims complete coverage',()=>withEngine((e,root)=>{
   const r=e.impact({workspace:root,changed:['src/auth.js']});assert.equal(r.risk,'high');assert.equal(r.coverage.static_only,true);assert.ok(r.uncertainty.length);
@@ -121,9 +123,18 @@ test('record incident, hypothesis, and evidence listing scoped to workspace',()=
   write('reports/results.tap','TAP version 13\n1..1\nok 1 - works\n');
   const v=e.verify({workspace:root,operation:'assess',criteria:[{id:'login',artifact:'reports/results.tap',test_name:'works'}]});
   const ev=v.criteria[0].evidence_id;
-  const inc=e.evidence({workspace:root,operation:'record_incident',title:'Login session was not persisted',root_cause:'Session store was reset on refresh',paths:['src/auth.js'],criteria:['refresh persists'],evidence_ids:[ev]});
-  assert.equal(inc.state,'evidence-linked');
-  const h=e.evidence({workspace:root,operation:'add_hypothesis',incident_id:inc.id,hypothesis:'State is recreated after reload',experiment:'Reproduce with a refresh'});assert.equal(h.status,'untested');
+  const inc=e.evidence({workspace:root,operation:'record_incident',persist_rca:true,
+    title:'Login session was not persisted',root_cause:'Session store was reset on refresh',
+    paths:['src/auth.js'],criteria:['refresh persists'],evidence_ids:[ev]});
+  assert.equal(inc.state,'investigating');
+  assert.equal(inc.root_cause_verified,false);
+  assert.match(inc.warning,/not independently prove/);
+  const h=e.evidence({workspace:root,operation:'add_hypothesis',persist_rca:true,
+    incident_id:inc.id,hypothesis:'State is recreated after reload',
+    experiment:'Reproduce with a complete browser refresh',
+    predicted_observation:'The session key is lost immediately after reload',
+    disconfirming_test:'Reload the browser while preserving its session cookie',
+    expected_criterion_id:'login'});assert.equal(h.status,'untested');
   const list=e.evidence({workspace:root,operation:'incidents'});assert.equal(list.items.length,1);
 }));
 test('input schema validation blocks unknown, invalid and oversized arguments',()=>{
@@ -148,11 +159,11 @@ test('a2a mode defaults to on-demand and supports toggle/set',()=>{
 test('compact mode supports toggle and skeletonization',()=>{
   fixture();
   try{
+    assert.equal(getCompactMode(),true,'Fresh installs prefer compact output');
+    assert.equal(setCompactMode(false),false,'Explicit compact off still supported');
     assert.equal(getCompactMode(),false);
-    assert.equal(setCompactMode(true),true);
+    assert.equal(setCompactMode('toggle'),true);
     assert.equal(getCompactMode(),true);
-    assert.equal(setCompactMode('toggle'),false);
-    assert.equal(getCompactMode(),false);
 
     const rawJs = `// test comment\nfunction test() {\n  /* multiline */\n  return 42;\n}\n\n\n`;
     const skeleton = skeletonizeCode(rawJs, '.js');
@@ -594,4 +605,108 @@ test('artifact versioning: snapshots versions, computes unified diffs, and integ
   assert.equal(diffRes.v1,1);
   assert.equal(diffRes.v2,2);
   assert.ok(diffRes.diff.includes('+- Item 2 added'));
+}));
+
+test('A2A semantic JSON reports do not change their own source revision',()=>withEngine((e,root,write)=>{
+ const baseline=e.sync(root,{verifyIntegrity:true});
+ const report={revision:baseline.revision,claims:[{id:'retry-case',scenario:'lost-response-retry',evidence:[]}]};
+ write('reports/scenarios.json',JSON.stringify(report));
+ const result=e.verify({workspace:root,operation:'assess_semantic',artifact:'reports/scenarios.json'});
+ assert.equal(result.report_status,'insufficient-evidence');
+ assert.equal(result.current_revision,baseline.revision);
+ assert.equal(e.sync(root,{verifyIntegrity:true}).revision,baseline.revision);
+ // Tampering invalidates the stored evidence hash even though reports do not change source revisions.
+ write('reports/scenarios.json',JSON.stringify({...report,note:'modified evidence'}));
+ const history=e.context({workspace:root,action:'freshness'});
+ assert.ok(history.evidence.some(x=>x.artifact_intact===false));
+ assert.equal(e.sync(root,{verifyIntegrity:true}).revision,baseline.revision);
+ write('src/config.json',JSON.stringify({enabled:true}));
+ assert.notEqual(e.sync(root,{verifyIntegrity:true}).revision,baseline.revision);
+ const stale=e.verify({workspace:root,operation:'assess_semantic',artifact:'reports/scenarios.json'});
+ assert.equal(stale.report_status,'stale');
+}));
+test('ordinary source JSON remains revision-bound even within reports folder',()=>withEngine((e,root,write)=>{
+ const before=e.sync(root,{verifyIntegrity:true});
+ write('reports/app-configuration.json',JSON.stringify({feature:true}));
+ const after=e.sync(root,{verifyIntegrity:true});
+ assert.notEqual(before.revision,after.revision);
+}));
+
+
+test('read-only evidence and run views invalidate freshness after same-size source edits',()=>withEngine((e,root,write)=>{
+  write('reports/regression.tap','TAP version 13\n1..1\nok 1 - works\n');
+  const observed=e.verify({workspace:root,operation:'assess',criteria:[{id:'integrity',artifact:'reports/regression.tap',test_name:'works'}]});
+  assert.equal(observed.verdict,'passed');
+  const before=e.evidence({workspace:root,operation:'list'});
+  assert.ok(before.items.some(x=>x.fresh===true));
+  const originalFile=path.join(root,'src/auth.js');
+  const previous=fs.statSync(originalFile);
+  const original=fs.readFileSync(originalFile,'utf8');
+  const changed=original.replace('true','null');
+  assert.equal(Buffer.byteLength(changed),Buffer.byteLength(original));
+  fs.writeFileSync(originalFile,changed);
+  fs.utimesSync(originalFile,previous.atime,previous.mtime);
+  const after=e.evidence({workspace:root,operation:'list'});
+  assert.notEqual(before.revision,after.revision);
+  assert.ok(after.items.some(x=>x.fresh===false));
+  const runs=e.evidence({workspace:root,operation:'runs'});
+  assert.ok(runs.runs.some(x=>x.fresh===false));
+}));
+
+
+test('impact, query, preview and verification use new source even when size and mtime are unchanged',()=>withEngine((e,root,write)=>{
+  write('src/misc.js','export function login() { return false }\n');
+  const before=e.impact({workspace:root,changed:['src/auth.js']});
+  assert.ok(before.affected.some(x=>x.path==='src/page.js'));
+  const filename=path.join(root,'src/page.js');
+  const stat=fs.statSync(filename);
+  const original=fs.readFileSync(filename,'utf8');
+  const modified=original.replace("from './auth.js'","from './misc.js'");
+  assert.notEqual(modified,original);
+  assert.equal(Buffer.byteLength(modified),Buffer.byteLength(original));
+  fs.writeFileSync(filename,modified);
+  fs.utimesSync(filename,stat.atime,stat.mtime);
+  const after=e.impact({workspace:root,changed:['src/auth.js']});
+  assert.notEqual(after.revision,before.revision);
+  assert.ok(!after.affected.some(x=>x.path==='src/page.js'));
+  const query=e.context({workspace:root,action:'query',query:'page'});
+  assert.equal(query.revision,after.revision);
+  assert.ok(query.relations.some(x=>x.source==='file:src/page.js'&&x.target==='file:src/misc.js'));
+  const skeleton=e.context({workspace:root,action:'skeleton',file:'src/page.js'});
+  assert.equal(skeleton.revision,after.revision);
+  assert.ok(skeleton.files[0].skeleton.includes('misc.js'));
+  const plan=e.verify({workspace:root,operation:'plan',criteria:['Import target must exist']});
+  assert.equal(plan.revision,after.revision);
+}));
+
+
+test('multi-criterion assessment rolls back previously inserted evidence when later artifact is invalid',()=>withEngine((e,root,write)=>{
+  write('reports/valid.tap','TAP version 13\n1..1\nok 1 - works\n');
+  assert.throws(()=>e.verify({workspace:root,operation:'assess',criteria:[
+    {id:'first-valid',artifact:'reports/valid.tap',test_name:'works'},
+    {id:'second-missing',artifact:'reports/missing.tap',test_name:'works'}
+  ]}),/ENOENT|no such file|not found/);
+  const after=e.evidence({workspace:root,operation:'list'});
+  assert.equal(after.items.length,0);
+  const runs=e.evidence({workspace:root,operation:'runs'});
+  assert.equal(runs.runs.length,0);
+  const valid=e.verify({workspace:root,operation:'assess',criteria:[
+    {id:'first-valid',artifact:'reports/valid.tap',test_name:'works'}
+  ]});
+  assert.equal(valid.verdict,'passed');
+  assert.equal(e.evidence({workspace:root,operation:'list'}).items.length,1);
+}));
+
+
+test('inspection never trusts file stat metadata alone for revision freshness',()=>withEngine((e,root,write)=>{
+  const first=e.context({workspace:root,action:'inspect'});
+  const file=path.join(root,'src/auth.js');
+  const stat=fs.statSync(file);
+  const old=fs.readFileSync(file,'utf8');
+  const next=old.replace('true','null');
+  assert.equal(old.length,next.length);
+  fs.writeFileSync(file,next);
+  fs.utimesSync(file,stat.atime,stat.mtime);
+  const refreshed=e.context({workspace:root,action:'inspect'});
+  assert.notEqual(refreshed.revision,first.revision);
 }));
