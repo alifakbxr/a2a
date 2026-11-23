@@ -14,6 +14,7 @@ import {readOfficialAgyUsageFile} from '../src/tokens.mjs';
 import {diagnoseSkillDiscovery} from '../src/skill-discovery.mjs';
 import {scanConversationHistory,attachReportSize,formatConversationReport} from '../src/conversations.mjs';
 import {assessContextHealth} from '../src/context-health.mjs';
+import {routeWorkflow} from '../src/workflow-router.mjs';
 
 // Treat active session metadata as untrusted local input: no symlinks,
 // oversized data or non-object payloads. This may describe a *different*
@@ -41,6 +42,7 @@ Commands:\n  doctor                     show runtime, workspace permissions, act
   inspect <workspace>        index project & show code graph coverage
   tokens [--json] [--limit 10] [--conversation ID] [--include-subagents] [--usage-file output.json] read all Antigravity conversation usage locally
   context-health --conversation ID [--milestone-complete] read-only milestone advice (no recurring hook)
+  route --profile economy|balanced|deep-review --task simple|cross-file|change-impact|verification|recovery [--risk low|medium|high|critical] [--uncertain] [--unknown-scope] non-executing native-first recommendation
   skeleton <workspace> <file...>   strip comments via lexer and estimate preview size reduction
   context <workspace> <query> query symbols and feature relations
   impact <workspace> [paths...] analyze impact & calculate tokens affected
@@ -161,6 +163,20 @@ try{
     }catch(err){
       print({error:'Failed to fetch GitHub traffic stats',details:err.message});
     }
+  }
+  else if(cmd==='route'){
+    const q={};
+    for(let i=0;i<argv.length;i++){
+      const arg=argv[i];
+      if(arg==='--profile'||arg==='--task'||arg==='--risk'){
+        if(!argv[i+1])throw new Error('Missing route value: '+arg);
+        q[arg.slice(2)]=argv[++i];
+      }else if(arg==='--uncertain')q.uncertainty=true;
+      else if(arg==='--unknown-scope')q.scopeKnown=false;
+      else if(arg==='--named-evidence')q.hasNamedEvidence=true;
+      else throw new Error('Unknown route option: '+arg);
+    }
+    print(routeWorkflow(q));
   }
   else if(cmd==='context-health'){
     let conversationId=null,milestoneComplete=false;

@@ -167,3 +167,7 @@ The November audit's local implementation corrections (#50–#61) are integrated
 ### Optional context-health advisor (issue #91: initial safe phase)
 
 `node scripts/a2a.mjs context-health --conversation <id> [--milestone-complete]` reads **one explicitly selected local session on demand** and provides a bounded context/milestone advisory. There is no recurring model hook, global configuration edit, background task, automatic `/compact`, token-spend estimate or claimed savings. The user must independently confirm that edits/tests are complete before supplying `--milestone-complete`. 80/140 planner steps are **heuristics**, not provider context limits. An automatic Context Guardian remains experimental under #91.
+
+### One-shot, non-executing routing profiles (issue #92)
+
+Use `node scripts/a2a.mjs route --profile economy --task cross-file --risk high --uncertain` for **explicit** native-first advice. Options are `economy`, `balanced` (baseline), and `deep-review`. This does **not** change the model, choose Antigravity subscription tiers, call MCP tools, spawn agents, alter global settings, or prove token savings. A trivial task always chooses **native-only**, even under deep-review. A scoped uncertain task proposes **at most one** initial A2A call; suggestions remain subject to workspace trust and live model discretion. See [issue #92](https://github.com/alifakbxr/a2a/issues/92) for the matched Native/A2A host benchmark required to validate any benefit.
