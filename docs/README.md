@@ -13,6 +13,7 @@
 | Purpose | Document |
 | --- | --- |
 | Minimal engineering method and Claude/Antigravity comparison | [Engineering method](ENGINEERING_METHOD.md) |
+| Lean CI budget and evidence-first tuning | [CI & Efficiency Strategy](CI_EFFICIENCY.md) |
 | Intro, setup, modes, examples | [Repository README](../README.md) |
 | Implementation and evidence status | [Build status](../BUILD_STATUS.md) |
 | MCP actions, criterion schemas, database tables | [Contracts](CONTRACTS.md) |
