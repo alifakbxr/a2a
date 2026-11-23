@@ -130,7 +130,7 @@ test('telemetry: cannot read arbitrary named transcript or infer another active 
 
 test('native hooks: match documented Antigravity file-edit operations',()=>{
   const config=JSON.parse(fs.readFileSync(new URL('../hooks.json',import.meta.url),'utf8'));
-  const matcher=config['a2a-session-telemetry'].PostToolUse.map(x=>x.matcher).join('|');
+  const matcher=config['pilah-session-telemetry'].PostToolUse.map(x=>x.matcher).join('|');
   for(const name of ['write_to_file','replace_file_content','multi_replace_file_content']){
     assert.match(name,new RegExp(matcher));
   }
