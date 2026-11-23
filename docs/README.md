@@ -1,8 +1,10 @@
-# A2A Documentation Index
+# PILAH Documentation Index
 
 > **Current main-branch status (23 Nov 2026; supersedes older branch-freeze notes):** [PR #105](https://github.com/alifakbxr/a2a/pull/105) promoted `v2.0.1` into `main` at `733c0cb`. The [main merge CI](https://github.com/alifakbxr/a2a/actions/runs/45202036041) must be checked for its actual result. The original F01–F18 live acceptance, installed Antigravity agent-selection tests, Guardian overhead and controlled Native/A2A trials remain **unverified** in [main validation backlog](MAIN_VALIDATION_BACKLOG.md). Old pre-main instructions in dated sections below are historical. **No package release was made.**
 
 
+
+**Current brand:** PILAH — Project Intelligence, Logic, Analysis & Handoffs; legacy paths and identifiers are retained for migration. Current source repository remains `alifakbxr/a2a` until a separate GitHub rename. New public MCP tools use `pilah_*`; local environment/data paths preserve `A2A_*` compatibility.
 
 **Current target:** [`v2.0.1`](https://github.com/alifakbxr/a2a/tree/v2.0.1), Node >=22.13.0, four public MCP tools, local-first/native-first. **Status: CI-passing development candidate, not production released.** The version branch contains behavioral reliability [PR #36](https://github.com/alifakbxr/a2a/pull/36). External release acceptance remains open in [#15](https://github.com/alifakbxr/a2a/issues/15).
 
@@ -10,6 +12,7 @@
 
 | Purpose | Document |
 | --- | --- |
+| Minimal engineering method and Claude/Antigravity comparison | [Engineering method](ENGINEERING_METHOD.md) |
 | Intro, setup, modes, examples | [Repository README](../README.md) |
 | Implementation and evidence status | [Build status](../BUILD_STATUS.md) |
 | MCP actions, criterion schemas, database tables | [Contracts](CONTRACTS.md) |
