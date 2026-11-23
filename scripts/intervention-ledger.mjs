@@ -10,6 +10,14 @@ export function isA2AInvocation(call){
  const name=plain(call?.name);
  const explicitServer=plain(call?.args?.ServerName??call?.args?.server_name??call?.serverName??call?.server_name);
  if(KNOWN.has(name))return !explicitServer||['pilah','pilah_pilah','a2a','a2a_a2a','verifykit','verifykit_verifykit'].includes(explicitServer)?name:null;
+ // Match exact known tool names before parsing server prefixes: pilah + pilah_context
+ // would otherwise be misread as pilah_pilah + context.
+ for(const server of ['pilah','pilah_pilah','a2a','a2a_a2a','verifykit','verifykit_verifykit']){
+  for(const tool of KNOWN){
+   if(name===`mcp_${server}_${tool}`||name===`mcp__${server}__${tool}`||
+      name===`${server}/${tool}`||name===`${server}.${tool}`||name===`${server}:${tool}`)return tool;
+  }
+ }
  // Antigravity surfaces MCP calls as both a nested call_mcp_tool event and
  // namespaced direct invocation strings. Normalize only known A2A namespaces.
  const scoped=name.match(/^(?:pilah_pilah|pilah|a2a_a2a|a2a|verifykit_verifykit|verifykit)[/.:]([a-z0-9_]+)$/);
