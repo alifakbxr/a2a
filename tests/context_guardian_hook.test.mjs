@@ -71,10 +71,34 @@ test('conflicting guardian key and malformed global hooks fail closed without wr
  }finally{fs.rmSync(home,{recursive:true,force:true});}
 });
 
+test('guardian persists an absolute executable and refuses non-object manifests',()=>{
+ const home=fs.mkdtempSync(path.join(os.tmpdir(),'a2a-guardian-json-'));
+ const manifest=path.join(home,'.gemini','config','hooks.json');
+ const env={...process.env,HOME:home,USERPROFILE:home};
+ const run=(arg)=>spawnSync(process.execPath,[fileURLToPath(script),arg],{env,encoding:'utf8',timeout:20000});
+ try{
+  fs.mkdirSync(path.dirname(manifest),{recursive:true});
+  for(const invalid of ['[]','null','"string"','123']){
+   fs.writeFileSync(manifest,invalid);
+   assert.notEqual(run('enable').status,0);
+   assert.equal(fs.readFileSync(manifest,'utf8'),invalid,'Invalid root must not be overwritten');
+  }
+  // Existing legacy hook is owned by this plugin; explicit enable upgrades the Node binary.
+  const old='node "'+fileURLToPath(script)+'" hook';
+  fs.writeFileSync(manifest,JSON.stringify({'a2a-context-guardian':{PreInvocation:[{type:'command',command:old,timeout:5}]}}));
+  assert.equal(JSON.parse(run('status').stdout).enabled,true);
+  const upgraded=run('enable');assert.equal(upgraded.status,0,upgraded.stderr);
+  const current=JSON.parse(fs.readFileSync(manifest,'utf8'));
+  assert.equal(current['a2a-context-guardian'].PreInvocation[0].command,guardianHookCommand());
+  assert.equal(run('disable').status,0);
+  assert.deepEqual(JSON.parse(fs.readFileSync(manifest,'utf8')),{});
+ } finally {fs.rmSync(home,{recursive:true,force:true});}
+});
+
 test('optional hook command rejects shell-expanded paths without installing hooks',()=>{
- assert.equal(guardianHookCommand('/path with spaces/a2a.mjs'),'node "/path with spaces/a2a.mjs" hook');
- for(const code of [34,36,96,37,33,10,13]){
+ assert.equal(guardianHookCommand('/path with spaces/a2a.mjs',process.execPath),'"'+process.execPath+'" "/path with spaces/a2a.mjs" hook');
+ for(const code of [0,10,13,34,36,96,37,33,127]){
   const bad='/tmp/unsafe'+String.fromCharCode(code)+'script.mjs';
-  assert.throws(()=>guardianHookCommand(bad),/Unsafe plugin path/);
+  assert.throws(()=>guardianHookCommand(bad),/Unsafe plugin or Node binary path/);
  }
 });
