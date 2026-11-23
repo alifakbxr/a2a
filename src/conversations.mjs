@@ -14,12 +14,25 @@ export function localBrainRoots(){
     ? [path.join(path.resolve(process.env.ANTIGRAVITY_APP_DATA_DIR),'brain')]
     : ['antigravity','antigravity-cli','antigravity-ide'].map(n=>path.join(getHomeDir(),'.gemini',n,'brain'));
 }
+const A2A_TOOL_NAMES=new Set(['a2a_context','a2a_impact','a2a_verify','a2a_evidence',
+  'verifykit_context','verifykit_impact','verifykit_verify','verifykit_evidence']);
+const A2A_SERVERS=new Set(['a2a','a2a_a2a','verifykit','verifykit_verifykit']);
 function isA2ACall(tc){
-  const name=String(tc?.name||tc?.toolName||''),tool=String(tc?.args?.ToolName||''),server=String(tc?.args?.ServerName||'');
-  if(/^(a2a_|verifykit_)/.test(name))return true;
-  if(/mcp/i.test(name)&&(/^(a2a_|verifykit_)/.test(tool)||/^a2a(?:_|$)/.test(server)))return true;
-  const cmd=name==='run_command'?String(tc?.args?.CommandLine||''):'';
-  return /(?:a2a\s+tokens|a2a\.mjs\s+tokens)/i.test(cmd);
+ const name=String(tc?.name||tc?.toolName||'');
+ if(A2A_TOOL_NAMES.has(name))return true;
+ for(const server of A2A_SERVERS){
+   for(const tool of A2A_TOOL_NAMES){
+     if(name===`mcp_${server}_${tool}`||name===`mcp__${server}__${tool}`||
+        name===`${server}/${tool}`)return true;
+   }
+ }
+ if(name==='call_mcp_tool'){
+   const server=String(tc?.args?.ServerName??tc?.args?.server_name??'');
+   const tool=String(tc?.args?.ToolName??tc?.args?.tool_name??'');
+   return A2A_SERVERS.has(server)&&A2A_TOOL_NAMES.has(tool);
+ }
+ // This counter measures actual A2A MCP use, not a CLI diagnostics call.
+ return false;
 }
 function safeLog(file,root){
   try{

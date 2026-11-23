@@ -116,3 +116,25 @@ test('CLI defaults to human-readable global history, with JSON available on requ
   assert.ok(pretty.stdout.includes('Conversations found: 1'));
   assert.equal(pretty.stdout.includes('"session_usage"'),false);
 });
+
+test('conversation history detects eager and lazy A2A calls without inflating CLI or unrelated MCP',t=>{
+ const x=fixture(t);
+ x.write('eager-mcp-001',[
+  {type:'PLANNER_RESPONSE',step_index:1,tool_calls:[
+   {name:'mcp_a2a_a2a_a2a_context'},
+   {name:'mcp_a2a_a2a_a2a_impact'},
+   {name:'mcp__a2a_a2a__a2a_verify'},
+   {name:'a2a_a2a/a2a_evidence'},
+   {name:'call_mcp_tool',args:{ServerName:'a2a_a2a',ToolName:'a2a_context'}},
+   {name:'call_mcp_tool',args:{ServerName:'other',ToolName:'a2a_context'}},
+   {name:'read_file',args:{Path:'a2a_context'}},
+   {name:'run_command',args:{CommandLine:'node a2a.mjs tokens'}},
+   {name:'mcp_other_a2a_context'}
+  ]}
+ ]);
+ const report=scanConversationHistory({brainRoots:[x.brain]});
+ assert.equal(report.scans.conversations,1);
+ assert.equal(report.latest_conversation.tool_calls,9);
+ assert.equal(report.a2a_calls_seen,5);
+ assert.equal(report.usage_accounting.a2a_calls_detected,5);
+});
