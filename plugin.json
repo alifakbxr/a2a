@@ -1,9 +1,9 @@
 {
   "$schema": "https://antigravity.google/schemas/v1/plugin.json",
-  "name": "a2a",
-  "displayName": "A2A (Agent to Alif)",
-  "version": "2.0.1",
-  "description": "A2A (Agent to Alif): Smart local-first engineering intelligence, impact analysis, token telemetry & verification for Antigravity.",
+  "name": "pilah",
+  "displayName": "PILAH",
+  "version": "2.1.0",
+  "description": "PILAH (Project Intelligence, Logic, Analysis & Handoffs): native-first engineering context, minimal-change guidance and evidence-scoped verification for Google Antigravity.",
   "logo": "assets/logo.svg",
   "author": {
     "name": "Alif Akbar"
@@ -11,18 +11,17 @@
   "license": "MIT",
   "repository": "https://github.com/alifakbxr/a2a",
   "keywords": [
-    "a2a",
-    "agent-to-alif",
+    "pilah",
     "engineering",
+    "native-first",
+    "minimal-code",
     "verification",
-    "code-intelligence",
-    "regression",
-    "local-first",
-    "tokens"
+    "context",
+    "token-awareness"
   ],
   "suggestedPrompts": [
-    "/a2a-toggle - Toggle A2A between Always-On and On-Demand modes",
-    "/a2a-status - Check A2A health, active mode & trusted workspaces",
-    "Check token telemetry and context savings with A2A"
+    "/pilah - Native-first code intelligence and minimal-change workflow",
+    "Ask PILAH for a scoped impact analysis before a risky edit",
+    "Review a fix using an evidence-based test plan"
   ]
 }
