@@ -31,7 +31,7 @@ function readActiveSession(base){
 const [cmd,...argv]=process.argv.slice(2);
 function print(obj){process.stdout.write(JSON.stringify(obj,null,2)+'\n')}
 if(!cmd||['help','--help','-h'].includes(cmd)){
-  console.log(`A2A CLI - Smart Code Intelligence & Verification\n
+  console.log(`PILAH CLI - Project Intelligence, Logic, Analysis & Handoffs\n
 Commands:\n  doctor                     show runtime, workspace permissions, active mode & telemetry
   mode [always-on|on-demand] get or set active A2A mode (default: on-demand)
   toggle                     switch between always-on and on-demand
