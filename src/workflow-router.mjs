@@ -27,7 +27,8 @@ export function routeWorkflow({profile='balanced',task='simple',risk='low',uncer
  }
  // Deep review may suggest more verification, but cannot authorize a second call.
  return {...baseline,proposal:operation??'native-only',max_initial_a2a_calls:operation?1:0,
-   reason,needs_workspace_permission:!!operation,needs_named_test_evidence:operation==='a2a_verify'&&!hasNamedEvidence,
+   reason,needs_workspace_permission:!!operation,needs_named_test_evidence:false,
+   named_evidence_required_for_assessment:operation==='a2a_verify',
    additional_calls:'Only after a new, explicit uncertainty; never automatically chained.',
    caveat:'A routing recommendation is not measured token or quality improvement.'};
 }
