@@ -12,6 +12,13 @@ test('classifies invalid, denied and successful interventions without leaking te
 });
 test('no result is unknown rather than success',()=>assert.equal(buildInterventionLedger([p(1)]).counts['no-result'],1));
 test('generic non-A2A tool does not count',()=>assert.equal(isA2AInvocation({name:'run_command'}),null));
+test('bare tool name with explicit foreign server is not attributed to A2A',()=>{
+ assert.equal(isA2AInvocation({name:'a2a_context',args:{ServerName:'foreign'}}),null);
+ assert.equal(isA2AInvocation({name:'a2a_context',args:{ServerName:'"a2a_a2a"'}}),'a2a_context');
+ assert.equal(isA2AInvocation({name:'a2a_context'}),'a2a_context');
+});
+
+
 
 
 test('replayed planner events count once and unknown tool names never leak',()=>{
