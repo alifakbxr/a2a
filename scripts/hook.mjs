@@ -355,7 +355,7 @@ function recordCommandRun(payload, baseDir) {
   });
 }
 
-export const ALWAYS_ON_POLICY = 'A2A Always-On (opt-in): Native first; zero calls for clear tasks. For unresolved cross-file/auth/payment uncertainty, use the eager A2A context tool once (workspace=<trusted project>, action=query, query=<symbol>, limit=5). Other A2A tools are lazy: discover their schema first. No chains without new evidence. Native tests; local PASS is not E2E.';
+export const ALWAYS_ON_POLICY = 'PILAH Always-On (opt-in): Native first; zero calls for clear tasks. Before coding, reuse existing code or platform primitives. If cross-file uncertainty remains, use eager PILAH context once (pilah_context, workspace=<trusted project>, limit=5). Other tools lazy: discover their schema. No chains without new evidence. Native tests; local PASS is not E2E.';
 
 export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   if (!payload || typeof payload !== 'object') return {};
