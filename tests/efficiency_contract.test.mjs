@@ -10,13 +10,13 @@ import {Engine} from '../src/engine.mjs';
 import {handleHookEvent} from '../scripts/hook.mjs';
 
 test('MCP verify_handoff is available in the published contract',()=>{
-  const tool=TOOLS.find(t=>t.name==='a2a_verify');
+  const tool=TOOLS.find(t=>t.name==='pilah_verify');
   assert.ok(tool);
   assert.ok(tool.inputSchema.properties.operation.enum.includes('verify_handoff'));
   assert.ok(tool.inputSchema.properties.worker_name);
   assert.ok(tool.inputSchema.properties.artifact);
   assert.ok(tool.inputSchema.properties.allow_stale);
-  assert.ok(TOOLS.find(t=>t.name==='a2a_impact').inputSchema.properties.summary);
+  assert.ok(TOOLS.find(t=>t.name==='pilah_impact').inputSchema.properties.summary);
   assert.doesNotThrow(()=>validateArgs('a2a_verify',{
     workspace:process.cwd(),operation:'verify_handoff',
     worker_name:'worker-1',artifact:'report.xml',
