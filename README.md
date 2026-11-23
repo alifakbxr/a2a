@@ -1,4 +1,22 @@
-# A2A — Agent to Alif
+# PILAH
+
+**Project Intelligence, Logic, Analysis & Handoffs**
+
+A small, native-first engineering layer for Google Antigravity. Write the least **complete, readable, safe** code; use the tools you already have; verify what actually ran.
+
+**Current source-stage migration:** The Antigravity plugin, skill and four default MCP tools are named PILAH. Package manifest: `@aliip/pilah` (not yet published). The source repository is **still** [alifakbxr/a2a](https://github.com/alifakbxr/a2a) until GitHub repository settings are renamed separately. Existing `a2a_*` and `verifykit_*` tools, `a2a` CLI alias and `A2A_*` local settings/data remain compatible.
+
+**Four default MCP tools:** `pilah_context`, `pilah_impact`, `pilah_verify`, `pilah_evidence`. One eager tool, three lazy. Old tool names are callable but hidden from model discovery unless legacy listing is explicitly enabled.
+
+**Minimal-change workflow:** no action for clear work → reuse project/platform code → one precise PILAH call for unresolved cross-file uncertainty → risk-appropriate native tests → scoped simplification. Never auto-run subagents or claim measured token savings without controlled trials.
+
+**Evidence status:** repository CI validates local implementation; installed Antigravity experiments, repeated cost comparisons and F01–F18 remain unverified. No tag or package publication is authorized. See [engineering method](docs/ENGINEERING_METHOD.md), [migration notes](docs/ENGINEERING_METHOD.md#brandcompatibility-status), [pending validation](docs/MAIN_VALIDATION_BACKLOG.md).
+
+---
+
+## Historical A2A implementation and validation notes (preserved for traceability)
+
+# Legacy project title: A2A — Agent to Alif
 
 > **Current main-branch status (23 Nov 2026; supersedes older branch-freeze notes):** [PR #105](https://github.com/alifakbxr/a2a/pull/105) promoted `v2.0.1` into `main` at `733c0cb`. The [main merge CI](https://github.com/alifakbxr/a2a/actions/runs/45202036041) must be checked for its actual result. The original F01–F18 live acceptance, installed Antigravity agent-selection tests, Guardian overhead and controlled Native/A2A trials remain **unverified** in [main validation backlog](docs/MAIN_VALIDATION_BACKLOG.md). Old pre-main instructions in dated sections below are historical. **No package release was made.**
 
