@@ -13,6 +13,7 @@ import {
 import {readOfficialAgyUsageFile} from '../src/tokens.mjs';
 import {diagnoseSkillDiscovery} from '../src/skill-discovery.mjs';
 import {scanConversationHistory,attachReportSize,formatConversationReport} from '../src/conversations.mjs';
+import {assessContextHealth} from '../src/context-health.mjs';
 
 // Treat active session metadata as untrusted local input: no symlinks,
 // oversized data or non-object payloads. This may describe a *different*
@@ -39,6 +40,7 @@ Commands:\n  doctor                     show runtime, workspace permissions, act
   revoke <absolute-workspace> revoke one project
   inspect <workspace>        index project & show code graph coverage
   tokens [--json] [--limit 10] [--conversation ID] [--include-subagents] [--usage-file output.json] read all Antigravity conversation usage locally
+  context-health --conversation ID [--milestone-complete] read-only milestone advice (no recurring hook)
   skeleton <workspace> <file...>   strip comments via lexer and estimate preview size reduction
   context <workspace> <query> query symbols and feature relations
   impact <workspace> [paths...] analyze impact & calculate tokens affected
@@ -159,6 +161,22 @@ try{
     }catch(err){
       print({error:'Failed to fetch GitHub traffic stats',details:err.message});
     }
+  }
+  else if(cmd==='context-health'){
+    let conversationId=null,milestoneComplete=false;
+    for(let i=0;i<argv.length;i++){
+      const arg=argv[i];
+      if(arg==='--conversation')conversationId=argv[++i];
+      else if(arg.startsWith('--conversation='))conversationId=arg.slice(15);
+      else if(arg==='--milestone-complete')milestoneComplete=true;
+      else throw new Error('Invalid context-health argument. Use --conversation ID [--milestone-complete]');
+    }
+    if(!conversationId||!/^[a-zA-Z0-9._-]{4,128}$/.test(conversationId))throw new Error('Provide an explicit valid --conversation ID');
+    const report=scanConversationHistory({dataDirPath:dataDir(),conversationId,limit:1,includeSubagents:true});
+    const entry=report.recent_conversations.find(x=>x.conversation_id===conversationId);
+    print(entry?assessContextHealth({steps:entry.steps,complete:entry.complete,milestoneComplete}):
+      {status:'insufficient_evidence',automatic_compaction:false,active_context_tokens:null,measured_token_savings:null,
+       recommendation:'No complete local transcript found for the explicit conversation ID.'});
   }
   else if(cmd==='tokens'){
     let format='text',limit=10,conversationId=null,includeSubagents=false;
