@@ -32,7 +32,7 @@ test('PILAH is the only default public skill and MCP identity',()=>{
 
 test('legacy tool calls stay callable with identical validation and a bounded public footprint',()=>{
  for(const op of ['context','impact','verify','evidence']){
-  const params={workspace:'/tmp',...(op==='verify'||op==='evidence'?{operation:'plan'}:{})};
+  const params={workspace:'/tmp',...(op==='verify'?{operation:'plan'}:op==='evidence'?{operation:'list'}:{})};
   for(const prefix of ['pilah','a2a','verifykit']){
    assert.doesNotThrow(()=>validateArgs(prefix+'_'+op,params));
    assert.throws(()=>validateArgs(prefix+'_'+op,{...params,unsanctioned:true}),/Unknown argument/);
