@@ -1,13 +1,13 @@
 {
   "mcpServers": {
-    "a2a": {
+    "pilah": {
       "command": "node",
       "args": [
         "${PLUGIN_ROOT}/src/mcp.mjs"
       ],
       "timeoutSeconds": 90,
       "tools": {
-        "a2a_context": {
+        "pilah_context": {
           "eager": true
         }
       }
