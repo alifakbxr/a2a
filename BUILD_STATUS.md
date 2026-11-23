@@ -72,3 +72,17 @@ Independent real Antigravity installation, frozen STOCKROOM F01–F18 security/f
 ### 23 November 2026 — current development candidate
 
 Merged PRs #94 (routing profiles), #95 (accurate eager history counts), #96 (opt-in Guardian), #97 (intervention ledger eager/foreign MCP accuracy), and #98 (hook command path hardening). Current `v2.0.1` SHA `9f4202903353a1260f24e1e3354c7cd05fda08a7`, with [9/9 post-merge CI success](https://github.com/alifakbxr/a2a/actions/runs/45165794296) on Ubuntu/macOS/Windows × Node 22/24/26.13.1. Prior 213/213 and 4/4 counts earlier in this document are historical, not this commit's current suite count. **No independent F01–F18 release acceptance or ≥5 matched Native/A2A experiments has been executed here.** Issues #15, #71, #91 and #92 remain open. No npm publication, tag or `main` promotion.
+
+## 23 November 2026 — follow-up re-audit and original-archive preflight
+
+**Audited code snapshot:** `v2.0.1` @ `27a33d4b1071a44948ead832ff1f151accc48afd` (before this documentation update); `main` remains at `b622110d0feabf469390a41f3c93338053b3c7b6`. Four remaining **open** issues: [#15](https://github.com/alifakbxr/a2a/issues/15), [#71](https://github.com/alifakbxr/a2a/issues/71), [#91](https://github.com/alifakbxr/a2a/issues/91), [#92](https://github.com/alifakbxr/a2a/issues/92).
+
+- [PR #100](https://github.com/alifakbxr/a2a/pull/100) corrected uncertainty routing; its PR 9/9 CI passed.
+- [PR #101](https://github.com/alifakbxr/a2a/pull/101) fixed opt-in Guardian non-object hooks manifest handling and pinned its Node binary to the explicitly enabling executable; its PR 9/9 CI passed.
+- [PR #102](https://github.com/alifakbxr/a2a/pull/102) fixed foreign MCP attribution / quoted lazy inputs. It was merged to **development only** after 8/9 CI jobs succeeded; the macOS Node 24 job was **queued, not successful** at merge time.
+- [PR #103](https://github.com/alifakbxr/a2a/pull/103) corrected verification-plan evidence advice. It was merged to **development only** after 6/9 CI jobs succeeded; three macOS jobs were **queued, not successful** at merge time.
+- Merged source and regression-test Git blobs for #101–#103 were individually re-fetched and matched their PR heads. The latest post-merge branch CI [run #45199814753](https://github.com/alifakbxr/a2a/actions/runs/45199814753) was queued when this audit was recorded. Do not reinterpret partial CI as 9/9 passed.
+- The original Library snapshots `stockroom-native(2).zip` and `stockroom-a2a(1).zip` were independently retrieved, matched the previously recorded SHA-256 hashes, and privately inspected without exporting `.env`, source or raw transcripts. `php -l` passed **101/101** Native and **80/80** A2A first-party PHP files. PHPUnit could not start in this environment (missing `dom`, `mbstring`, `xmlwriter`, and PDO SQLite). **None** of the required independent F01–F18 runtime acceptance cases was newly executed or established as PASS.
+- No fresh installed Antigravity parent/subagent agent-selection trial, real per-turn Guardian latency/token experiment, or ≥5 controlled matched Native/A2A runs was completed by this audit.
+
+**Release decision: NO-GO.** General user authorization to proceed does not satisfy independent execution/signature requirements. No `v2.0.1 -> main` promotion, tag or publication is justified until #15/#71/#91/#92 verification evidence is complete.
