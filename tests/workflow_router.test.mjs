@@ -30,6 +30,22 @@ test('routing is bounded, precise, and never claims outcome',()=>{
  assert.throws(()=>routeWorkflow({risk:'severe'}),/Invalid/);
 });
 
+test('uncertainty does not suppress scoped high-risk deep-review guidance',()=>{
+ for(const task of ['verification','recovery']){
+  const expected=task==='verification'?'a2a_verify':'a2a_evidence';
+  const r=routeWorkflow({profile:'deep-review',task,risk:'critical',uncertainty:true,scopeKnown:true});
+  assert.equal(r.proposal,expected);
+  assert.equal(r.max_initial_a2a_calls,1);
+  assert.equal(r.automatic_tool_calls,0);
+  assert.equal(routeWorkflow({profile:'economy',task,risk:'critical',uncertainty:true}).proposal,'native-only');
+  assert.equal(routeWorkflow({profile:'deep-review',task,risk:'critical',uncertainty:true,scopeKnown:false}).proposal,'a2a_context');
+ }
+ const simple=routeWorkflow({profile:'deep-review',task:'simple',risk:'critical',uncertainty:true,scopeKnown:false});
+ assert.equal(simple.proposal,'native-only');
+ assert.match(simple.reason,/native-only/);
+ assert.doesNotMatch(simple.reason,/graph query/);
+});
+
 test('CLI route is one-shot and does not write user settings',()=>{
  const out=spawnSync(process.execPath,['scripts/a2a.mjs','route','--profile','economy','--task','cross-file','--uncertain'],
   {encoding:'utf8',timeout:12000});
