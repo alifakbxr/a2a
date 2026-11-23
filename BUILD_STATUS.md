@@ -1,5 +1,8 @@
 # A2A Build and Validation Status — v2.0.1 candidate
 
+> **Current main-branch status (23 Nov 2026; supersedes older branch-freeze notes):** [PR #105](https://github.com/alifakbxr/a2a/pull/105) promoted `v2.0.1` into `main` at `733c0cb`. The [main merge CI](https://github.com/alifakbxr/a2a/actions/runs/45202036041) must be checked for its actual result. The original F01–F18 live acceptance, installed Antigravity agent-selection tests, Guardian overhead and controlled Native/A2A trials remain **unverified** in [main validation backlog](docs/MAIN_VALIDATION_BACKLOG.md). Old pre-main instructions in dated sections below are historical. **No package release was made.**
+
+
 **As of 18 November 2026.** This tracks the implementation branch, **not** a production-release certificate.
 
 | Area | Recorded result | Boundary |
