@@ -25,13 +25,13 @@ function spawnServer(extraEnv={}){const temp=fs.mkdtempSync(path.join(os.tmpdir(
 test('MCP handshake, default 4-tool listing, legacy alias routing, resources, and safe permission rejection',async()=>{
   const {temp,ask,close}=spawnServer();try{
     const init=await ask({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-03-26',capabilities:{},clientInfo:{name:'test',version:'0.1'}}});
-    assert.equal(init.result.serverInfo.name,'a2a');
+    assert.equal(init.result.serverInfo.name,'pilah');
     assert.equal(init.result.protocolVersion,'2025-03-26');
     assert.ok(init.result.capabilities.resources);
 
     const tools=await ask({jsonrpc:'2.0',id:2,method:'tools/list',params:{}});
     assert.equal(tools.result.tools.length,4);
-    assert.ok(tools.result.tools.every(t=>t.name.startsWith('a2a_')));
+    assert.ok(tools.result.tools.every(t=>t.name.startsWith('pilah_')));
 
     // Legacy verifykit_* tool calls remain backward-compatible even when not listed
     const deniedLegacy=await ask({jsonrpc:'2.0',id:3,method:'tools/call',params:{name:'verifykit_context',arguments:{workspace:'/tmp'}}});
@@ -47,7 +47,7 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
     fs.mkdirSync(cfgDir,{recursive:true});
     fs.writeFileSync(path.join(cfgDir,'allowed-workspaces.json'),JSON.stringify({version:1,allowed:[fs.realpathSync(work)]}));
 
-    const skel=await ask({jsonrpc:'2.0',id:4,method:'tools/call',params:{name:'a2a_context',arguments:{workspace:work,action:'skeleton',file:'src/app.js'}}});
+    const skel=await ask({jsonrpc:'2.0',id:4,method:'tools/call',params:{name:'pilah_context',arguments:{workspace:work,action:'skeleton',file:'src/app.js'}}});
     assert.equal(skel.result.isError,false);
     const skelJson=JSON.parse(skel.result.content[0].text);
     assert.ok(!skelJson.files[0].skeleton.includes('// comment'));
@@ -55,9 +55,9 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
 
     const resList=await ask({jsonrpc:'2.0',id:5,method:'resources/list',params:{}});
     assert.ok(resList.result.resources.length>=3);
-    const resRead=await ask({jsonrpc:'2.0',id:6,method:'resources/read',params:{uri:'a2a://status'}});
+    const resRead=await ask({jsonrpc:'2.0',id:6,method:'resources/read',params:{uri:'pilah://status'}});
     const statusObj=JSON.parse(resRead.result.contents[0].text);
-    assert.equal(statusObj.name,'a2a');
+    assert.equal(statusObj.name,'pilah');
     assert.equal(typeof statusObj.authorized_workspace_count,'number');
     assert.equal(typeof statusObj.antigravity_workspace_count,'number');
     assert.equal(typeof statusObj.data_dir_configured,'boolean');
@@ -72,11 +72,11 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
     fs.mkdirSync(notTrusted);
     fs.writeFileSync(path.join(notTrusted,'package.json'),JSON.stringify({name:'untrusted'}));
     fs.writeFileSync(path.join(temp,'db','active-session.json'),JSON.stringify({latest:{conversationId:'untrusted-session',workspacePaths:[notTrusted]}}));
-    const deniedResource=await ask({jsonrpc:'2.0',id:16,method:'resources/read',params:{uri:'a2a://side-questions'}});
+    const deniedResource=await ask({jsonrpc:'2.0',id:16,method:'resources/read',params:{uri:'pilah://side-questions'}});
     assert.equal(deniedResource.error.code,-32000);
     assert.ok(!JSON.stringify(deniedResource).includes(temp),'Denied resources must not echo the host path');
 
-    const resUnknown=await ask({jsonrpc:'2.0',id:7,method:'resources/read',params:{uri:'a2a://missing'}});
+    const resUnknown=await ask({jsonrpc:'2.0',id:7,method:'resources/read',params:{uri:'pilah://missing'}});
     assert.equal(resUnknown.error.code,-32002);
 
     const unknown=await ask({jsonrpc:'2.0',id:8,method:'method/unknown',params:{}});
@@ -84,10 +84,10 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
   }finally{await close()}
 });
 
-test('MCP legacy alias env flag exposes 8 tools when enabled',async()=>{
+test('MCP legacy alias env flag exposes 12 tools when enabled',async()=>{
   const {ask,close}=spawnServer({A2A_LEGACY_TOOL_ALIASES:'1'});try{
     const tools=await ask({jsonrpc:'2.0',id:1,method:'tools/list',params:{}});
-    assert.equal(tools.result.tools.length,8);
+    assert.equal(tools.result.tools.length,12);
   }finally{await close()}
 });
 
