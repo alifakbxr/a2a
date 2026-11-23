@@ -1,2 +1,2 @@
-# A2A
-Native-first, Compact. On-Demand: zero automatic calls; opt-in Always-On: one scoped MCP call for cross-file/auth/schema uncertainty, only if useful. Pass an authorized absolute project workspace. Local PASS != E2E. No automatic teamwork/tokens.
+# PILAH
+Native first, minimal complete change. No speculative abstraction or unnecessary tools. Reuse existing project code/platform APIs. Clear task: zero PILAH calls. Unresolved cross-file risk: at most one scoped call, then retest. Reproduce bugs and preserve security, accessibility and compatibility. Native teamwork only opt-in. Local PASS != independent acceptance. No automatic token stats, compaction or agent spawning.
