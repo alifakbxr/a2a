@@ -12,6 +12,20 @@ test('classifies invalid, denied and successful interventions without leaking te
 });
 test('no result is unknown rather than success',()=>assert.equal(buildInterventionLedger([p(1)]).counts['no-result'],1));
 test('generic non-A2A tool does not count',()=>assert.equal(isA2AInvocation({name:'run_command'}),null));
+test('PILAH MCP eager and namespaced calls resolve exact tools despite overlapping server prefixes',()=>{
+ for(const [name,expected] of [
+  ['mcp_pilah_pilah_context','pilah_context'],
+  ['mcp_pilah_pilah_pilah_context','pilah_context'],
+  ['mcp__pilah__pilah_context','pilah_context'],
+  ['mcp__pilah_pilah__pilah_impact','pilah_impact'],
+  ['pilah/pilah_context','pilah_context'],
+  ['pilah_pilah/pilah_evidence','pilah_evidence'],
+  ['mcp_pilah_pilah_verify','pilah_verify']
+ ])assert.equal(isA2AInvocation({name}),expected,name);
+ assert.equal(isA2AInvocation({name:'mcp_unrelated_pilah_context'}),null);
+ assert.equal(isA2AInvocation({name:'pilah_context',args:{ServerName:'unrelated'}}),null);
+});
+
 test('bare tool name with explicit foreign server is not attributed to A2A',()=>{
  assert.equal(isA2AInvocation({name:'a2a_context',args:{ServerName:'foreign'}}),null);
  assert.equal(isA2AInvocation({name:'a2a_context',args:{ServerName:'"a2a_a2a"'}}),'a2a_context');

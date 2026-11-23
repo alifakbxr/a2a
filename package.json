@@ -1,10 +1,11 @@
 {
-  "name": "@aliip/a2a",
-  "version": "2.0.1",
-  "description": "A2A (Agent to Alif): Smart local-first engineering intelligence, impact analysis, token telemetry & verification for Antigravity.",
+  "name": "@aliip/pilah",
+  "version": "2.1.0",
+  "description": "PILAH (Project Intelligence, Logic, Analysis & Handoffs): native-first engineering context, minimal-change guidance and evidence-scoped verification for Google Antigravity.",
   "type": "module",
   "main": "src/engine.mjs",
   "bin": {
+    "pilah": "scripts/a2a.mjs",
     "a2a": "scripts/a2a.mjs"
   },
   "publishConfig": {

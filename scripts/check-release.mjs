@@ -17,7 +17,7 @@ assert.match(manifest.version,/^\d+\.\d+\.\d+$/);
 assert.ok(manifest.displayName&&manifest.description&&manifest.license&&manifest.author);
 
 const mcpCfg=read('mcp_config.json');
-assert.equal(mcpCfg.mcpServers.a2a.command,'node');
+assert.equal(mcpCfg.mcpServers.pilah.command,'node');
 assert.ok(fs.existsSync(path.join(root,manifest.logo)));
 
 const hooksFile=path.join(root,'hooks.json');

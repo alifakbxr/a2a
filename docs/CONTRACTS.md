@@ -1,3 +1,7 @@
+# PILAH public MCP contract
+
+The four default operations are `pilah_context`, `pilah_impact`, `pilah_verify`, and `pilah_evidence`. Previous `a2a_*` and `verifykit_*` names remain callable for compatibility but are not listed by default. Persisted A2A data schemas and env vars are deliberately unchanged during migration.
+
 # A2A Contracts and Data Dictionary — v2.0.1 candidate
 
 **Executable source of truth:** [`src/tools.mjs`](../src/tools.mjs), [generated MCP schema](../schemas/mcp-tools.json), [SQLite DDL](../schemas/database.sql), [plugin manifest](../plugin.json), [hooks](../hooks.json). Current contracts supersede historical examples in earlier audit notes. Documentation is not an executable verifier.
@@ -8,18 +12,18 @@ Four public, JSON-RPC 2.0 **stdio** tools. Every tool requires an **authorized a
 
 | MCP tool | `action` / `operation` | Meaning |
 | --- | --- | --- |
-| `a2a_context` | `inspect`, `query`, `freshness`, `tokens`, `skeleton`, `orchestration` | Code inventory, static graph, tokens, declared native teamwork advisor |
-| `a2a_impact` | `changed`, `depth` (1–4), `summary` | Bounded static change-impact analysis; uncertainty remains |
-| `a2a_verify` | `plan`, `assess`, `verify_handoff`, `assess_release`, `assess_semantic`, `assess_browser` | Test planning, scoped local machine results, independent signed release assessment |
-| `a2a_evidence` | `list`, `runs`, `incidents`, `record_incident`, `add_hypothesis`, `assess_hypothesis`, `hypotheses`, `delete_incident`, `side_questions`, `record_side_question`, `artifact_versions`, `artifact_diff`, `snapshot_artifact`, `save_checkpoint`, `model_recovery`, `tool_recovery` | Revision-bound evidence, incident hypotheses, explicit checkpoints, bounded recovery guidance |
+| `pilah_context` | `inspect`, `query`, `freshness`, `tokens`, `skeleton`, `orchestration` | Code inventory, static graph, tokens, declared native teamwork advisor |
+| `pilah_impact` | `changed`, `depth` (1–4), `summary` | Bounded static change-impact analysis; uncertainty remains |
+| `pilah_verify` | `plan`, `assess`, `verify_handoff`, `assess_release`, `assess_semantic`, `assess_browser` | Test planning, scoped local machine results, independent signed release assessment |
+| `pilah_evidence` | `list`, `runs`, `incidents`, `record_incident`, `add_hypothesis`, `assess_hypothesis`, `hypotheses`, `delete_incident`, `side_questions`, `record_side_question`, `artifact_versions`, `artifact_diff`, `snapshot_artifact`, `save_checkpoint`, `model_recovery`, `tool_recovery` | Revision-bound evidence, incident hypotheses, explicit checkpoints, bounded recovery guidance |
 
 The public operation enums above reflect current `src/tools.mjs`. Additional engine-internal compatibility aliases may exist but are not guaranteed as public input enums. A2A cannot launch native commands, edit project source, run browsers, force model selection or guarantee upstream agent obedience.
 
 ### Scope binding and privacy (19 November re-audit)
 
-`persist_plan` (Boolean, default `false`) on `a2a_verify(operation="plan")` stores the entire user-authored acceptance matrix in private SQLite, hashed and bound to the current source revision. The result includes a `plan_id` (or `null` when disabled), `scope_bound` and `scope_persisted`. This is an explicit **local-content retention** opt-in.
+`persist_plan` (Boolean, default `false`) on `pilah_verify(operation="plan")` stores the entire user-authored acceptance matrix in private SQLite, hashed and bound to the current source revision. The result includes a `plan_id` (or `null` when disabled), `scope_bound` and `scope_persisted`. This is an explicit **local-content retention** opt-in.
 
-Pass `plan_id` on `a2a_verify(operation="assess")`. Provide evidence bindings by `id` (`artifact`, exact `test_name` or `blocked`); the stored Given/When/Then and required evidence type cannot be replaced. Omitted required cases appear as `not_tested`; an outdated plan becomes `stale`, and unexpected IDs or mutated expectations are rejected. After changing source code, explicitly **reissue the identical frozen requirements** with `a2a_verify(operation="plan",plan_id="<old-id>",persist_plan=true,criteria=[])`. This creates a new plan ID at the current revision, resets every case to `not_tested`, and never asserts that tests ran. If a stored criterion explicitly pins a different `source_revision`, reissuing fails closed and the user must review and recreate that requirement with its new revision. Without `plan_id`, a standalone assessment remains backwards compatible but reports `scope_bound:false` and cannot know the original mandatory scenario list.
+Pass `plan_id` on `pilah_verify(operation="assess")`. Provide evidence bindings by `id` (`artifact`, exact `test_name` or `blocked`); the stored Given/When/Then and required evidence type cannot be replaced. Omitted required cases appear as `not_tested`; an outdated plan becomes `stale`, and unexpected IDs or mutated expectations are rejected. After changing source code, explicitly **reissue the identical frozen requirements** with `pilah_verify(operation="plan",plan_id="<old-id>",persist_plan=true,criteria=[])`. This creates a new plan ID at the current revision, resets every case to `not_tested`, and never asserts that tests ran. If a stored criterion explicitly pins a different `source_revision`, reissuing fails closed and the user must review and recreate that requirement with its new revision. Without `plan_id`, a standalone assessment remains backwards compatible but reports `scope_bound:false` and cannot know the original mandatory scenario list.
 
 `verify_handoff` enforces the **same local evidence-kind policy** as `assess`. For browser/visual/hardware/security/independent criteria, named local reports and native hook records never produce `verified:true`. The `verified_scope` field is limited to **named local machine assertions**, with `independently_attested:false`.
 
@@ -29,7 +33,7 @@ Automatic full-content brain Markdown snapshots are **disabled by default**; opt
 
 ### Verification plan: typed acceptance
 
-`a2a_verify(operation="plan",criteria=[...])` accepts up to 40 strings (legacy) or objects. **Typed** criteria include:
+`pilah_verify(operation="plan",criteria=[...])` accepts up to 40 strings (legacy) or objects. **Typed** criteria include:
 
 | Field | Requirement |
 | --- | --- |
@@ -71,15 +75,15 @@ A plan returns `not_tested` plus `completion.fully_verified:false`. For `assess`
 
 ### Existing native tool recovery
 
-`a2a_evidence(operation="tool_recovery")` accepts `tool_family` (mcp/browser/filesystem/terminal/other), optional `error_hint` (<=400 chars; avoid secrets), `error_class` (invalid_arguments/context_lost/timeout/permission_denied/missing_file/edit_conflict/unknown) and `retry_count` (0–20). It returns deterministic **guidance only**, `automatic_execution:false`, `retry_same_input:false`, and never copies or stores the raw hint. Native state/schema refresh is required before a changed retry; permission denial requires user consent.
+`pilah_evidence(operation="tool_recovery")` accepts `tool_family` (mcp/browser/filesystem/terminal/other), optional `error_hint` (<=400 chars; avoid secrets), `error_class` (invalid_arguments/context_lost/timeout/permission_denied/missing_file/edit_conflict/unknown) and `retry_count` (0–20). It returns deterministic **guidance only**, `automatic_execution:false`, `retry_same_input:false`, and never copies or stores the raw hint. Native state/schema refresh is required before a changed retry; permission denial requires user consent.
 
 ### Explicit checkpoint and resume
 
-`a2a_evidence(operation="save_checkpoint")` uses `conversation_id`, `task_summary` (1–500 chars), up to eight bounded `completed`, `next_steps`, `decisions` and `pending_tests` notes (<=200 chars each). It rejects recognizable plaintext secret assignments and records the **source revision**, not a verified result. `model_recovery` returns source freshness, notes and a `verified:false` warning; changed source makes an older checkpoint stale. Nothing resumes or switches a model automatically. This is distinct from the read-only headless stream checkpoint CLI in [checkpoint recovery](CHECKPOINT_RECOVERY.md).
+`pilah_evidence(operation="save_checkpoint")` uses `conversation_id`, `task_summary` (1–500 chars), up to eight bounded `completed`, `next_steps`, `decisions` and `pending_tests` notes (<=200 chars each). It rejects recognizable plaintext secret assignments and records the **source revision**, not a verified result. `model_recovery` returns source freshness, notes and a `verified:false` warning; changed source makes an older checkpoint stale. Nothing resumes or switches a model automatically. This is distinct from the read-only headless stream checkpoint CLI in [checkpoint recovery](CHECKPOINT_RECOVERY.md).
 
 ### Native teamwork
 
-`a2a_context(action="orchestration",task=...)` accepts user-declared tier, available native commands, workstreams, dependencies, milestones, long horizon, hard reasoning and `file_ownership` (`independent`/`shared`/`unknown`). Parallel modes require **independent ownership and low dependencies** plus confirmed command availability. A2A never creates workers and always requires user approval.
+`pilah_context(action="orchestration",task=...)` accepts user-declared tier, available native commands, workstreams, dependencies, milestones, long horizon, hard reasoning and `file_ownership` (`independent`/`shared`/`unknown`). Parallel modes require **independent ownership and low dependencies** plus confirmed command availability. A2A never creates workers and always requires user approval.
 
 ## MCP resources
 
@@ -129,13 +133,13 @@ For actual error behavior and constraints, consult the executable [MCP server](.
 
 New installations default to `On-Demand` (**no automatic A2A calls or SessionStart injection**) and `Compact` (**bounded result payloads**). `node scripts/a2a.mjs compact off` explicitly restores fuller responses and persists until changed. Existing explicit user settings have precedence.
 
-In Compact, `a2a_context(action="skeleton")` limits previews to 4,800 characters total, 1,600 per file, and six previewed files out of up to 20 requested. Requested-but-omitted paths are returned with `skipped:true` and reason `compact_file_budget`; partial previews carry `truncated:true`, and summary counters disclose omissions. `action="query"` caps static relation rows at 12 and sets `relations_truncated:true` plus `relations_before_compaction` when necessary. This count refers to the query response *before compaction*, not total possible project edges. Impact `summary:true` retains its existing risk/uncertainty/coverage semantics.
+In Compact, `pilah_context(action="skeleton")` limits previews to 4,800 characters total, 1,600 per file, and six previewed files out of up to 20 requested. Requested-but-omitted paths are returned with `skipped:true` and reason `compact_file_budget`; partial previews carry `truncated:true`, and summary counters disclose omissions. `action="query"` caps static relation rows at 12 and sets `relations_truncated:true` plus `relations_before_compaction` when necessary. This count refers to the query response *before compaction*, not total possible project edges. Impact `summary:true` retains its existing risk/uncertainty/coverage semantics.
 
 Only local payload bytes/characters and heuristic estimates are measurable by these APIs; neither the skill nor the `a2a tokens` CLI can prove provider billing or net token savings. Tool outputs that are truncated must not be presented as complete analysis. See [token efficiency](TOKEN_EFFICIENCY.md).
 
 ## Adaptive RCA / 5 Whys contract (issue #48)
 
-The **existing** `a2a_evidence` tool now supports `assess_hypothesis`; there is **no fifth public MCP tool**. `record_incident`, `add_hypothesis` and `assess_hypothesis` require **explicit `persist_rca:true`** to store bounded private RCA text. A call to `record_incident` always yields `state:"investigating"`, even with valid evidence IDs; historical `evidence-linked` rows are displayed as *unverified*. The legacy `root_cause` field is **candidate cause text**, never a confirmed claim.
+The **existing** `pilah_evidence` tool now supports `assess_hypothesis`; there is **no fifth public MCP tool**. `record_incident`, `add_hypothesis` and `assess_hypothesis` require **explicit `persist_rca:true`** to store bounded private RCA text. A call to `record_incident` always yields `state:"investigating"`, even with valid evidence IDs; historical `evidence-linked` rows are displayed as *unverified*. The legacy `root_cause` field is **candidate cause text**, never a confirmed claim.
 
 `add_hypothesis` requires `incident_id`, `hypothesis`, `experiment`, `predicted_observation`, `disconfirming_test`, and an exact `expected_criterion_id`. Optional `parent_hypothesis_id` branches a Why chain up to depth 8; optional `plan_id` must match the hypothesis criterion in a fresh, hashed acceptance plan. New hypotheses start `untested`.
 
@@ -147,7 +151,7 @@ The **existing** `a2a_evidence` tool now supports `assess_hypothesis`; there is 
 
 ### RCA privacy cleanup and Compact evidence freshness
 
-`a2a_evidence(operation="delete_incident")` requires an authorized workspace, existing `incident_id`, `persist_rca:true` and `confirm_deletion:true`. It atomically deletes only the selected incident and its linked hypotheses; existing independent machine evidence and acceptance plans are **not removed**. This is logical deletion, not secure erasure of SQLite WAL/backups. In Compact, `incidents` and `hypotheses` lists show max 8 entries and report `total` / `more_available`, retaining causal-proof warnings. The `hypotheses` read path re-checks source revisions and stored named-test evidence hashes; a previously locally-supported cause becomes **stale** if the linked report was modified or removed.
+`pilah_evidence(operation="delete_incident")` requires an authorized workspace, existing `incident_id`, `persist_rca:true` and `confirm_deletion:true`. It atomically deletes only the selected incident and its linked hypotheses; existing independent machine evidence and acceptance plans are **not removed**. This is logical deletion, not secure erasure of SQLite WAL/backups. In Compact, `incidents` and `hypotheses` lists show max 8 entries and report `total` / `more_available`, retaining causal-proof warnings. The `hypotheses` read path re-checks source revisions and stored named-test evidence hashes; a previously locally-supported cause becomes **stale** if the linked report was modified or removed.
 
 **RCA experiment audit trail:** `rca_experiments` is an append-only SQLite table for hypothesis outcomes with source revisions, criterion, observation and linked evidence IDs. A hypothesis keeps its current status and returns `recent_experiments` (max 3), `experiments_total` and `more_experiments_available`; older records are not overwritten by newer interpretations. Explicit `delete_incident` also deletes that incident's experiment history, not unrelated evidence.
 
@@ -162,10 +166,10 @@ The CLI `tokens` absolute workspace argument and `artifacts snapshot|list|diff|s
 
 ## v2.0.1 reliability and privacy contract updates (19 November 2026)
 
-- Four public MCP tools remain. `a2a_evidence` includes opt-in Adaptive 5 Whys RCA operations; local hypotheses remain non-causal suggestions unless supported by exact source-bound machine assertions.
+- Four public MCP tools remain. `pilah_evidence` includes opt-in Adaptive 5 Whys RCA operations; local hypotheses remain non-causal suggestions unless supported by exact source-bound machine assertions.
 - `a2a://status` returns redacted workspace **counts** and booleans only, not host paths or per-project names. `resources/read` errors sanitize authorization failures.
 - `hooks.json` recognizes native `write_file`, `edit_file`, `write_to_file`, `replace_file_content`, `multi_replace_file_content` tool events; native test evidence rejects indirect or spoofed commands.
-- `tools/list` enforces a 6,500-byte serialized contract budget with bounded IDs and criteria. Removed unused `a2a_context.conversation_id`, `a2a_context.transcript_path`, and `a2a_evidence.version_number`; deprecated `allow_stale` never permits PASS.
+- `tools/list` enforces a 6,500-byte serialized contract budget with bounded IDs and criteria. Removed unused `pilah_context.conversation_id`, `pilah_context.transcript_path`, and `pilah_evidence.version_number`; deprecated `allow_stale` never permits PASS.
 - Syntax validation recursively covers all source and script `.mjs` files on all CI/runtime-publish gates. `a2a doctor` advises about shell-managed Node version manager paths without executing a shell or changing user configuration.
 
 See [security](SECURITY.md), [compatibility](COMPATIBILITY.md), and [release gate #15](https://github.com/alifakbxr/a2a/issues/15). A2A v2.0.1 is **not** externally certified or authorized for publishing.

@@ -1,5 +1,5 @@
 {
-  "a2a-session-telemetry": {
+  "pilah-session-telemetry": {
     "SessionStart": [
       {
         "type": "command",

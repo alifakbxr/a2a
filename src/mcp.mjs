@@ -9,7 +9,7 @@ import {dataDir,getA2AMode,getCompactMode,getAutoTrustMode,loadAllowlist,loadAnt
 import {getSessionTokenUsage} from './tokens.mjs';
 import {classifyMcpFailure} from './mcp-diagnostics.mjs';
 
-const server={name:'a2a',version:pkg.version}, engine=new Engine();
+const server={name:'pilah',version:pkg.version}, engine=new Engine();
 const io=readline.createInterface({input:process.stdin,crlfDelay:Infinity,terminal:false});
 const answer=(id,result,error)=>{
   const message={jsonrpc:'2.0',id,...(error?{error:{code:error.code||-32603,message:String(error.message||error).slice(0,300)}}:{result})};
@@ -17,10 +17,10 @@ const answer=(id,result,error)=>{
 };
 
 const RESOURCES = [
-  {uri:'a2a://status',name:'A2A Status',description:'Current A2A modes and redacted workspace counts; no local paths.',mimeType:'application/json'},
-  {uri:'a2a://tokens/session',name:'A2A Session Diagnostics',description:'Local session event counts only; model token totals require official Antigravity CLI JSON output.',mimeType:'application/json'},
-  {uri:'a2a://workspace/summary',name:'A2A Workspace Summary',description:'Active workspace graph coverage and estimated source inventory; not model token usage.',mimeType:'application/json'},
-  {uri:'a2a://side-questions',name:'A2A Side Questions',description:'Recorded Antigravity side questions (/btw) and exploration notes.',mimeType:'application/json'},
+  {uri:'pilah://status',name:'PILAH Status',description:'Current A2A modes and redacted workspace counts; no local paths.',mimeType:'application/json'},
+  {uri:'pilah://tokens/session',name:'PILAH Session Diagnostics',description:'Local session event counts only; model token totals require official Antigravity CLI JSON output.',mimeType:'application/json'},
+  {uri:'pilah://workspace/summary',name:'PILAH Workspace Summary',description:'Active workspace graph coverage and estimated source inventory; not model token usage.',mimeType:'application/json'},
+  {uri:'pilah://side-questions',name:'PILAH Side Questions',description:'Recorded Antigravity side questions (/btw) and exploration notes.',mimeType:'application/json'},
 ];
 
 function getActiveSession(){
@@ -39,9 +39,9 @@ function getActiveSession(){
   }catch{return null}
 }
 function readResource(uri){
-  if(uri==='a2a://status'){
+  if(uri.replace(/^a2a:\/\//,'pilah://')==='pilah://status'){
     return {
-      name:'a2a',
+      name:'pilah',
       version:server.version,
       mode:getA2AMode(),
       compact_mode:getCompactMode(),
@@ -56,20 +56,20 @@ function readResource(uri){
       })(),
     };
   }
-  if(uri==='a2a://tokens/session'){
+  if(uri.replace(/^a2a:\/\//,'pilah://')==='pilah://tokens/session'){
     const active=getActiveSession();
     if(!active)return {status:'unavailable',reason:'No active session found'};
     requireAuthorizedWorkspace(active.workspace);
     return getSessionTokenUsage(active.conversationId,{workspace:active.workspace,dataDirPath:engine.store.base})||{status:'unavailable',reason:'No session transcript found'};
   }
-  if(uri==='a2a://side-questions'){
+  if(uri.replace(/^a2a:\/\//,'pilah://')==='pilah://side-questions'){
     const active=getActiveSession();
     if(!active?.conversationId || !active?.workspace) return {status:'no_active_session',side_questions:[]};
     const root=requireAuthorizedWorkspace(active.workspace);
     const wsId=engine.store.register(root);
     return {side_questions:engine.store.listSideQuestions({workspaceId:wsId,conversationId:active.conversationId,limit:20})};
   }
-  if(uri==='a2a://workspace/summary'){
+  if(uri.replace(/^a2a:\/\//,'pilah://')==='pilah://workspace/summary'){
     const activeWs=getActiveSession()?.workspace;
     if(!activeWs)return {status:'no_active_workspace',reason:'Open an authorized workspace in a session first.'};
     return engine.context({workspace:activeWs,action:'inspect'});
@@ -87,12 +87,16 @@ function route(req){
       const {name,arguments:args={}}=req.params||{};validateArgs(name,args);
       let result;
       switch(name){
+        case 'pilah_context':
         case 'a2a_context':
         case 'verifykit_context':result=engine.context(args);break;
+        case 'pilah_impact':
         case 'a2a_impact':
         case 'verifykit_impact':result=engine.impact(args);break;
+        case 'pilah_verify':
         case 'a2a_verify':
         case 'verifykit_verify':result=engine.verify(args);break;
+        case 'pilah_evidence':
         case 'a2a_evidence':
         case 'verifykit_evidence':result=engine.evidence(args);break;
         default:throw new Error('Unknown tool: '+name);

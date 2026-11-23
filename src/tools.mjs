@@ -87,9 +87,11 @@ const BASE_SPECS = [
   }
 ];
 
-export const TOOLS = BASE_SPECS.map(s => ({name: `a2a_${s.name}`, description: s.description, inputSchema: s.inputSchema}));
+export const TOOLS = BASE_SPECS.map(s => ({name: `pilah_${s.name}`, description: s.description, inputSchema: s.inputSchema}));
+// Compatibility aliases are callable, but never exposed by default to the model.
+export const A2A_COMPAT_TOOLS = BASE_SPECS.map(s => ({name: `a2a_${s.name}`, description: s.description, inputSchema: s.inputSchema}));
 export const LEGACY_TOOLS = BASE_SPECS.map(s => ({name: `verifykit_${s.name}`, description: s.description, inputSchema: s.inputSchema}));
-export const ALL_TOOLS = [...TOOLS, ...LEGACY_TOOLS];
+export const ALL_TOOLS = [...TOOLS, ...A2A_COMPAT_TOOLS, ...LEGACY_TOOLS];
 export const TOOL_NAMES = new Set(ALL_TOOLS.map(x=>x.name));
 export function getListedTools() {
   return process.env.A2A_LEGACY_TOOL_ALIASES === '1' ? ALL_TOOLS : TOOLS;

@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "tools": [
     {
-      "name": "a2a_context",
+      "name": "pilah_context",
       "description": "Query cross-file auth, payment and inventory symbols.",
       "inputSchema": {
         "type": "object",
@@ -129,7 +129,7 @@
       }
     },
     {
-      "name": "a2a_impact",
+      "name": "pilah_impact",
       "description": "Static impact and candidate tests; not proof.",
       "inputSchema": {
         "type": "object",
@@ -162,7 +162,7 @@
       }
     },
     {
-      "name": "a2a_verify",
+      "name": "pilah_verify",
       "description": "Local tests/evidence; not release proof.",
       "inputSchema": {
         "type": "object",
@@ -308,7 +308,7 @@
       }
     },
     {
-      "name": "a2a_evidence",
+      "name": "pilah_evidence",
       "description": "Local incidents, RCA, history and artifacts.",
       "inputSchema": {
         "type": "object",

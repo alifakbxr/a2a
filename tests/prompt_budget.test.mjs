@@ -30,13 +30,13 @@ function fixture(){
 }
 
 test('A2A skill, rule and Always-On instruction have tight measured character budgets',()=>{
- const skill=read('skills/a2a/SKILL.md'),rule=read('rules/AGENTS.md');
+ const skill=read('skills/pilah/SKILL.md'),rule=read('rules/AGENTS.md');
  assert.ok(skill.length<=3000,'Skill too large: '+skill.length+' chars');
  assert.ok(rule.length<=260,'Permanent rule too large: '+rule.length+' chars');
  assert.ok(ALWAYS_ON_POLICY.length<=350,'Always-On policy too large: '+ALWAYS_ON_POLICY.length+' chars');
  assert.match(skill,/0 calls/);
  assert.match(skill,/Second call only/);
- for(const name of ['a2a_context','a2a_impact','a2a_verify','a2a_evidence'])
+ for(const name of ['pilah_context','pilah_impact','pilah_verify','pilah_evidence'])
    assert.ok(skill.includes(name),'Skill omits public tool '+name);
  assert.match(skill,/persist_plan:true/);
  assert.match(skill,/not.*independent|not.*visual/i);
@@ -139,6 +139,6 @@ test('MCP schema byte budget and removed invalid parameters',()=>{
   assert.throws(()=>validateArgs('a2a_context',{...ctx,workspace:'x'.repeat(1025)}),/too long/i);
   assert.throws(()=>validateArgs('a2a_evidence',{workspace:process.cwd(),operation:'list',id:'x'.repeat(161)}),/too long/i);
   assert.throws(()=>validateArgs('a2a_verify',{workspace:process.cwd(),operation:'plan',criteria:['x'.repeat(241)]}),/Invalid item|too long/i);
-  const allow=TOOLS.find(t=>t.name==='a2a_verify').inputSchema.properties.allow_stale;
+  const allow=TOOLS.find(t=>t.name==='pilah_verify').inputSchema.properties.allow_stale;
   assert.match(allow.description,/stale reports never pass/);
 });

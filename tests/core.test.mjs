@@ -485,10 +485,10 @@ test('verification & validation: <testsuites> aggregation, a2a-test-report-v1, a
   assert.equal(parsedJson.format,'a2a-test-report-v1');
 
   assert.equal(TOOLS.length,4);
-  assert.equal(ALL_TOOLS.length,8);
+  assert.equal(ALL_TOOLS.length,12);
   assert.equal(getListedTools().length,4);
   process.env.A2A_LEGACY_TOOL_ALIASES='1';
-  assert.equal(getListedTools().length,8);
+  assert.equal(getListedTools().length,12);
   delete process.env.A2A_LEGACY_TOOL_ALIASES;
 
   assert.throws(()=>validateArgs('a2a_impact',{workspace:'/tmp',changed:[123]}),/Invalid type/);

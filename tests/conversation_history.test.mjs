@@ -112,7 +112,7 @@ test('CLI defaults to human-readable global history, with JSON available on requ
   assert.equal(data.official_usage.total_tokens,null);
   const pretty=spawnSync(exe,['scripts/a2a.mjs','tokens'],{env,encoding:'utf8'});
   assert.equal(pretty.status,0,pretty.stderr);
-  assert.ok(pretty.stdout.includes('A2A | Conversation Token Usage'));
+  assert.ok(pretty.stdout.includes('PILAH | Conversation Token Usage'));
   assert.ok(pretty.stdout.includes('Conversations found: 1'));
   assert.equal(pretty.stdout.includes('"session_usage"'),false);
 });

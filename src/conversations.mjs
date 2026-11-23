@@ -14,9 +14,9 @@ export function localBrainRoots(){
     ? [path.join(path.resolve(process.env.ANTIGRAVITY_APP_DATA_DIR),'brain')]
     : ['antigravity','antigravity-cli','antigravity-ide'].map(n=>path.join(getHomeDir(),'.gemini',n,'brain'));
 }
-const A2A_TOOL_NAMES=new Set(['a2a_context','a2a_impact','a2a_verify','a2a_evidence',
+const A2A_TOOL_NAMES=new Set(['pilah_context','pilah_impact','pilah_verify','pilah_evidence','a2a_context','a2a_impact','a2a_verify','a2a_evidence',
   'verifykit_context','verifykit_impact','verifykit_verify','verifykit_evidence']);
-const A2A_SERVERS=new Set(['a2a','a2a_a2a','verifykit','verifykit_verifykit']);
+const A2A_SERVERS=new Set(['pilah','pilah_pilah','a2a','a2a_a2a','verifykit','verifykit_verifykit']);
 const normalized=M=>String(M??'').trim().replace(/^["']|["']$/g,'');
 function isA2ACall(tc){
  const name=normalized(tc?.name||tc?.toolName);
@@ -243,7 +243,7 @@ export function formatConversationReport(r){
   const num=x=>Number(x||0).toLocaleString('en-US');
   const official=r.official_usage,logs=r.historical_log_counters,last=r.latest_conversation;
   const lines=[
-    'A2A | Conversation Token Usage',
+    'PILAH | Conversation Token Usage',
     '-----------------------------------',
     'Conversations found: '+num(r.scans.conversations)+' (including chats from before A2A was installed).',
     '',
@@ -258,7 +258,7 @@ export function formatConversationReport(r){
     '- If cache reads are counted separately: '+num(logs.alternative_total_if_cache_separate)+' tokens.',
     '- Both figures are interpretations of local logs, not confirmed totals.',
     '- Workers included: '+(r.usage_accounting?.worker_conversations??0)+(r.usage_accounting?.overlapping_worker_accounting==='possible'?' (possible overlap; do not sum with parent)':' (excluded by default)'),
-    "- A2A-specific model tokens: unknown; CLI counts do not isolate the plugin's contribution.",
+    "- PILAH-specific model tokens: unknown; CLI counts do not isolate the plugin's contribution.",
     '',
   ];
   if(last){
@@ -270,7 +270,7 @@ export function formatConversationReport(r){
     }
     lines.push('');
   }
-  lines.push('A2A activity:');
+  lines.push('PILAH activity:');
   lines.push('- A2A tool calls found in these logs: '+num(r.a2a_calls_seen)+'.');
   lines.push('- Size of this report: about '+num(r.self_report.estimated_text_tokens)+' estimated text tokens ('+num(r.self_report.response_bytes)+' bytes).');
   lines.push('- This is the report\'s approximate size, not tokens already billed by Gemini.');
