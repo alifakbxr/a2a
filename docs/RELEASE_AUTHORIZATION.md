@@ -74,3 +74,7 @@ The latest merged **behavioral implementation** documented here is [PR #36](http
 ## 20 November 2026 correction
 
 The above PR #36/4-job CI paragraph is historical. Later signed-acceptance fixes in [PR #82](https://github.com/alifakbxr/a2a/pull/82) require `a2a-attestation-v2` (including each evidence `outcome`) and an Ed25519 reviewer approval over the canonical SHA-256 of the **complete unsigned release manifest** (including scenarios, verdicts and explicit `critical_defects`). Earlier signatures no longer grant publication. Final merged 9-job [CI](https://github.com/alifakbxr/a2a/actions/runs/44706443191) passed, but it does not supply a single independently executed F01–F18 receipt or reviewer approval. **Publishing, tagging and merging to main remain blocked under #15.**
+
+## 23 November 2026 status checkpoint
+
+The current merged `v2.0.1` implementation `9f4202903353a1260f24e1e3354c7cd05fda08a7` passed [post-merge CI 45165794296](https://github.com/alifakbxr/a2a/actions/runs/45165794296) (9/9 matrix). Changes in PRs #94–#98 are **engineering corrections and opt-in advisors**, not independently signed F01–F18 release acceptance, observed autonomous A2A model decisions or five repeated controlled provider-usage comparisons. The reviewer does not have the original user's Antigravity GUI environment or the required PHP DB/browser runtime for full adversarial STOCKROOM HTTP tests. Continue release **NO-GO**, and leave `main` frozen until all required external evidence, separate signer approval and explicit user authorization are present.
