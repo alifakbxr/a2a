@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/alifakbxr/a2a/actions/workflows/ci.yml/badge.svg?branch=v2.0.1)](https://github.com/alifakbxr/a2a/actions/workflows/ci.yml) · [npm package](https://www.npmjs.com/package/@aliip/a2a) · [MIT License](LICENSE)
 
-> **Release status (20 November 2026):** `v2.0.1` is a **CI-validated development branch**, not a published or externally accepted release. Security/provenance and MCP adoption diagnostics were improved in [PRs #81–#86 and #88](https://github.com/alifakbxr/a2a/pulls?q=is%3Apr+is%3Amerged+base%3Av2.0.1). The combined [9-job Node 22/24/26 OS matrix](https://github.com/alifakbxr/a2a/actions/runs/44706443191) passed. **The v2.0.1 candidate has not been promoted to `main`; real Antigravity agent-selection evidence and independent F01–F18/browser/DB acceptance remain outstanding**, tracked by [#71](https://github.com/alifakbxr/a2a/issues/71) and [#15](https://github.com/alifakbxr/a2a/issues/15).
+> **Release status (23 November 2026):** `v2.0.1` is a **CI-validated development branch**, not an independently accepted/published release. The current combined [9-job CI](https://github.com/alifakbxr/a2a/actions/runs/45165794296) passed across Ubuntu/macOS/Windows and Node 22/24/26.13.1. Improvements through [PR #98](https://github.com/alifakbxr/a2a/pull/98) include opt-in Context Guardian, native-first routing profiles, and accurate eager MCP intervention tracking. **The branch has not been promoted to `main`**, tagged or published. Live autonomous tool adoption [#71](https://github.com/alifakbxr/a2a/issues/71), full independently verified F01–F18 acceptance [#15](https://github.com/alifakbxr/a2a/issues/15), Guardian host overhead [#91](https://github.com/alifakbxr/a2a/issues/91), and matched routing benchmarks [#92](https://github.com/alifakbxr/a2a/issues/92) remain open. Unit/CI success is not external release authorization.
 
 ## What A2A does
 
@@ -166,8 +166,18 @@ The November audit's local implementation corrections (#50–#61) are integrated
 
 ### Optional context-health advisor (issue #91: initial safe phase)
 
-`node scripts/a2a.mjs context-health --conversation <id> [--milestone-complete]` reads **one explicitly selected local session on demand** and provides a bounded context/milestone advisory. There is no recurring model hook, global configuration edit, background task, automatic `/compact`, token-spend estimate or claimed savings. The user must independently confirm that edits/tests are complete before supplying `--milestone-complete`. 80/140 planner steps are **heuristics**, not provider context limits. An automatic Context Guardian remains experimental under #91.
+`node scripts/a2a.mjs context-health --conversation <id> [--milestone-complete]` reads **one explicitly selected local session on demand** and provides a bounded context/milestone advisory. This **on-demand command** has no recurring hook or background task; a separate, explicitly enabled Guardian can install one native `PreInvocation` hook (details below). Neither path performs automatic `/compact`, estimates billing or claims savings. The user must independently confirm that edits/tests are complete before supplying `--milestone-complete`. 80/140 planner steps are **heuristics**, not provider context limits. Automated advising is opt-in, while empirical per-turn overhead and live host benefit are still under evaluation in #91.
 
 ### One-shot, non-executing routing profiles (issue #92)
 
 Use `node scripts/a2a.mjs route --profile economy --task cross-file --risk high --uncertain` for **explicit** native-first advice. Options are `economy`, `balanced` (baseline), and `deep-review`. This does **not** change the model, choose Antigravity subscription tiers, call MCP tools, spawn agents, alter global settings, or prove token savings. A trivial task always chooses **native-only**, even under deep-review. A scoped uncertain task proposes **at most one** initial A2A call; suggestions remain subject to workspace trust and live model discretion. See [issue #92](https://github.com/alifakbxr/a2a/issues/92) for the matched Native/A2A host benchmark required to validate any benefit.
+
+### Context Guardian opt-in (never enabled by default)
+
+```sh
+node scripts/context-guardian.mjs status
+node scripts/context-guardian.mjs enable   # Explicitly enable one A2A-owned PreInvocation hook
+node scripts/context-guardian.mjs disable  # Remove only that hook
+```
+
+The installer edits `~/.gemini/config/hooks.json` **only** on explicit enable/disable; it preserves unrelated hooks and fails closed on malformed or conflicting configurations. Antigravity may require a restart to reload hooks. When enabled, A2A reads native invocation/step metadata (not transcript content) and occasionally injects **ephemeral, non-actioning milestone advice**. Thresholds 80/140 steps are UX heuristics, **not context capacity estimates**. Never compact in the middle of unfinished code/tests. Activating this hook adds a Node process at each model invocation; there are **no provider-token or latency savings measurements** yet. Keep it disabled if you do not need the guidance.
