@@ -10,7 +10,13 @@ const KEY='a2a-context-guardian';
 const SCRIPT=fileURLToPath(import.meta.url);
 const LIMITS=Object.freeze({yellow:80,red:140,yellowCooldown:35,redCooldown:25});
 const hookFile=()=>path.join(getHomeDir(),'.gemini','config','hooks.json');
-const command=()=>`node "${SCRIPT}" hook`;
+export function guardianHookCommand(pluginFile=SCRIPT){
+ if(typeof pluginFile!=='string'||pluginFile.length>4096||
+    [...pluginFile].some(char=>[34,36,96,37,33,10,13].includes(char.codePointAt(0))))
+  throw new Error('Unsafe plugin path for hook command');
+ return 'node "' + pluginFile + '" hook';
+}
+const command=()=>guardianHookCommand();
 const owned=()=>({PreInvocation:[{type:'command',command:command(),timeout:5}]});
 
 export function adviseInvocation(p){
