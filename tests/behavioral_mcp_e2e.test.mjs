@@ -55,10 +55,10 @@ test('real MCP stdio: deny untrusted, plan, reject false UI PASS, checkpoint/rec
  const io=start();
  try{
   const initialization=await io.request('initialize',{protocolVersion:'2025-03-26',capabilities:{}});
-  assert.equal(initialization.result.serverInfo.name,'a2a');
+  assert.equal(initialization.result.serverInfo.name,'pilah');
   const tools=await io.request('tools/list');
-  assert.deepEqual(tools.result.tools.map(x=>x.name),['a2a_context','a2a_impact','a2a_verify','a2a_evidence']);
-  const denied=await io.call('a2a_context',{workspace:io.work,action:'inspect'});
+  assert.deepEqual(tools.result.tools.map(x=>x.name),['pilah_context','pilah_impact','pilah_verify','pilah_evidence']);
+  const denied=await io.call('pilah_context',{workspace:io.work,action:'inspect'});
   assert.equal(denied.isError,true);
 
   const allowDir=path.join(io.home,'.config','a2a');
@@ -66,7 +66,7 @@ test('real MCP stdio: deny untrusted, plan, reject false UI PASS, checkpoint/rec
   fs.writeFileSync(path.join(allowDir,'allowed-workspaces.json'),JSON.stringify({
    version:1,allowed:[fs.realpathSync(io.work)]
   }));
-  const valid=await io.call('a2a_context',{workspace:io.work,action:'inspect'});
+  const valid=await io.call('pilah_context',{workspace:io.work,action:'inspect'});
   assert.equal(valid.isError,false);
   const revision=valid.body.revision;
   const acceptance={
@@ -77,7 +77,7 @@ test('real MCP stdio: deny untrusted, plan, reject false UI PASS, checkpoint/rec
    evidence_type:'browser',reference:'user-defined scan flow',
    viewport:'desktop-with-printer',ui_state:'second-checkin',negative:true
   };
-  const plan=await io.call('a2a_verify',{workspace:io.work,operation:'plan',criteria:[acceptance]});
+  const plan=await io.call('pilah_verify',{workspace:io.work,operation:'plan',criteria:[acceptance]});
   assert.equal(plan.isError,false);
   assert.equal(plan.body.completion.fully_verified,false);
   assert.equal(plan.body.completion.counts.not_tested,1);
@@ -86,7 +86,7 @@ test('real MCP stdio: deny untrusted, plan, reject false UI PASS, checkpoint/rec
   fs.writeFileSync(path.join(io.work,'reports','suite.json'),JSON.stringify({
    format:'a2a-test-report-v1',completed:true,cases:[{name:'build succeeded',state:'passed'}]
   }));
-  const assessed=await io.call('a2a_verify',{workspace:io.work,operation:'assess',
+  const assessed=await io.call('pilah_verify',{workspace:io.work,operation:'assess',
    criteria:[{...acceptance,artifact:'reports/suite.json',test_name:'build succeeded'}]});
   assert.equal(assessed.isError,false);
   assert.equal(assessed.body.completion.fully_verified,false);
@@ -95,7 +95,7 @@ test('real MCP stdio: deny untrusted, plan, reject false UI PASS, checkpoint/rec
   assert.equal(assessed.body.revision,revision);
 
   const conv='test-user-session-2026';
-  const checkpoint=await io.call('a2a_evidence',{workspace:io.work,operation:'save_checkpoint',
+  const checkpoint=await io.call('pilah_evidence',{workspace:io.work,operation:'save_checkpoint',
    conversation_id:conv,task_summary:'Fix duplicate print',
    completed:['Updated backend handler'],
    next_steps:['Run physical device test'],
@@ -103,28 +103,28 @@ test('real MCP stdio: deny untrusted, plan, reject false UI PASS, checkpoint/rec
    pending_tests:['Selfie only','Verification only']});
   assert.equal(checkpoint.isError,false);
   assert.equal(checkpoint.body.status,'saved');
-  const restore=await io.call('a2a_evidence',{workspace:io.work,operation:'model_recovery',conversation_id:conv});
+  const restore=await io.call('pilah_evidence',{workspace:io.work,operation:'model_recovery',conversation_id:conv});
   assert.equal(restore.body.checkpoint.source_revision_matches,true);
   assert.equal(restore.body.checkpoint.pending_tests.length,2);
   assert.equal(restore.body.checkpoint.verified,false);
-  const recovery=await io.call('a2a_evidence',{workspace:io.work,operation:'tool_recovery',
+  const recovery=await io.call('pilah_evidence',{workspace:io.work,operation:'tool_recovery',
    tool_family:'browser',retry_count:3,error_hint:'Execution context was destroyed, token=THIS_IS_PRIVATE'});
   assert.equal(recovery.isError,false);
   assert.equal(recovery.body.category,'context_lost');
   assert.equal(recovery.body.retry_same_input,false);
   assert.equal(JSON.stringify(recovery.body).includes('THIS_IS_PRIVATE'),false);
 
-  const bad=await io.call('a2a_evidence',{workspace:io.work,operation:'save_checkpoint',
+  const bad=await io.call('pilah_evidence',{workspace:io.work,operation:'save_checkpoint',
    conversation_id:conv,task_summary:'password=THIS_IS_PRIVATE'});
   assert.equal(bad.isError,true);
   assert.equal(JSON.stringify(bad.body).includes('THIS_IS_PRIVATE'),false);
 
   fs.writeFileSync(path.join(io.work,'src','checkin.js'),'export function shouldPrint(isRepeat){return true}');
-  const stale=await io.call('a2a_evidence',{workspace:io.work,operation:'model_recovery',conversation_id:conv});
+  const stale=await io.call('pilah_evidence',{workspace:io.work,operation:'model_recovery',conversation_id:conv});
   assert.equal(stale.isError,false);
   assert.equal(stale.body.checkpoint.source_freshness,'stale');
   assert.equal(stale.body.checkpoint.source_revision_matches,false);
-  const inputError=await io.call('a2a_verify',{workspace:io.work,operation:'plan',criteria:[{...acceptance,foo:'invalid'}]});
+  const inputError=await io.call('pilah_verify',{workspace:io.work,operation:'plan',criteria:[{...acceptance,foo:'invalid'}]});
   assert.equal(inputError.isError,true);
   assert.equal(inputError.body.code,'invalid_tool_arguments');
  }finally{await io.close()}
@@ -134,7 +134,7 @@ test('re-audit real MCP stdio: immutable acceptance coverage, permission precede
  const io=start();
  try{
   const initialized=await io.request('initialize',{protocolVersion:'2025-03-26',capabilities:{}});
-  assert.equal(initialized.result.serverInfo.name,'a2a');
+  assert.equal(initialized.result.serverInfo.name,'pilah');
   const allowDir=path.join(io.home,'.config','a2a');
   fs.mkdirSync(allowDir,{recursive:true});
   fs.writeFileSync(path.join(allowDir,'allowed-workspaces.json'),
@@ -146,7 +146,7 @@ test('re-audit real MCP stdio: immutable acceptance coverage, permission precede
     then:'Button visible at small viewport',evidence_type:'visual',
     viewport:'375x812',ui_state:'hover',reference:'Figma node'}
   ];
-  const plan=await io.call('a2a_verify',{workspace:io.work,operation:'plan',
+  const plan=await io.call('pilah_verify',{workspace:io.work,operation:'plan',
     persist_plan:true,criteria:scenarios});
   assert.equal(plan.isError,false);
   assert.equal(plan.body.scope_bound,true);
@@ -156,7 +156,7 @@ test('re-audit real MCP stdio: immutable acceptance coverage, permission precede
   const report='reports/suite.json';
   fs.writeFileSync(path.join(io.work,report),JSON.stringify({
     format:'a2a-test-report-v1',completed:true,cases:[{name:'named backend assertion',state:'passed'}]}));
-  const result=await io.call('a2a_verify',{workspace:io.work,operation:'assess',
+  const result=await io.call('pilah_verify',{workspace:io.work,operation:'assess',
     plan_id:plan.body.plan_id,
     criteria:[{id:'native-checkin',artifact:report,test_name:'named backend assertion'}]});
   assert.equal(result.isError,false);
@@ -165,11 +165,11 @@ test('re-audit real MCP stdio: immutable acceptance coverage, permission precede
   assert.equal(result.body.completion.counts.passed,1);
   assert.equal(result.body.completion.counts.not_tested,1);
   assert.equal(result.body.completion.fully_verified,false);
-  const denied=await io.call('a2a_verify',{workspace:io.work,operation:'assess',
+  const denied=await io.call('pilah_verify',{workspace:io.work,operation:'assess',
    plan_id:plan.body.plan_id,
    criteria:[{id:'native-checkin',evidence_type:'browser',artifact:report,test_name:'named backend assertion'}]});
   assert.equal(denied.isError,true);
-  const permission=await io.call('a2a_evidence',{workspace:io.work,operation:'tool_recovery',
+  const permission=await io.call('pilah_evidence',{workspace:io.work,operation:'tool_recovery',
     error_hint:'pageId 14 returned 403 Permission denied',tool_family:'browser',error_class:'invalid_arguments'});
   assert.equal(permission.isError,false);
   assert.equal(permission.body.category,'permission_denied');
@@ -188,12 +188,12 @@ test('re-audit real MCP stdio: immutable acceptance coverage, permission precede
   assert.deepEqual(observed.report_hashes,{});
 
   fs.writeFileSync(path.join(io.work,'src','checkin.js'),'export function shouldPrint(isRepeat){return true}');
-  const stale=await io.call('a2a_verify',{workspace:io.work,operation:'assess',
+  const stale=await io.call('pilah_verify',{workspace:io.work,operation:'assess',
     plan_id:plan.body.plan_id,criteria:[]});
   assert.equal(stale.isError,false);
   assert.equal(stale.body.completion.counts.stale,2);
   assert.equal(stale.body.completion.fully_verified,false);
-  const reissued=await io.call('a2a_verify',{workspace:io.work,operation:'plan',
+  const reissued=await io.call('pilah_verify',{workspace:io.work,operation:'plan',
     plan_id:plan.body.plan_id,persist_plan:true,criteria:[]});
   assert.equal(reissued.isError,false);
   assert.notEqual(reissued.body.plan_id,plan.body.plan_id);
@@ -207,7 +207,7 @@ test('adaptive RCA through real MCP stdio: consent, competing causes, strict evi
  const io=start();
  try{
   const init=await io.request('initialize',{protocolVersion:'2025-03-26',capabilities:{}});
-  assert.equal(init.result.serverInfo.name,'a2a');
+  assert.equal(init.result.serverInfo.name,'pilah');
   const tools=await io.request('tools/list');
   assert.equal(tools.result.tools.length,4);
   const folder=path.join(io.home,'.config','a2a');
@@ -215,7 +215,7 @@ test('adaptive RCA through real MCP stdio: consent, competing causes, strict evi
   fs.writeFileSync(path.join(folder,'allowed-workspaces.json'),JSON.stringify({
    version:1,allowed:[fs.realpathSync(io.work)]
   }));
-  const failedConsent=await io.call('a2a_evidence',{workspace:io.work,operation:'record_incident',
+  const failedConsent=await io.call('pilah_evidence',{workspace:io.work,operation:'record_incident',
    title:'Double-print observed after second QR scan'});
   assert.equal(failedConsent.isError,true);
   const report='reports/rca-synthetic.json';
@@ -227,11 +227,11 @@ test('adaptive RCA through real MCP stdio: consent, competing causes, strict evi
   const check={id:'qr-guard',given:'Guest has checked in',
    when:'Same QR code is scanned again',then:'Only the first scan causes printing',
    evidence_type:'integration',negative:true,artifact:report,test_name:'repeated QR print guard'};
-  const verification=await io.call('a2a_verify',{workspace:io.work,operation:'assess',criteria:[check]});
+  const verification=await io.call('pilah_verify',{workspace:io.work,operation:'assess',criteria:[check]});
   assert.equal(verification.isError,false);
   assert.equal(verification.body.criteria[0].status,'passed');
   const evidence=verification.body.criteria[0].evidence_id;
-  const inc=await io.call('a2a_evidence',{workspace:io.work,operation:'record_incident',
+  const inc=await io.call('pilah_evidence',{workspace:io.work,operation:'record_incident',
    title:'Second QR scan prints twice',root_cause:'Maybe frontend sends duplicate events',
    paths:['src/checkin.js'],persist_rca:true,evidence_ids:[evidence]});
   assert.equal(inc.isError,false);
@@ -244,33 +244,33 @@ test('adaptive RCA through real MCP stdio: consent, competing causes, strict evi
    predicted_observation:'The duplicate print stops when the UI event is disabled',
    disconfirming_test:'Observe two queue print events with the UI event disabled',
    expected_criterion_id:'qr-guard'};
-  const hypothesis=await io.call('a2a_evidence',hypArgs);
+  const hypothesis=await io.call('pilah_evidence',hypArgs);
   assert.equal(hypothesis.isError,false);
   assert.equal(hypothesis.body.status,'untested');
-  const alternative=await io.call('a2a_evidence',{...hypArgs,
+  const alternative=await io.call('pilah_evidence',{...hypArgs,
    parent_hypothesis_id:hypothesis.body.id,
    hypothesis:'Backend print queue retries an already completed check-in'});
   assert.equal(alternative.body.why_depth,2);
-  const unsupported=await io.call('a2a_evidence',{workspace:io.work,operation:'assess_hypothesis',
+  const unsupported=await io.call('pilah_evidence',{workspace:io.work,operation:'assess_hypothesis',
    hypothesis_id:hypothesis.body.id,persist_rca:true,experiment_outcome:'supports',
    observation:'Observed duplicate print with UI handler enabled',evidence_ids:[]});
   assert.equal(unsupported.isError,true);
-  const supported=await io.call('a2a_evidence',{workspace:io.work,operation:'assess_hypothesis',
+  const supported=await io.call('pilah_evidence',{workspace:io.work,operation:'assess_hypothesis',
    hypothesis_id:hypothesis.body.id,persist_rca:true,experiment_outcome:'supports',
    observation:'Named backend assertion was observed while toggling the handler',
    evidence_ids:[evidence]});
   assert.equal(supported.isError,false);
   assert.equal(supported.body.status,'locally_supported');
   assert.equal(supported.body.root_cause_verified,false);
-  const list=await io.call('a2a_evidence',{workspace:io.work,operation:'hypotheses',
+  const list=await io.call('pilah_evidence',{workspace:io.work,operation:'hypotheses',
    incident_id:inc.body.id});
   assert.equal(list.body.items.length,2);
   assert.ok(list.body.items.some(x=>x.status==='locally_supported'));
   fs.writeFileSync(path.join(io.work,'src','checkin.js'),'export function shouldPrint(isRepeat){return true}');
-  const stale=await io.call('a2a_evidence',{workspace:io.work,operation:'hypotheses',
+  const stale=await io.call('pilah_evidence',{workspace:io.work,operation:'hypotheses',
    incident_id:inc.body.id});
   assert.equal(stale.body.items.find(x=>x.id===hypothesis.body.id).status,'stale');
-  const wrong=await io.call('a2a_evidence',{workspace:io.work,operation:'assess_hypothesis',
+  const wrong=await io.call('pilah_evidence',{workspace:io.work,operation:'assess_hypothesis',
    hypothesis_id:hypothesis.body.id,persist_rca:true,experiment_outcome:'refutes',
    observation:'Old test no longer applies after changing source',evidence_ids:[evidence]});
   assert.equal(wrong.isError,true);
