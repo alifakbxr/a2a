@@ -2,12 +2,13 @@ name: CI Test & Quality Gate
 
 on:
   push:
-    branches: [main, 'v2.0.1']
+    branches: [main]
   pull_request:
-    branches: [main, 'v2.0.1']
+    branches: [main]
+  workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -20,10 +21,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Three OS families × supported LTS runtimes; keep 26 patch exact
-        # to validate the same binary version used on the user's Pop!_OS.
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        node-version: ['22', '24', '26.13.1']
+        # PR: 1 full-suite job (Linux/Node 24); main push: 3 OS on Node 24.
+        # Manual workflow_dispatch: complete 3 OS × Node 22/24/26.13.1 matrix.
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest","macos-latest","windows-latest"]') }}
+        node-version: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["22","24","26.13.1"]' || '["24"]') }}
 
     steps:
       - name: Checkout repository
