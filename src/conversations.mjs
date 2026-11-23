@@ -17,9 +17,11 @@ export function localBrainRoots(){
 const A2A_TOOL_NAMES=new Set(['a2a_context','a2a_impact','a2a_verify','a2a_evidence',
   'verifykit_context','verifykit_impact','verifykit_verify','verifykit_evidence']);
 const A2A_SERVERS=new Set(['a2a','a2a_a2a','verifykit','verifykit_verifykit']);
+const normalized=M=>String(M??'').trim().replace(/^["']|["']$/g,'');
 function isA2ACall(tc){
- const name=String(tc?.name||tc?.toolName||'');
- if(A2A_TOOL_NAMES.has(name))return true;
+ const name=normalized(tc?.name||tc?.toolName);
+ const explicitServer=normalized(tc?.args?.ServerName??tc?.args?.server_name??tc?.serverName??tc?.server_name);
+ if(A2A_TOOL_NAMES.has(name))return !explicitServer||A2A_SERVERS.has(explicitServer);
  for(const server of A2A_SERVERS){
    for(const tool of A2A_TOOL_NAMES){
      if(name===`mcp_${server}_${tool}`||name===`mcp__${server}__${tool}`||
@@ -27,8 +29,8 @@ function isA2ACall(tc){
    }
  }
  if(name==='call_mcp_tool'){
-   const server=String(tc?.args?.ServerName??tc?.args?.server_name??'');
-   const tool=String(tc?.args?.ToolName??tc?.args?.tool_name??'');
+   const server=normalized(tc?.args?.ServerName??tc?.args?.server_name);
+   const tool=normalized(tc?.args?.ToolName??tc?.args?.tool_name);
    return A2A_SERVERS.has(server)&&A2A_TOOL_NAMES.has(tool);
  }
  // This counter measures actual A2A MCP use, not a CLI diagnostics call.
