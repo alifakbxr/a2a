@@ -10,17 +10,18 @@ export function routeWorkflow({profile='balanced',task='simple',risk='low',uncer
    requires_user_approval:false,model_switch:false,estimated_token_savings:null,provider_usage:null,
    selection_basis:'Caller-declared task, risk and uncertainty; not independently verified or an instruction to auto-call MCP.'};
  let operation=null,reason='Native context is sufficient or this task does not require A2A.';
- if(uncertainty){
-   if(task==='cross-file'||!scopeKnown){operation='a2a_context';reason='Targeted code graph query may reduce uncertainty across files.';}
-   else if(task==='change-impact'){operation='a2a_impact';reason='Scoped change impact may expose dependent files and tests.';}
- } else if(task==='change-impact'&&risk!=='low'&&profile!=='economy'){
-   operation='a2a_impact';reason='A risk-aware impact summary is potentially useful for the scoped change.';
+ if(task!=='simple'&&uncertainty&&(task==='cross-file'||!scopeKnown)){
+   operation='a2a_context';reason='Targeted code graph query may reduce uncertainty across files.';
+ } else if(task==='change-impact'&&(uncertainty||(risk!=='low'&&profile!=='economy'))){
+   operation='a2a_impact';reason=uncertainty
+     ?'Scoped change impact may expose dependent files and tests.'
+     :'A risk-aware impact summary is potentially useful for the scoped change.';
  } else if(task==='verification'&&['high','critical'].includes(risk)&&profile==='deep-review'){
    operation='a2a_verify';reason='A high-risk acceptance plan is warranted; no local test is counted as release proof.';
  } else if(task==='recovery'&&['high','critical'].includes(risk)&&profile==='deep-review'){
    operation='a2a_evidence';reason='Opt-in model recovery may be helpful after a verified failure; no automatic retries.';
  }
- if(task==='simple')operation=null;
+ if(task==='simple'){operation=null;reason='Simple tasks remain native-only regardless of declared uncertainty.';}
  if(operation&&(!scopeKnown||task==='cross-file')&&operation!=='a2a_context'){
    operation='a2a_context';reason='Determine the scope before considering other A2A operations.';
  }
