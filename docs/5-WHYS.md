@@ -1,3 +1,5 @@
+> **Historical research record:** Terminology has been standardized to PILAH. Dates, CI results and observed limitations refer to the source revision investigated at that time, not necessarily the current plugin.
+
 # 5 Whys Findings → Implementation Matrix
 
 5 Whys are *causal hypotheses* until reproduced. Five is a questioning device, not proof of a single underlying cause.
