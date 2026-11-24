@@ -4,8 +4,8 @@ PILAH is language-agnostic in its **file, evidence, and MCP contracts**. Static 
 
 | Stack | Manifest recognition | File-level code relationships | Existing test runner candidates | Limitations |
 | --- | --- | --- | --- | --- |
-| Node/JS/TS/Vue | package.json | local import (`.ts`/`.mts`/`.cts` & `.js`->`.ts`) and symbols | npm scripts | path aliases and dynamic imports may be missed |
-| PHP | composer.json | simple symbols, relative includes | PHPUnit / Pest candidates | framework route reflection not resolved |
+| Node/JS/TS/Vue | package.json | local imports, explicitly configured TypeScript/Vue aliases and symbols | npm scripts | runtime aliases and dynamic imports remain unproven; only indexed, statically declared targets resolve |
+| PHP | composer.json | simple symbols, relative includes and declared Composer PSR-4 `use` mappings | PHPUnit / Pest candidates | dynamic container, framework routes and facades not resolved |
 | Python | pyproject.toml / requirements | simple symbols and relative Python imports | pytest candidates | import packages and decorators incomplete |
 | Go | go.mod | files, `func`, `type struct/interface` symbols | go test | Go package graph not parsed fully |
 | Rust | Cargo.toml | files and basic symbols | cargo test | modules/macros not fully resolved |
