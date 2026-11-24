@@ -15,8 +15,8 @@ try{
   if(!Number.isSafeInteger(count)||count<1||count>1000)throw new Error('BENCH_FILES must be an integer from 1 to 1000');
   for(let i=0;i<count;i++){const from=i>0?`import {m${i-1}} from './m${i-1}.js';\n`:'';fs.writeFileSync(path.join(work,'src',`m${i}.js`),from+`export function m${i}(){return ${i}}\n`)}
   authorizeWorkspace(work);const e=new Engine();
-  const a=performance.now(),inspection=e.context({workspace:work}),b=performance.now(),impact=e.impact({workspace:work,changed:['src/m0.js']}),c=performance.now();
-  e.close();console.log(JSON.stringify({benchmark:'local-deterministic-graph',system:process.platform,node:process.versions.node,files:inspection.coverage.files,index_ms:+(b-a).toFixed(2),impact_ms:+(c-b).toFixed(2),affected:impact.affected.length,notes:'This is not an AI benchmark, model-quality comparison, or full user-task speedup.'},null,2));
+  const a=performance.now(),inspection=e.context({workspace:work}),b=performance.now(),warm=e.context({workspace:work}),bWarm=performance.now(),impact=e.impact({workspace:work,changed:['src/m0.js']}),c=performance.now();
+  e.close();console.log(JSON.stringify({benchmark:'local-deterministic-graph',system:process.platform,node:process.versions.node,files:inspection.coverage.files,index_ms:+(b-a).toFixed(2),warm_index_ms:+(bWarm-b).toFixed(2),impact_ms:+(c-bWarm).toFixed(2),cold_scan:inspection.index_scan_stats,warm_scan:warm.index_scan_stats,affected:impact.affected.length,notes:'This is measured local file-scan latency/I-O only, not an AI benchmark, model-quality comparison or token savings.'},null,2));
 } finally {
   for(const [k,v] of Object.entries(old))if(v===undefined)delete process.env[k];else process.env[k]=v;
   fs.rmSync(base,{recursive:true,force:true});
