@@ -42,7 +42,7 @@ jobs:
             echo "A2A_RELEASE_EVIDENCE_B64 not configured, skipping external gate"
           fi
 
-      - name: Configure package name for GitHub Packages
+      - name: Configure package name for @alifakbxr/pilah
         run: |
           node -e "
             const fs = require('fs');
@@ -52,7 +52,23 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
 
-      - name: Publish to GitHub Packages
+      - name: Publish @alifakbxr/pilah to GitHub Packages
+        run: npm publish || echo "pilah version already published or unchanged"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure package name and version for @alifakbxr/a2a
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.name = '@alifakbxr/a2a';
+            pkg.version = '2.1.0';
+            pkg.publishConfig = { registry: 'https://npm.pkg.github.com' };
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Publish @alifakbxr/a2a (v2.1.0) to GitHub Packages
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
