@@ -17,7 +17,7 @@ PILAH helps coding agents find relevant cross-file context, reason about change 
 | `pilah_verify` | Risk-aware acceptance planning and named test-evidence assessment | Run or independently certify actual tests |
 | `pilah_evidence` | Source-bound incidents, optional checkpoints and recovery guidance | Replay unknown tools or grant new permissions |
 
-Only `pilah_context` is eager by default; the other tools remain lazy. **A clear task should trigger zero PILAH calls.** One precise call is preferable to an automatic chain. For difficult bugs: reproduce → test a hypothesis → make the smallest complete fix → run relevant tests → report what remains unverified. See the [PILAH skill](skills/pilah/SKILL.md) and [engineering method](docs/ENGINEERING_METHOD.md).
+The scanner resolves basic local Python imports, configured Composer PSR-4 PHP class imports, and explicit JS/TS path aliases only when exact target files exist. Runtime framework dispatch remains unknown. Only `pilah_context` is eager by default; the other tools remain lazy. **A clear task should trigger zero PILAH calls.** One precise call is preferable to an automatic chain. For difficult bugs: reproduce → test a hypothesis → make the smallest complete fix → run relevant tests → report what remains unverified. See the [PILAH skill](skills/pilah/SKILL.md) and [engineering method](docs/ENGINEERING_METHOD.md).
 
 ## Requirements and source setup
 
@@ -34,12 +34,13 @@ node --version
 npm run check
 node scripts/check-release.mjs
 node scripts/pilah.mjs doctor
+node scripts/pilah.mjs doctor --public  # Redacted diagnostics for issue reports
 node scripts/pilah.mjs host-check  # requires agy; may report blocked
 ```
 
 The optional `host-check` command only validates the CLI's plugin manifest and whether PILAH appears in plugin listings. It cannot certify tool selection, browser workflows or independent E2E behavior. Missing `agy` is reported as blocked, not passed.
 
-Install/register this **source checkout** using the native plugin manager supported by your Antigravity version. If the `agy` CLI is available, validate it with `agy plugin validate --strict .` and inspect `agy plugin list`. These are **steps for your machine**, not claims of a completed live installation test. The bundle includes `plugin.json`, `mcp_config.json`, `hooks.json`, `rules/AGENTS.md` and `skills/pilah/SKILL.md`.
+Install/register this **source checkout** using the native plugin manager supported by your Antigravity version. If the `agy` CLI is available, validate it with `agy plugin validate --strict .` and inspect `agy plugin list`. These are **steps for your machine**, not claims of a completed live installation test. For real host acceptance criteria, see [the host-validation runbook](docs/HOST_VALIDATION.md). The bundle includes `plugin.json`, `mcp_config.json`, `hooks.json`, `rules/AGENTS.md` and `skills/pilah/SKILL.md`.
 
 Do not rely on the unpublished `@aliip/pilah` package identifier as an installation command. Avoid registering duplicate plugin instances unless explicitly intended.
 
