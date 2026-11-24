@@ -38,5 +38,5 @@ test('imports historical benchmark variants without advertising the previous ide
  assert.equal(output.schema,'pilah-ab-evaluation-v1');
  assert.ok(output.variants['pilah-on-demand']);
  assert.equal(output.variants['a2a-on-demand'],undefined);
- assert.throws(()=>evaluateManifest({...old,runs:[...old.runs,{...old.runs[1],variant:'pilah-on-demand',capture:'duplicate'}]},()=>JSON.stringify(final)),/Duplicate variant/);
+ assert.throws(()=>evaluateManifest({...old,runs:[...old.runs,{...old.runs[1],variant:'pilah-on-demand',capture:'duplicate'}]},name=>JSON.stringify({...final,num_turns:name==='native'?1:name==='pilah'?2:3})),/Duplicate variant/);
 });
