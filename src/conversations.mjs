@@ -207,12 +207,13 @@ export function scanConversationHistory({brainRoots=localBrainRoots(),dataDirPat
     overlapping_worker_accounting:subagentSessions.length?'possible':'excluded-from-aggregate',
     safe_to_combine_worker_and_parent_totals:subagentSessions.length===0,
     missing_or_partial_records:skipped+partial,
-    a2a_calls_detected:sessions.reduce((n,r)=>n+r.totals.a2a,0),
+    pilah_calls_detected:sessions.reduce((n,r)=>n+r.totals.a2a,0),
+    a2a_calls_detected:sessions.reduce((n,r)=>n+r.totals.a2a,0), // compatibility
     a2a_attributable_model_tokens:null,
     current_in_progress_step_tokens:null,
     weekly_quota_consumption:null,
     measured_token_savings:null,
-    note:'Tool-call frequency is observable; model tokens caused by A2A are not independently attributable. Free Tier quota is not a fixed token budget.'
+    note:'Tool-call frequency is observable; model tokens caused by PILAH are not independently attributable. Free Tier quota is not a fixed token budget.'
   };
   const last=sessions[0]||null;
   return {
@@ -231,7 +232,8 @@ export function scanConversationHistory({brainRoots=localBrainRoots(),dataDirPat
       note:'These are counters found in older local logs. Cache accounting is undocumented; neither interpretation is a confirmed usage total or bill.'},
     latest_conversation:last?view(last):null,
     recent_conversations:sessions.slice(0,Math.min(30,Math.max(1,limit))).map(view),
-    a2a_calls_seen:sessions.reduce((n,r)=>n+r.totals.a2a,0),
+    pilah_calls_seen:sessions.reduce((n,r)=>n+r.totals.a2a,0),
+    a2a_calls_seen:sessions.reduce((n,r)=>n+r.totals.a2a,0), // compatibility
     conversations_without_counts:noCounts,
     usage_accounting:usageAccounting,
     self_report:{current_invocation:1,response_bytes:null,estimated_text_tokens:null,
@@ -245,7 +247,7 @@ export function formatConversationReport(r){
   const lines=[
     'PILAH | Conversation Token Usage',
     '-----------------------------------',
-    'Conversations found: '+num(r.scans.conversations)+' (including chats from before A2A was installed).',
+    'Conversations found: '+num(r.scans.conversations)+' (including chats from before PILAH was installed).',
     '',
     'Confirmed by Antigravity:',
     official.conversations

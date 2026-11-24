@@ -16,6 +16,14 @@ Pull requests are the only automated test entry for feature branches; there is n
 
 **Manual full-matrix run:** GitHub repository → Actions → *CI Test & Quality Gate* → *Run workflow*, selecting the intended ref. Run before release or after platform/runtime compatibility changes. Passing the smaller routine matrix is not a substitute for this check.
 
+## Measurable indexing and model usage
+
+Run `node benchmarks/bench.mjs` to measure local source indexing and impact time on a synthetic project. It now records cold/warm scan operations and bytes read, not an inferred savings figure. `pilah_context(action="inspect")` reports `index_scan_stats` only on inspection; routine symbol queries do not pay for that extra output.
+
+Use `node scripts/pilah.mjs tokens --usage-file <official-usage.json> --json` for one authentic model run. Optional cache-read, cache-write, cache-creation, and cache-miss metrics are reported **only** when present in official usage. The existence of a cache counter cannot prove a discount or a task completed.
+
+For meaningful quality comparisons, pin an evaluator-owned acceptance suite and use `node benchmarks/ab-evaluate.mjs <manifest.json>`. The evaluator intentionally leaves `comparability.ready=false` without independent acceptance evidence and does not infer model-token savings from compact context alone.
+
 ## Evaluate efficiency without overengineering
 
 | Suggestion | Decision | Reason |

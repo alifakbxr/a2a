@@ -40,3 +40,14 @@ test('imports historical benchmark variants without advertising the previous ide
  assert.equal(output.variants['a2a-on-demand'],undefined);
  assert.throws(()=>evaluateManifest({...old,runs:[...old.runs,{...old.runs[1],variant:'pilah-on-demand',capture:'duplicate'}]},name=>JSON.stringify({...final,num_turns:name==='native'?1:name==='pilah'?2:3})),/Duplicate variant/);
 });
+
+test('A/B capture reports cache fields only when the provider reports them',()=>{
+ const r=parseCapture(JSON.stringify({...final,usage:{...final.usage,cache_write_tokens:12,cache_miss_tokens:8}}));
+ assert.equal(r.usage.cache_write_tokens,12);
+ assert.equal(r.usage.cache_miss_tokens,8);
+ assert.equal(r.usage.total_tokens,100);
+ const absent=parseCapture(JSON.stringify(final));
+ assert.equal(absent.usage.cache_write_tokens,null);
+ assert.equal(absent.usage.cache_miss_tokens,null);
+ assert.throws(()=>parseCapture(JSON.stringify({...final,usage:{...final.usage,cache_miss_tokens:-1}})),/Invalid official usage/);
+});

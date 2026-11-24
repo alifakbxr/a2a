@@ -36,7 +36,7 @@ export class Engine {
       const graph=createGraph(index);
       this.store.persistIndex(wsId,revision,index.files.map(({text,...rest})=>rest),graph.nodes,graph.edges);
     }
-    return {root,wsId,revision,index,git,snapshot,skipped:index.skipped,source_integrity_complete:index.integrityComplete!==false};
+    return {root,wsId,revision,index,git,snapshot,skipped:index.skipped,scan_stats:index.scan_stats,source_integrity_complete:index.integrityComplete!==false};
   }
   resolveMeta(workspace){
     const root=requireAuthorizedWorkspace(workspace),wsId=this.store.register(root);
@@ -117,7 +117,7 @@ export class Engine {
         },
         ...(compact?{compact:true}:{}),
       };
-      this.store.recordTelemetry(s.wsId,{toolName:'a2a_context',action:'skeleton',rawScopeTokens:totalRaw,responseTokens:estimateTokens(JSON.stringify(payload))});
+      this.store.recordTelemetry(s.wsId,{toolName:'pilah_context',action:'skeleton',rawScopeTokens:totalRaw,responseTokens:estimateTokens(JSON.stringify(payload))});
       return payload;
     }
 
@@ -152,7 +152,7 @@ export class Engine {
       const matchedFiles=new Set(qRes.nodes.map(n=>n.file).filter(Boolean));
       let rawBytes=0;
       for(const fp of matchedFiles) rawBytes+=fileBytes.get(fp)||0;
-      this.store.recordTelemetry(s.wsId,{toolName:'a2a_context',action:'query',rawScopeTokens:estimateTokens(rawBytes),responseTokens:estimateTokens(JSON.stringify(payload))});
+      this.store.recordTelemetry(s.wsId,{toolName:'pilah_context',action:'query',rawScopeTokens:estimateTokens(rawBytes),responseTokens:estimateTokens(JSON.stringify(payload))});
       return payload;
     }
     if(action==='freshness'){
@@ -163,6 +163,7 @@ export class Engine {
       const cmdInfo=discoverTestCommands(s.index,s.root);
       return {
         ...base,
+        index_scan_stats:s.scan_stats,
         ecosystems:cmdInfo.suggestions.map(x=>x.ecosystem),
         test_candidates:cmdInfo.testFiles.slice(0,25),
         limitations:compact?['Static heuristic analysis']:['Language analysis is heuristic and static; relationships may be incomplete.'],
@@ -192,7 +193,7 @@ export class Engine {
           status:'not_available',
           source:null,
           usage:null,
-          reason:'No provider-reported Antigravity CLI usage supplied. Use a2a tokens --usage-file <official agy JSON output>.',
+          reason:'No provider-reported Antigravity CLI usage supplied. Use pilah tokens --usage-file <official agy JSON output>.',
         },
         ...(compact?{compact:true}:{}),
       };
@@ -258,7 +259,7 @@ export class Engine {
       }:{}),
       ...(compact?{compact:true}:{}),
     };
-    this.store.recordTelemetry(s.wsId,{toolName:'a2a_impact',action:'impact',rawScopeTokens:estimateTokens(rawScopeBytes),responseTokens:estimateTokens(JSON.stringify(payload))});
+    this.store.recordTelemetry(s.wsId,{toolName:'pilah_impact',action:'impact',rawScopeTokens:estimateTokens(rawScopeBytes),responseTokens:estimateTokens(JSON.stringify(payload))});
     return payload;
   }
   verify({workspace,operation='plan',criteria=[],changed=[],worker_name,artifact,allow_stale,persist_plan=false,plan_id=null}={}){

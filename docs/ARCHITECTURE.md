@@ -6,7 +6,7 @@ PILAH is a **local-first, native-first engineering support layer** for Google An
 
 - **Plugin:** `plugin.json`, `mcp_config.json`, `hooks.json`, `rules/AGENTS.md`, `skills/pilah/SKILL.md`.
 - **Four public MCP tools:** `pilah_context`, `pilah_impact`, `pilah_verify`, `pilah_evidence`. They use JSON-RPC 2.0 over stdio and require an authorized absolute workspace. `pilah_context` is the only eager tool; others are lazy.
-- **Compatibility:** callable `PILAH_*` and `verifykit_*` tool aliases, `scripts/pilah.mjs`, `PILAH_*` environment variables, and preexisting local storage paths remain supported; the default tool listing exposes only PILAH.
+- **Compatibility:** public calls use `pilah_*`, and the preferred source CLI is `scripts/pilah.mjs`. Earlier internal tool aliases, configuration keys and database paths remain recognized without exposing retired names in public guides. Inspect source before changing persisted identifiers.
 - **Runtime:** Node.js >=22.13.0 with built-in SQLite, no third-party npm runtime dependency, no automatic network service and no arbitrary project-command MCP tool.
 
 ## Components
@@ -14,9 +14,9 @@ PILAH is a **local-first, native-first engineering support layer** for Google An
 | Component | Function | Known boundary |
 | --- | --- | --- |
 | [Security](../src/security.mjs) | Workspace trust/revocation, protected paths, settings and bounded file reads | No authorization from untrusted tool arguments |
-| [Scanner](../src/scanner.mjs) and [graph](../src/graph.mjs) | Static symbol/import index and reverse-impact candidates | Not a compiler, full LSP or complete cross-language dependency graph |
+| [Scanner](../src/scanner.mjs) and [graph](../src/graph.mjs) | Static symbols, observed directional imports and explicitly heuristic test candidates | Not a compiler, full LSP or complete cross-language dependency graph |
 | [Engine](../src/engine.mjs) and [MCP server](../src/mcp.mjs) | Four bounded public operations, JSON-RPC errors, read-first calls | Cannot edit code or control Antigravity |
-| [Storage](../src/storage.mjs) | Local SQLite index, revision metadata, opt-in checkpoints and incident evidence | Explicitly saved notes may include private user-supplied content |
+| [Storage](../src/storage.mjs) | Local SQLite index, revision metadata, opt-in checkpoints, incident evidence and consent-gated workspace purge | Explicitly saved notes may include private user-supplied content |
 | [Verification](../src/verification.mjs) | Given/When/Then scope, machine-report assessment | Local tests do not independently certify visual, security, hardware or production outcomes |
 | [Token diagnostics](../src/tokens.mjs) | Local provenance, size estimates and eligible session usage | Does not prove model token savings or billing |
 | [RCA](../src/rca.mjs) | Bounded hypothesis and falsification notes | Local evidence is not independent causal proof |

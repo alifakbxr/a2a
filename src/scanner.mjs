@@ -61,7 +61,7 @@ function fingerprintOversizedSource(full,size){
 }
 
 export function discover(root,{limit=MAX_INDEX_FILES,cachedFiles=null}={}){
-  const paths=[],skip=[],skippedHashes=[],stack=[''];let scanned=0,totalBytes=0,integrityComplete=true;const now=Date.now();
+  const paths=[],skip=[],skippedHashes=[],stack=[''];let scanned=0,totalBytes=0,integrityComplete=true,readFiles=0,readBytes=0,reusedFiles=0,oversizedHashedBytes=0;const now=Date.now();
   while(stack.length){const dir=stack.pop();let entries;try{entries=fs.readdirSync(path.join(root,dir),{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))}catch{continue}
     for(const ent of entries){const rel=(dir?dir+'/':'')+ent.name;
       if(shouldIgnore(rel)||ent.isSymbolicLink())continue;
@@ -71,23 +71,23 @@ export function discover(root,{limit=MAX_INDEX_FILES,cachedFiles=null}={}){
       try{const full=safeFile(root,rel);const st=fs.statSync(full);if(st.size>MAX_SOURCE_BYTES){
           skip.push('large:'+rel);
           const digest=fingerprintOversizedSource(full,st.size);
-          if(digest)skippedHashes.push(rel+':'+digest);else integrityComplete=false;
+          if(digest){skippedHashes.push(rel+':'+digest);oversizedHashedBytes+=st.size;}else integrityComplete=false;
           continue;
         }
         if(totalBytes+st.size>32*1024*1024){skip.push('index_byte_budget_exceeded');integrityComplete=false;stack.length=0;break}
         const cached=cachedFiles?.get(rel);
         if(cached && ent.name!=='package.json' && !/(^|\/)(?:reports?|test-results)\/[^/]+\.json$/i.test(rel) && cached.mtime_ms!=null && cached.mtime_ms===st.mtimeMs && cached.bytes===st.size && (now-st.mtimeMs)>1500){
-          totalBytes+=st.size;
+          totalBytes+=st.size;reusedFiles++;
           paths.push({path:rel,hash:cached.hash,language:cached.language||detectLanguage(rel),bytes:st.size,mtime_ms:st.mtimeMs,text:null});
           continue;
         }
-        const buf=fs.readFileSync(full);totalBytes+=st.size;if(buf.includes(0)){skip.push('binary:'+rel);skippedHashes.push(rel+':'+sha256(buf));continue}
+        const buf=fs.readFileSync(full);readFiles++;readBytes+=buf.length;totalBytes+=st.size;if(buf.includes(0)){skip.push('binary:'+rel);skippedHashes.push(rel+':'+sha256(buf));continue}
         if(isGeneratedA2AReport(rel,buf))continue;
         paths.push({path:rel,hash:sha256(buf),language:detectLanguage(rel),bytes:st.size,mtime_ms:st.mtimeMs,text:buf.toString('utf8')});
       }catch{skip.push('unreadable:'+rel);integrityComplete=false}
     }
   }
-  paths.sort((a,b)=>a.path.localeCompare(b.path));return {files:paths,skipped:skip,skippedHashes,integrityComplete};
+  paths.sort((a,b)=>a.path.localeCompare(b.path));return {files:paths,skipped:skip,skippedHashes,integrityComplete,scan_stats:{read_files:readFiles,read_bytes:readBytes,reused_files:reusedFiles,oversized_hashed_bytes:oversizedHashedBytes,scanned_candidates:scanned}};
 }
 function buildLineStarts(text){
   const starts=[0];
@@ -139,11 +139,22 @@ function importsFrom(text,language,ext=''){
   for(const re of patterns){let m;re.lastIndex=0;while((m=re.exec(cleaned))!==null && matches.length<120)matches.push(m[1]);}
   if(language==='python'){
     const re=/^\s*from\s+(\.*[A-Za-z_][\w.]*)\s+import\s+/gm;let m;while((m=re.exec(cleaned))!==null)matches.push(m[1]);
+    const direct=/^\s*import\s+([A-Za-z_][\w.]*)/gm;while((m=direct.exec(cleaned))!==null)matches.push(m[1]);
   }
   return [...new Set(matches)];
 }
-function resolveImport(rel,imp,known){
-  if(imp.startsWith('res://'))imp=imp.slice(6);
+function resolveImport(rel,imp,known,language){
+  if(language==='python'){
+    const dots=imp.match(/^\.+/);
+    if(dots){
+      let dir=path.posix.dirname(rel);
+      for(let n=1;n<dots[0].length;n++)dir=path.posix.dirname(dir);
+      const member=imp.slice(dots[0].length).replaceAll('.','/');
+      imp=path.posix.normalize(path.posix.join(dir,member));
+    }else imp=imp.replaceAll('.','/');
+    if(!imp||imp==='.'||imp.startsWith('..')||imp.startsWith('/'))return null;
+  }
+  else if(imp.startsWith('res://'))imp=imp.slice(6);
   else if(imp.startsWith('.'))imp=path.posix.normalize(path.posix.join(path.posix.dirname(rel),imp));
   else return null;
   if(imp.startsWith('..')||imp.startsWith('/')||imp==='.')return null;
@@ -153,6 +164,11 @@ function resolveImport(rel,imp,known){
     else if(imp.endsWith('.jsx'))candidates.push(imp.slice(0,-4)+'.tsx');
     else if(imp.endsWith('.mjs'))candidates.push(imp.slice(0,-4)+'.mts');
     else if(imp.endsWith('.cjs'))candidates.push(imp.slice(0,-4)+'.cts');
+  }
+  // Python src-layout packages (e.g. src/pkg/mod.py) are resolved only
+  // when the exact indexed file exists; never synthesize external dependencies.
+  if(language==='python' && !imp.startsWith('src/')){
+    candidates.push('src/'+imp+'.py','src/'+imp+'/__init__.py');
   }
   candidates.push(
     ...['.ts','.tsx','.mts','.cts','.js','.jsx','.mjs','.cjs','.py','.php','.gd','.json','.vue','.svelte','.h','.hpp','.rs'].map(s=>imp+s),
@@ -176,7 +192,7 @@ export function createGraph(index){
     }
     const ext=path.extname(f.path);
     for(const sym of extractSymbols(f.text,ext)){const sid='symbol:'+f.path+':'+sym.name+':'+sym.line;nodes.push({id:sid,kind:'symbol',label:sym.name,path:f.path,line:sym.line,basis:'source'});addEdge(fid,sid,'DECLARES','source','observed',f.path)}
-    for(const imp of importsFrom(f.text,f.language,ext)){const target=resolveImport(f.path,imp,known);if(target)addEdge(fid,'file:'+target,'IMPORTS','static-import','observed',f.path)}
+    for(const imp of importsFrom(f.text,f.language,ext)){const target=resolveImport(f.path,imp,known,f.language);if(target)addEdge(fid,'file:'+target,'IMPORTS','static-import','observed',f.path)}
   }
   for(const f of files){
     if(!isTestFile(f.path))continue;
