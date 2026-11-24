@@ -47,7 +47,9 @@ export function saveRecoveryCheckpoint(store,wsId,{conversationId,revision,taskS
   store.run('INSERT INTO recovery_checkpoints(workspace_id,conversation_id,revision_id,task_summary,completed_json,next_steps_json,decisions_json,pending_tests_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(workspace_id,conversation_id) DO UPDATE SET revision_id=excluded.revision_id,task_summary=excluded.task_summary,completed_json=excluded.completed_json,next_steps_json=excluded.next_steps_json,decisions_json=excluded.decisions_json,pending_tests_json=excluded.pending_tests_json,updated_at=excluded.updated_at',
     wsId,conversationId,revision||null,taskSummary.trim(),JSON.stringify(completed),JSON.stringify(nextSteps),JSON.stringify(decisions),JSON.stringify(pendingTests),now,now);
   store.run('DELETE FROM recovery_checkpoints WHERE workspace_id=? AND conversation_id NOT IN (SELECT conversation_id FROM recovery_checkpoints WHERE workspace_id=? ORDER BY updated_at DESC LIMIT 30)',wsId,wsId);
-  return {status:'saved',conversation_id:conversationId,revision:revision||null,verified:false,content_origin:'explicit_notes',updated_at:now};
+  return {status:'saved',task_outcome:pendingTests.length||nextSteps.length?'partial':'unknown',
+    conversation_id:conversationId,revision:revision||null,verified:false,
+    content_origin:'explicit_notes',updated_at:now};
 }
 export function recordModelStop(store,wsId,{conversationId,modelName,error,terminationReason}){
   if(!validConversationId(conversationId)||terminationReason!=='error')return {recorded:false};
@@ -96,6 +98,8 @@ export function recoveryStatus(store,wsId,{conversationId=null,currentRevision=n
     decisions:JSON.parse(row.decisions_json||'[]'),pending_tests:JSON.parse(row.pending_tests_json||'[]'),
     source_revision:row.revision_id,source_revision_matches:typeof currentRevision==='string'?row.revision_id===currentRevision:null,
     source_freshness:typeof currentRevision!=='string'?'unknown':row.revision_id===currentRevision?'current':'stale',
+    task_outcome:typeof currentRevision==='string'&&row.revision_id!==currentRevision?'stale':
+      (JSON.parse(row.pending_tests_json||'[]').length||JSON.parse(row.next_steps_json||'[]').length?'partial':'unknown'),
     updated_at:row.updated_at,verified:false,
     warning:'Explicit notes are not proof of completion. Recheck code, permissions and tests.'}:null;
   return {status:'assisted_only',automatic_switch:false,

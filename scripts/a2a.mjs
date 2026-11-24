@@ -33,9 +33,9 @@ function print(obj){process.stdout.write(JSON.stringify(obj,null,2)+'\n')}
 if(!cmd||['help','--help','-h'].includes(cmd)){
   console.log(`PILAH CLI - Project Intelligence, Logic, Analysis & Handoffs\n
 Commands:\n  doctor                     show runtime, workspace permissions, active mode & telemetry
-  mode [always-on|on-demand] get or set active A2A mode (default: on-demand)
+  mode [always-on|on-demand] get or set active PILAH mode (default: on-demand)
   toggle                     switch between always-on and on-demand
-  compact [on|off|toggle|status] get, set, or toggle A2A Compact mode
+  compact [on|off|toggle|status] get, set, or toggle PILAH Compact mode
   autotrust [antigravity-trust|active-only|project-markers|off] get or set Antigravity workspace auto-trust policy
   allow <absolute-workspace> authorize one project manually
   revoke <absolute-workspace> revoke one project
@@ -53,9 +53,11 @@ Commands:\n  doctor                     show runtime, workspace permissions, act
   side-questions [workspace] [--conv <id>] [--parent <id>] list recorded Antigravity side questions (/btw)
   artifacts [list|diff|show|snapshot] [file] [--conv <id>] [--v1 N] [--v2 M] version & diff brain artifacts
   artifact-autosnapshot [status|on|off]  explicit opt-in for retaining full brain Markdown on edit events
-  refresh [serverName]       hot-reload A2A MCP server via Antigravity Language Server RPC
+   privacy status <workspace>     inspect local workspace-scoped SQLite retention
+   privacy purge <workspace> --confirm-purge  delete only stored rows for that trusted workspace
+  refresh [serverName]       hot-reload PILAH MCP server via Antigravity Language Server RPC
   stats                      view install metrics, clone traffic & unique users from GitHub
-  mcp                        start A2A stdio server via src/mcp.mjs`);process.exit(0);
+  mcp                        start PILAH stdio server via src/mcp.mjs`);process.exit(0);
 }
 try{
   if(cmd==='doctor'){
@@ -112,12 +114,22 @@ try{
     if(!target||target==='status'){print({auto_trust:getAutoTrustMode()});}
     else {print({auto_trust:setAutoTrustMode(target)});}
   }
+  else if(cmd==='privacy'){
+    const [action,workspace,flag]=argv;
+    if(!['status','purge'].includes(action)||!workspace)throw Error('Usage: privacy status <trusted-workspace> | privacy purge <trusted-workspace> --confirm-purge');
+    if(action==='status'&&flag!==undefined)throw Error('Unexpected privacy argument');
+    if(action==='purge'&&flag!=='--confirm-purge')throw Error('Explicit --confirm-purge is required to erase workspace-scoped records');
+    const root=requireAuthorizedWorkspace(workspace),e=new Engine();
+    try{
+      print(action==='status'?e.store.workspaceDataCounts(root):e.store.purgeWorkspaceData(root,{confirmed:true}));
+    }finally{e.close()}
+  }
   else if(cmd==='allow'){print({authorized:authorizeWorkspace(argv[0])})}
   else if(cmd==='revoke'){print({remaining:revokeWorkspace(argv[0])})}
   else if(cmd==='refresh'){
     const addr=process.env.ANTIGRAVITY_LS_ADDRESS;
     const csrf=process.env.ANTIGRAVITY_CSRF_TOKEN;
-    const serverName=(argv[0]&&/^[A-Za-z0-9_-]{1,64}$/.test(argv[0]))?argv[0]:'a2a_a2a';
+    const serverName=(argv[0]&&/^[A-Za-z0-9_-]{1,64}$/.test(argv[0]))?argv[0]:'pilah_pilah';
     if(!addr||!csrf){
       print({status:'skipped',serverName,reason:'ANTIGRAVITY_LS_ADDRESS or ANTIGRAVITY_CSRF_TOKEN not set'});
     }else{

@@ -119,16 +119,19 @@ test('decision checkpoint retains pending tests, becomes stale on source change 
    pending_tests:['All enabled','Selfie only','Verification only']
   });
   assert.equal(saved.status,'saved');
+   assert.equal(saved.task_outcome,'partial');
   const current=f.engine.evidence({workspace:f.work,operation:'model_recovery',conversation_id:conv});
   assert.equal(current.checkpoint.source_revision_matches,true);
   assert.equal(current.checkpoint.decisions.length,2);
   assert.equal(current.checkpoint.pending_tests.length,3);
   assert.equal(current.checkpoint.verified,false);
+   assert.equal(current.checkpoint.task_outcome,'partial');
   assert.throws(()=>f.engine.evidence({workspace:f.work,operation:'save_checkpoint',conversation_id:conv,
    task_summary:'password=supersecret'}),/credential/);
   fs.writeFileSync(path.join(f.work,'src','checkin.js'),'export const allowSecondPrint = true;');
   const stale=f.engine.evidence({workspace:f.work,operation:'model_recovery',conversation_id:conv});
   assert.equal(stale.checkpoint.source_freshness,'stale');
+   assert.equal(stale.checkpoint.task_outcome,'stale');
   assert.equal(stale.checkpoint.source_revision_matches,false);
  }finally{f.close()}
 });
