@@ -25,7 +25,7 @@ export function parseCapture(source){
   check(object(result)&&object(result.usage),'Missing final result or official usage');
   const u=result.usage;
   for(const k of ['input_tokens','output_tokens','total_tokens'])check(nat(u[k]),'Invalid official usage.'+k);
-  for(const k of ['cache_read_tokens','thinking_tokens'])if(u[k]!==undefined)check(nat(u[k]),'Invalid official usage.'+k);
+  for(const k of ['cache_read_tokens','cache_write_tokens','cache_creation_tokens','cache_miss_tokens','thinking_tokens'])if(u[k]!==undefined)check(nat(u[k]),'Invalid official usage.'+k);
   check(u.total_tokens===u.input_tokens+u.output_tokens,'Inconsistent official usage total');
   check(typeof result.status==='string','Missing terminal status');
   const done=new Set();let calls=0,errors=0;
@@ -36,7 +36,7 @@ export function parseCapture(source){
     if(done.has(key))continue;done.add(key);calls++;
     if(s.tool_info?.error)errors++;
   }
-  return {status:result.status,usage:{input_tokens:u.input_tokens,output_tokens:u.output_tokens,total_tokens:u.total_tokens,cache_read_tokens:u.cache_read_tokens??null,thinking_tokens:u.thinking_tokens??null},duration_seconds:typeof result.duration_seconds==='number'&&Number.isFinite(result.duration_seconds)&&result.duration_seconds>=0?result.duration_seconds:null,num_turns:nat(result.num_turns)?result.num_turns:null,tool_calls:events.length?calls:null,tool_errors:events.length?errors:null};
+  return {status:result.status,usage:{input_tokens:u.input_tokens,output_tokens:u.output_tokens,total_tokens:u.total_tokens,cache_read_tokens:u.cache_read_tokens??null,cache_write_tokens:u.cache_write_tokens??null,cache_creation_tokens:u.cache_creation_tokens??null,cache_miss_tokens:u.cache_miss_tokens??null,thinking_tokens:u.thinking_tokens??null},duration_seconds:typeof result.duration_seconds==='number'&&Number.isFinite(result.duration_seconds)&&result.duration_seconds>=0?result.duration_seconds:null,num_turns:nat(result.num_turns)?result.num_turns:null,tool_calls:events.length?calls:null,tool_errors:events.length?errors:null};
 }
 function median(values){const s=values.filter(x=>typeof x==='number'&&Number.isFinite(x)).sort((a,b)=>a-b);if(!s.length)return null;let m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2}
 function summary(records,key){const v=records.map(x=>x[key]).filter(x=>typeof x==='number'&&Number.isFinite(x));return {median:median(v),min:v.length?Math.min(...v):null,max:v.length?Math.max(...v):null}}
