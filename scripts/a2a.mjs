@@ -15,6 +15,7 @@ import {diagnoseSkillDiscovery} from '../src/skill-discovery.mjs';
 import {scanConversationHistory,attachReportSize,formatConversationReport} from '../src/conversations.mjs';
 import {assessContextHealth} from '../src/context-health.mjs';
 import {routeWorkflow} from '../src/workflow-router.mjs';
+import {checkHost} from './host-check.mjs';
 
 // Treat active session metadata as untrusted local input: no symlinks,
 // oversized data or non-object payloads. This may describe a *different*
@@ -33,6 +34,7 @@ function print(obj){process.stdout.write(JSON.stringify(obj,null,2)+'\n')}
 if(!cmd||['help','--help','-h'].includes(cmd)){
   console.log(`PILAH CLI - Project Intelligence, Logic, Analysis & Handoffs\n
 Commands:\n  doctor                     show runtime, workspace permissions, active mode & telemetry
+   host-check                 explicitly validate CLI and plugin listing; NOT live IDE acceptance
   mode [always-on|on-demand] get or set active PILAH mode (default: on-demand)
   toggle                     switch between always-on and on-demand
   compact [on|off|toggle|status] get, set, or toggle PILAH Compact mode
@@ -60,7 +62,13 @@ Commands:\n  doctor                     show runtime, workspace permissions, act
   mcp                        start PILAH stdio server via src/mcp.mjs`);process.exit(0);
 }
 try{
-  if(cmd==='doctor'){
+  if(cmd==='host-check'){
+    if(argv.length)throw Error('Usage: pilah host-check');
+    const result=checkHost();print(result);
+    if(result.status==='blocked'||result.status==='partial')process.exitCode=2;
+    else if(result.status==='failed')process.exitCode=1;
+  }
+  else if(cmd==='doctor'){
     print({
       name:'a2a',
       title:'A2A',
