@@ -46,14 +46,14 @@ These are sources of **ideas**. PILAH does not import, fetch, execute or install
 
 ## Built-in implementation: no extra tool call
 
-The existing `PILAH_verify(operation="plan")` response may include **one compact `maintainer_review` checklist** when the actual changed scope/risk is high. It is a suggestion marked **not-reviewed**; it does not run tests or grant release approval. Low-risk/trivial changes keep the existing zero-call or minimal-output workflow.
+The existing `pilah_verify(operation="plan")` response may include **one compact `maintainer_review` checklist** when the actual changed scope/risk is high. It is a suggestion marked **not-reviewed**; it does not run tests or grant release approval. Low-risk/trivial changes keep the existing zero-call or minimal-output workflow.
 
 PILAH must not advertise this checklist as automatically verifying coding quality. The actual indicators are: smaller justified diff, a regression test that fails on broken behavior and passes after the fix, existing API compatibility, no accidental data leak, and external acceptance when relevant.
 
 ## Quality and token budget
 
 - **Zero** PILAH MCP calls when Antigravity already has the answer for a trivial task.
-- At most **one** scoped `PILAH_impact` pass plus **one** `PILAH_verify plan` when they meaningfully improve a high-risk task (manual exceptions justified by specific new evidence).
+- At most **one** scoped `pilah_impact` pass plus **one** `pilah_verify plan` when they meaningfully improve a high-risk task (manual exceptions justified by specific new evidence).
 - Keep maintainer guidance bounded, do not inject the whole research document into model context, and never append automatic token reports.
 - Avoid treating module count, test count, lines of code or tool calls as quality. Value comes from correct user-visible behavior and independently verified constraints.
 

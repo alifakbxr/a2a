@@ -6,7 +6,7 @@
 
 The report itself includes a size estimate for its printed response; **printing it in a terminal makes no Gemini model call**. When the agent reads the report, a subsequent completed model turn is needed before that consumption can appear in Antigravity's logs.
 
-For performance, `PILAH_context(action="tokens")` defaults to the latest available conversation; specify `history_scope="all"` explicitly to include other conversations. Historical scanning is local and read-only; model prompts are parsed only for usage metadata, not stored anew.
+For performance, `pilah_context(action="tokens")` defaults to the latest available conversation; specify `history_scope="all"` explicitly to include other conversations. Historical scanning is local and read-only; model prompts are parsed only for usage metadata, not stored anew.
 
 For explanation of coverage, privacy, limits and accuracy, see [CONVERSATION_USAGE.md](CONVERSATION_USAGE.md).
 
@@ -63,9 +63,9 @@ Issue #44 addresses unnecessary instruction/context overhead on the `v2.0.1` dev
 
 **MCP output limits in default Compact (new installations):**
 
-- `PILAH_context(action="skeleton")`: 4,800 total skeleton characters; max 1,600 per file; up to six file previews, remaining entries marked `skipped: true`. Keep source revision, omitted/truncated counts and `estimated_preview_only`.
-- `PILAH_context(action="query",limit=5)`: prefer an exact symbol. In Compact, at most twelve relation rows. If clipped, `relations_truncated:true` and `relations_before_compaction` describe **the retrieved query response**, not the entire graph.
-- `PILAH_impact(summary=true)`: bounded eight affected paths and five related tests with risk, coverage and uncertainty preserved. This pre-existing summary remains the preferred impact call.
+- `pilah_context(action="skeleton")`: 4,800 total skeleton characters; max 1,600 per file; up to six file previews, remaining entries marked `skipped: true`. Keep source revision, omitted/truncated counts and `estimated_preview_only`.
+- `pilah_context(action="query",limit=5)`: prefer an exact symbol. In Compact, at most twelve relation rows. If clipped, `relations_truncated:true` and `relations_before_compaction` describe **the retrieved query response**, not the entire graph.
+- `pilah_impact(summary=true)`: bounded eight affected paths and five related tests with risk, coverage and uncertainty preserved. This pre-existing summary remains the preferred impact call.
 - Full outputs remain available via **explicit** `node scripts/pilah.mjs compact off`; existing explicit settings are preserved. Do not infer correctness from truncated previews.
 
 **Quality gates:** automated tests enforce character budgets, default On-Demand injection neutrality, default Compact behavior, skeleton omission disclosure, relation trimming and non-fabricated token estimates. These tests measure **local output sizes only**. To prove usage benefit, run matched Native vs PILAH model/effort/tasks with official provider usage and independent acceptance; F01–F18 and real installed Antigravity validation remain in issue #15.
