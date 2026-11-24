@@ -58,7 +58,7 @@ test('historical conversations count before A2A installation, with no assumed mo
   assert.equal(report.self_report.included_in_model_usage,false);
   attachReportSize(report);
   const printed=formatConversationReport(report);
-  assert.ok(printed.includes('before A2A was installed'));
+  assert.ok(printed.includes('before PILAH was installed'));
   assert.ok(printed.includes('not confirmed totals'));
   assert.ok(report.self_report.response_bytes>0);
   assert.ok(report.self_report.estimated_text_tokens>0);
