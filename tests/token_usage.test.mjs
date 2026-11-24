@@ -19,6 +19,8 @@ test('official agy usage is reported without adding cached or thinking tokens ag
   assert.equal(r.status,'reported');
   assert.equal(r.usage.total_tokens,11007);
   assert.equal(r.usage.cache_read_tokens,8113);
+  assert.equal(r.usage.cache_write_tokens,null);
+  assert.equal(r.usage.cache_miss_tokens,null);
   assert.equal(r.usage.thinking_tokens,551);
   assert.equal(r.net_token_savings,null);
   assert.equal(r.cost_usd,null);
@@ -88,4 +90,13 @@ test('internal transcript data is diagnostic only and cannot be labeled actual G
       else process.env.ANTIGRAVITY_APP_DATA_DIR=old;
     }
   }finally{fs.rmSync(root,{recursive:true,force:true})}
+});
+
+test('official cache-write and cache-miss fields remain optional and do not inflate totals',()=>{
+ const usage={input_tokens:90,output_tokens:10,total_tokens:100,cache_read_tokens:70,cache_write_tokens:8,cache_miss_tokens:12};
+ const r=parseOfficialAgyUsage({status:'SUCCESS',usage});
+ assert.equal(r.usage.cache_write_tokens,8);
+ assert.equal(r.usage.cache_miss_tokens,12);
+ assert.equal(r.usage.total_tokens,100);
+ assert.throws(()=>parseOfficialAgyUsage({usage:{...usage,cache_write_tokens:-1}}),/Invalid usage/);
 });

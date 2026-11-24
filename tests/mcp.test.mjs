@@ -28,6 +28,12 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
     assert.equal(init.result.serverInfo.name,'pilah');
     assert.equal(init.result.protocolVersion,'2025-03-26');
     assert.ok(init.result.capabilities.resources);
+    const newer=await ask({jsonrpc:'2.0',id:20,method:'initialize',params:{protocolVersion:'2026-07-28'}});
+    assert.equal(newer.error.code,-32602);
+    assert.deepEqual(newer.error.data.supported,['2025-03-26']);
+    assert.ok(!newer.result);
+    const unsupported=await ask({jsonrpc:'2.0',id:21,method:'initialize',params:{protocolVersion:'2099-01-01'}});
+    assert.equal(unsupported.error.code,-32602);
 
     const tools=await ask({jsonrpc:'2.0',id:2,method:'tools/list',params:{}});
     assert.equal(tools.result.tools.length,4);

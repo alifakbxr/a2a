@@ -3,7 +3,7 @@
   "tools": [
     {
       "name": "pilah_context",
-      "description": "Query cross-file auth, payment and inventory symbols.",
+      "description": "Scoped project symbols and file relations; static only.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,

@@ -589,6 +589,8 @@ export function parseOfficialAgyUsage(envelope) {
   };
   const input=read('input_tokens'),output=read('output_tokens'),total=read('total_tokens');
   const thinking=read('thinking_tokens',false),cache=read('cache_read_tokens',false);
+  // Optional fields are reported only when the host provides them; no cache miss is inferred.
+  const cacheWrite=read('cache_write_tokens',false),cacheCreation=read('cache_creation_tokens',false),cacheMiss=read('cache_miss_tokens',false);
   if(total!==input+output)throw new Error('Inconsistent CLI usage total: expected input_tokens + output_tokens');
   return {
     status:'reported',
@@ -597,10 +599,10 @@ export function parseOfficialAgyUsage(envelope) {
     run_status:typeof result.status==='string'?result.status:null,
     duration_seconds:typeof result.duration_seconds==='number'&&result.duration_seconds>=0?result.duration_seconds:null,
     num_turns:Number.isSafeInteger(result.num_turns)&&result.num_turns>=0?result.num_turns:null,
-    usage:{input_tokens:input,output_tokens:output,total_tokens:total,thinking_tokens:thinking,cache_read_tokens:cache},
+    usage:{input_tokens:input,output_tokens:output,total_tokens:total,thinking_tokens:thinking,cache_read_tokens:cache,cache_write_tokens:cacheWrite,cache_creation_tokens:cacheCreation,cache_miss_tokens:cacheMiss},
     cost_usd:null,
     net_token_savings:null,
-    note:'Reported by Antigravity CLI for this specific run only. Cache/thinking fields are not added to the reported total. No native-versus-A2A baseline is available.',
+    note:'Reported by Antigravity CLI for this specific run only. Cache/thinking fields are not added to the reported total. No controlled native-versus-PILAH baseline is available.',
   };
 }
 
