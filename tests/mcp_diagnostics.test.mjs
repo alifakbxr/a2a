@@ -24,3 +24,18 @@ test('generic path outside workspace returns safe error only',()=>{
  assert.equal(r.code,'workspace_access_denied');
  assert.equal(JSON.stringify(r).includes('/Users/private'),false);
 });
+
+test('stale source, missing evidence and oversized responses receive actionable redacted codes',()=>{
+ const cases=[
+  ['Source integrity incomplete at /home/private/secret','source_freshness_unconfirmed'],
+  ['Required relative evidence artifact /home/private/receipt.xml','evidence_missing'],
+  ['MCP response exceeds 64 KiB. Narrow query. /Users/private','resource_limit']
+ ];
+ for(const [message,code] of cases){
+  const result=classifyMcpFailure('pilah_verify',new Error(message));
+  assert.equal(result.code,code);
+  assert.ok(!JSON.stringify(result).includes('/home/private'));
+  assert.ok(!JSON.stringify(result).includes('/Users/private'));
+  assert.ok(!JSON.stringify(result).includes('secret'));
+ }
+});
