@@ -34,4 +34,4 @@ For the latest evidence and caveats see [build status](../BUILD_STATUS.md) and [
 
 ## Mandatory CI execution — no conditional bypass
 
-The release validator is intentionally fail-closed, and **publishing workflows must invoke it unconditionally**. Missing `A2A_RELEASE_EVIDENCE_B64`, trust keys, registry or approved SHA must stop the workflow. CI regression tests enforce the absence of a conditional skip, and a failed `npm publish` must not be rewritten to success. Human-owned signed evidence and detached approval are still required; this repository does not create them.
+The release validator is intentionally fail-closed, and **publishing workflows must invoke it unconditionally**. Missing evidence secrets, trust keys, registry or approved SHA must stop the workflow. CI regression tests enforce the absence of a conditional skip, and a failed `npm publish` must not be rewritten to success. Human-owned signed evidence and detached approval are still required; this repository does not create them.
