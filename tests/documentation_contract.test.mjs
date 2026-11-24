@@ -8,7 +8,7 @@ import {TOOLS} from '../src/tools.mjs';
 
 const root=path.resolve(fileURLToPath(new URL('../',import.meta.url)));
 const read=relative=>fs.readFileSync(path.join(root,relative),'utf8');
-const files=['README.md','BUILD_STATUS.md','skills/pilah/SKILL.md',
+const files=['README.md','BUILD_STATUS.md','skills/pilah/SKILL.md','rules/AGENTS.md',
   ...fs.readdirSync(path.join(root,'docs')).filter(n=>n.endsWith('.md')).map(n=>'docs/'+n)];
 const content=Object.fromEntries(files.map(file=>[file,read(file)]));
 const pkg=JSON.parse(read('package.json')),plugin=JSON.parse(read('plugin.json'));
@@ -23,6 +23,14 @@ test('documentation covers every Markdown page from a single versioned navigatio
    assert.ok(index.includes(file.slice(5)),'Undocumented page: '+file);
  }
  assert.equal(new Set(files).size,files.length);
+});
+
+test('public Markdown is PILAH-only, including examples, URLs, links and archived pages',()=>{
+ for(const [file,body] of Object.entries(content)){
+   assert.doesNotMatch(body,/a2a/i,file+': retired public name must not appear anywhere in docs');
+ }
+ assert.equal(pkg.bin.pilah,'scripts/pilah.mjs');
+ assert.ok(fs.existsSync(path.join(root,'scripts/pilah.mjs')));
 });
 
 test('all local Markdown links resolve and no machine-local file URLs leak into public docs',()=>{
@@ -51,11 +59,11 @@ test('README, contracts, skill, plugin and CLI agree on version, four tools and 
      assert.ok(content[file].includes(name),file+': missing '+name);
    }
  }
- const help=spawnSync(process.execPath,['scripts/a2a.mjs','help'],{cwd:root,encoding:'utf8',timeout:15000});
+ const help=spawnSync(process.execPath,['scripts/pilah.mjs','help'],{cwd:root,encoding:'utf8',timeout:15000});
  assert.equal(help.status,0,help.stderr);
  for(const command of ['doctor','mode','toggle','compact','autotrust','allow','revoke','tokens','inspect','impact']){
    assert.match(help.stdout,new RegExp('\\b'+command+'\\b'));
-   assert.ok(readme.includes('scripts/a2a.mjs '+command),'README docs missing CLI: '+command);
+   assert.ok(readme.includes('scripts/pilah.mjs '+command),'README docs missing CLI: '+command);
  }
  assert.match(readme,/PILAH/);
  assert.match(readme,/3\/3/,'README must state the last known tested main CI scope');
@@ -99,7 +107,7 @@ test('current documentation does not misstate closed audit issues or release rea
  assert.match(build,/main/);
  assert.match(build,/NO-GO/);
  assert.doesNotMatch(build,/main branch remains unchanged|Do not merge into `main` yet|#15 remains open/i);
- assert.match(read('docs/README.md'),/Historical A2A audits and research/);
+ assert.match(read('docs/README.md'),/Historical implementation audits and research/);
  assert.match(read('docs/MAIN_VALIDATION_BACKLOG.md'),/deferred\/superseded/);
  assert.match(read('docs/ENGINEERING_METHOD.md'),/Lean evaluation loop/);
  const compatibility=read('docs/COMPATIBILITY.md');
