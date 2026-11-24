@@ -14,6 +14,14 @@ test('doctor --public reports PILAH without exposing private local paths',()=>{
  assert.equal(d.host_validation.status,'not_checked');
  assert.ok(!r.stdout.includes('pilah-private-sensitive-store'));
 });
+test('ordinary doctor uses the current public identity',()=>{
+ const r=spawnSync(process.execPath,['scripts/pilah.mjs','doctor'],{encoding:'utf8',timeout:15000});
+ assert.equal(r.status,0,r.stderr);
+ const d=JSON.parse(r.stdout);
+ assert.equal(d.name,'pilah');
+ assert.equal(d.title,'PILAH');
+ assert.equal(d.public_redacted,false);
+});
 test('doctor refuses extra flags rather than silently ignoring them',()=>{
  const r=spawnSync(process.execPath,['scripts/pilah.mjs','doctor','--unexpected'],{encoding:'utf8',timeout:15000});
  assert.notEqual(r.status,0);
