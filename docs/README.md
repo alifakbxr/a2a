@@ -1,8 +1,8 @@
 # PILAH documentation
 
-**Current project:** PILAH v2.1.0 source on `the existing repository`. The repository has **not** been renamed on GitHub and `@aliip/pilah` publication is not verified. Node.js >=22.13.0 is required.
+**Current project:** PILAH v2.1.0 source in this repository. The repository has **not** been renamed on GitHub and `@aliip/pilah` publication is not verified. Node.js >=22.13.0 is required.
 
-Start with the [README](../README.md) for source setup and CLI usage, [build status](../BUILD_STATUS.md) for tested behavior, and [validation backlog](MAIN_VALIDATION_BACKLOG.md) for the outstanding host-run and F01–F18 checks. The four current public tools are `pilah_context`, `pilah_impact`, `pilah_verify`, `pilah_evidence`. Legacy `PILAH_*` names remain callable aliases, not recommended usage.
+Start with the [README](../README.md) for source setup and CLI usage, [build status](../BUILD_STATUS.md) for tested behavior, and [validation backlog](MAIN_VALIDATION_BACKLOG.md) for the outstanding host-run and F01–F18 checks. The four current public tools are `pilah_context`, `pilah_impact`, `pilah_verify`, `pilah_evidence`. Previously registered tool names remain callable for compatibility; public examples use PILAH.
 
 **Evidence boundary:** Passing unit/CI tests does not mean an installed Antigravity host, app/browser behavior, token-saving benchmark, or independently signed release has passed. No public package publication has been authorized.
 
@@ -34,7 +34,7 @@ Start with the [README](../README.md) for source setup and CLI usage, [build sta
 
 ## Historical implementation audits and research — reference only
 
-These dated records explain earlier decisions; they are **not current installation, CI or release instructions**. Some deliberately retain legacy names and outdated branch status as evidence of the original audit.
+These dated records explain earlier decisions; they are **not current installation, CI or release instructions**. Archived notes retain their historical test dates; their displayed terminology is standardized and older results are not current acceptance.
 
 - [Initial Five Whys review](5-WHYS.md)
 - [Earlier Always-On incident analysis](ALWAYS_ON_5_WHYS.md)
