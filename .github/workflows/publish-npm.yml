@@ -65,11 +65,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js with npm Registry
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Verify independently authorized release candidate
         env:
@@ -104,12 +103,15 @@ jobs:
             echo "already_published=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Publish to npmjs.com
+      - name: Publish to npmjs.com (Trusted Publisher OIDC or Token)
         if: steps.version_check.outputs.already_published == 'false'
         run: |
+          if [ -n "$NPM_AUTH_TOKEN" ]; then
+            npm config set //registry.npmjs.org/:_authToken "$NPM_AUTH_TOKEN"
+          fi
           npm publish --access public --provenance
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Verification & Publication Summary
         if: steps.version_check.outputs.already_published == 'false'
