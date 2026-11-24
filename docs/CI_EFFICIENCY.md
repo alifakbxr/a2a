@@ -45,6 +45,8 @@ Official Antigravity features: [Teamwork](https://antigravity.google/docs/teamwo
 
 `node scripts/pilah.mjs host-check` performs a fail-closed, read-only Antigravity CLI/plugin-list preflight **only when the host is installed locally**. If the CLI is missing, it returns blocked. Even a successful local preflight leaves live agent tool choice, security denials and browser outcomes `not_tested`. Capture independent host evidence before any Native-vs-PILAH performance claim.
 
+A six-scenario [candidate evaluation fixture](../tests/fixtures/pilah-eval-scenarios.json) is versioned in source. Freeze a copy under evaluator ownership; checked-in scenarios and PR CI cannot independently approve their own acceptance results.
+
 ## Closed-loop evaluation, without an autonomous self-modifier
 
 1. Freeze a representative task suite: simple edit, cross-file issue, security denial, integration regression, debugging and complex feature.
