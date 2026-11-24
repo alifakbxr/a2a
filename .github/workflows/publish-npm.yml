@@ -58,6 +58,7 @@ jobs:
     name: Publish @aliip/pilah to npmjs.com
     needs: [validate]
     runs-on: ubuntu-latest
+    environment: github-actions-pilah
     permissions:
       contents: read
       id-token: write # Required for npm Provenance (SLSA Level 3 cryptographic attestation)
