@@ -17,6 +17,8 @@ Start with the [README](../README.md) for source setup and CLI usage, [build sta
 
 ## Operations and evidence
 
+- [Installed Antigravity scenarios and host acceptance runbook](HOST_VALIDATION.md)
+
 - [One-job PR CI, three-job main CI; honest token benchmarking](CI_EFFICIENCY.md)
 - [Release checklist and required live tests](RELEASE.md)
 - [Signed, fail-closed publication gate](RELEASE_AUTHORIZATION.md)

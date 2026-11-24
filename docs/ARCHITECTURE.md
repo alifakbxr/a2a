@@ -14,7 +14,7 @@ PILAH is a **local-first, native-first engineering support layer** for Google An
 | Component | Function | Known boundary |
 | --- | --- | --- |
 | [Security](../src/security.mjs) | Workspace trust/revocation, protected paths, settings and bounded file reads | No authorization from untrusted tool arguments |
-| [Scanner](../src/scanner.mjs) and [graph](../src/graph.mjs) | Static symbols, observed directional imports and explicitly heuristic test candidates | Not a compiler, full LSP or complete cross-language dependency graph |
+| [Scanner](../src/scanner.mjs) and [graph](../src/graph.mjs) | Static symbols, directional imports (including local Composer PSR-4 and configured JS/TS aliases), and heuristic test candidates | Not a compiler, full LSP or complete cross-language dependency graph |
 | [Engine](../src/engine.mjs) and [MCP server](../src/mcp.mjs) | Four bounded public operations, JSON-RPC errors, read-first calls | Cannot edit code or control Antigravity |
 | [Storage](../src/storage.mjs) | Local SQLite index, revision metadata, opt-in checkpoints, incident evidence and consent-gated workspace purge | Explicitly saved notes may include private user-supplied content |
 | [Verification](../src/verification.mjs) | Given/When/Then scope, machine-report assessment | Local tests do not independently certify visual, security, hardware or production outcomes |

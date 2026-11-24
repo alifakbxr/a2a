@@ -33,7 +33,7 @@ const [cmd,...argv]=process.argv.slice(2);
 function print(obj){process.stdout.write(JSON.stringify(obj,null,2)+'\n')}
 if(!cmd||['help','--help','-h'].includes(cmd)){
   console.log(`PILAH CLI - Project Intelligence, Logic, Analysis & Handoffs\n
-Commands:\n  doctor                     show runtime, workspace permissions, active mode & telemetry
+Commands:\n  doctor [--public]          inspect runtime, workspace trust and mode (redacted sharing option)
    host-check                 explicitly validate CLI and plugin listing; NOT live IDE acceptance
   mode [always-on|on-demand] get or set active PILAH mode (default: on-demand)
   toggle                     switch between always-on and on-demand
@@ -69,27 +69,27 @@ try{
     else if(result.status==='failed')process.exitCode=1;
   }
   else if(cmd==='doctor'){
-    print({
-      name:'a2a',
-      title:'A2A',
+    if(argv.length>1||(argv[0]!==undefined&&argv[0]!=='--public'))throw Error('Usage: doctor [--public]');
+    const shared=argv[0]==='--public';
+    const allowed=loadAllowlist().filter(ws=>!isProtectedRoot(ws));
+    const ide=loadAntigravityWorkspaces();
+    print({public_redacted:shared,
+      name:'pilah',
+      title:'PILAH',
       version:pkg.version,
       node:process.versions.node,
       node_requirement:'>=22.13.0',
       sqlite:'node:sqlite',
       sqlite_api:sqliteApiName,
       sqlite_version:process.versions.sqlite||null,
-      node_binary:process.execPath,
-      ...nodeVersionManagerAdvisory(process.execPath),
+      ...(shared?{}:{node_binary:process.execPath,...nodeVersionManagerAdvisory(process.execPath)}),
       mode:getA2AMode(),
       compact_mode:getCompactMode()?'enabled':'disabled',
       artifact_auto_snapshot:getArtifactAutoSnapshotMode()?'enabled':'disabled',
       auto_trust:getAutoTrustMode(),
-      settings:settingsPath(),
-      data_dir:dataDir(),
-      allowlist:allowlistPath(),
-      allowed_workspaces:loadAllowlist().filter(ws=>!isProtectedRoot(ws)),
+      ...(shared?{allowed_workspace_count:allowed.length,antigravity_workspace_count:ide.length}:{settings:settingsPath(),data_dir:dataDir(),allowlist:allowlistPath(),allowed_workspaces:allowed,antigravity_workspaces:ide}),
       ignored_protected_grants:loadAllowlist().filter(isProtectedRoot).length,
-      antigravity_workspaces:loadAntigravityWorkspaces(),
+      host_validation:{status:'not_checked',next_step:'Run node scripts/pilah.mjs host-check for an explicit native CLI preflight.'},
       skill_discovery:diagnoseSkillDiscovery(),
       session_usage:{status:'not_collected',reason:'Doctor does not read internal conversation transcripts.'},
       network:'no outbound requests',

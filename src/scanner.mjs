@@ -141,9 +141,59 @@ function importsFrom(text,language,ext=''){
     const re=/^\s*from\s+(\.*[A-Za-z_][\w.]*)\s+import\s+/gm;let m;while((m=re.exec(cleaned))!==null)matches.push(m[1]);
     const direct=/^\s*import\s+([A-Za-z_][\w.]*)/gm;while((m=direct.exec(cleaned))!==null)matches.push(m[1]);
   }
+  if(language==='php'){
+    // Explicit, static imports only. Runtime container resolution and Laravel
+    // facades are intentionally out of scope.
+    const re=/^\s*use\s+(?!function\b|const\b)([A-Za-z_][\w\\]*)(?:\s+as\s+\w+)?\s*;/gm;
+    let m;while((m=re.exec(cleaned))!==null && matches.length<120)matches.push(m[1]);
+  }
   return [...new Set(matches)];
 }
-function resolveImport(rel,imp,known,language){
+function localConfigAliases(files){
+  const php=[],js=[];
+  const resolveDir=(folder,dir)=>{
+    if(typeof dir!=='string'||dir.startsWith('/')||dir.includes('\\')||dir.split('/').includes('..'))return null;
+    const combined=path.posix.normalize(path.posix.join(folder,dir));
+    return combined==='..'||combined.startsWith('../')||combined.startsWith('/')?null:combined;
+  };
+  for(const f of files){
+    if(!f.text||!/(^|\/)(?:composer|tsconfig|jsconfig)\.json$/.test(f.path))continue;
+    let data;try{data=JSON.parse(f.text)}catch{continue}
+    const folder=path.posix.dirname(f.path)==='.'?'':path.posix.dirname(f.path);
+    if(path.posix.basename(f.path)==='composer.json'){
+      for(const mapping of [data?.autoload?.['psr-4'],data?.['autoload-dev']?.['psr-4']]){
+        if(!mapping||typeof mapping!=='object'||Array.isArray(mapping))continue;
+        for(const [prefix,dirs] of Object.entries(mapping).slice(0,100)){
+          if(!prefix.endsWith('\\')||prefix.length>100)continue;
+          for(const dir of (Array.isArray(dirs)?dirs:[dirs]).slice(0,8)){
+            const target=resolveDir(folder,dir);
+            if(target!==null)php.push({prefix,target});
+          }
+        }
+      }
+    }else{
+      const compiler=data?.compilerOptions;
+      if(!compiler||typeof compiler!=='object'||Array.isArray(compiler))continue;
+      const base=resolveDir(folder,typeof compiler.baseUrl==='string'?compiler.baseUrl:'.');
+      if(base===null)continue;
+      const entries=compiler.paths;
+      if(!entries||typeof entries!=='object'||Array.isArray(entries))continue;
+      for(const [prefix,targets] of Object.entries(entries).slice(0,100)){
+        if(!prefix.endsWith('/*')||prefix.length>80||!Array.isArray(targets))continue;
+        for(const target of targets.slice(0,8)){
+          if(typeof target!=='string'||!target.endsWith('/*'))continue;
+          const dir=resolveDir(base,target.slice(0,-2));
+          if(dir!==null)js.push({prefix:prefix.slice(0,-1),target:dir});
+        }
+      }
+    }
+  }
+  php.sort((a,b)=>b.prefix.length-a.prefix.length);
+  js.sort((a,b)=>b.prefix.length-a.prefix.length);
+  return {php,js};
+}
+function resolveImport(rel,imp,known,language,aliases){
+
   if(language==='python'){
     const dots=imp.match(/^\.+/);
     if(dots){
@@ -153,6 +203,30 @@ function resolveImport(rel,imp,known,language){
       imp=path.posix.normalize(path.posix.join(dir,member));
     }else imp=imp.replaceAll('.','/');
     if(!imp||imp==='.'||imp.startsWith('..')||imp.startsWith('/'))return null;
+  }
+  else if(language==='php' && imp.includes('\\')){
+    let mapped=null;
+    for(const rule of aliases.php){
+      if(!imp.startsWith(rule.prefix))continue;
+      const remainder=imp.slice(rule.prefix.length).replaceAll('\\','/');
+      if(!remainder||remainder.split('/').some(x=>!x||x==='..'||x==='.'))continue;
+      mapped=path.posix.join(rule.target,remainder+'.php');
+      break;
+    }
+    if(!mapped)return null;
+    imp=mapped;
+  }
+  else if(['javascript','typescript','vue','svelte'].includes(language)&&!imp.startsWith('.')&&!imp.startsWith('res://')){
+    let mapped=null;
+    for(const rule of aliases.js){
+      if(!imp.startsWith(rule.prefix))continue;
+      const remainder=imp.slice(rule.prefix.length);
+      if(!remainder||remainder.split('/').some(x=>!x||x==='..'||x==='.'))continue;
+      mapped=path.posix.join(rule.target,remainder);
+      break;
+    }
+    if(!mapped)return null;
+    imp=mapped;
   }
   else if(imp.startsWith('res://'))imp=imp.slice(6);
   else if(imp.startsWith('.'))imp=path.posix.normalize(path.posix.join(path.posix.dirname(rel),imp));
@@ -179,7 +253,7 @@ function resolveImport(rel,imp,known,language){
 function featureOf(rel){let n=path.basename(rel).replace(/\.(test|spec|unit|integration)\b/ig,'').replace(/(_test|_spec|Test)\b/g,'').replace(/\.[^.]+$/,'');return n.toLowerCase().replace(/(controller|service|component|handler|model|repository|screen|page|view|store|routes|route)$/,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'root'}
 export function createGraph(index){
   let files=index.files,nodes=[],edges=[],byPath=new Map(files.map(f=>[f.path,f])),featIds=new Map();const known=new Set(byPath.keys());
-  const nonTestByFeature=new Map();
+  const nonTestByFeature=new Map(),configured=localConfigAliases(files);
   const addEdge=(from,to,kind,basis='source',state='observed',file=null)=>{const id=sha256(from+'|'+to+'|'+kind).slice(0,36);edges.push({id,from,to,kind,basis,state,file})};
   for(const f of files){const fid='file:'+f.path;const isTest=isTestFile(f.path);nodes.push({id:fid,kind:isTest?'test':'file',label:f.path,path:f.path,basis:'source'});
     if(manifestName.test(path.basename(f.path)))continue;
@@ -192,7 +266,7 @@ export function createGraph(index){
     }
     const ext=path.extname(f.path);
     for(const sym of extractSymbols(f.text,ext)){const sid='symbol:'+f.path+':'+sym.name+':'+sym.line;nodes.push({id:sid,kind:'symbol',label:sym.name,path:f.path,line:sym.line,basis:'source'});addEdge(fid,sid,'DECLARES','source','observed',f.path)}
-    for(const imp of importsFrom(f.text,f.language,ext)){const target=resolveImport(f.path,imp,known,f.language);if(target)addEdge(fid,'file:'+target,'IMPORTS','static-import','observed',f.path)}
+    for(const imp of importsFrom(f.text,f.language,ext)){const target=resolveImport(f.path,imp,known,f.language,configured);if(target)addEdge(fid,'file:'+target,'IMPORTS','static-import','observed',f.path)}
   }
   for(const f of files){
     if(!isTestFile(f.path))continue;
