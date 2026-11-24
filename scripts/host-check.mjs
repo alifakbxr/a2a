@@ -24,7 +24,7 @@ export function checkHost({command='agy',cwd=root,exec=spawnSync}={}){
  if(listed.error||listed.status!==0)return {...base,status:'partial',
    cli:'available',validation:'passed',installed:'unknown',
    next_step:'Inspect agy plugin list and the active Antigravity plugin manager; test real tool discovery separately.'};
- const found=/(^|[^a-z0-9_-])pilah([^a-z0-9_-]|$)/i.test(String(listed.stdout||''));
+ const found=/(^|[^a-z0-9_-])(pilah|a2a)([^a-z0-9_-]|$)/i.test(String(listed.stdout||''));
  return {...base,status:found?'local-preflight-passed':'partial',
    cli:'available',validation:'passed',installed:found?'listed':'not_listed',
    next_step:found
