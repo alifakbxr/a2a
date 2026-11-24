@@ -19,7 +19,7 @@ npm pack --dry-run
 node scripts/pilah.mjs doctor
 ```
 
-Verify MCP `tools/list` exposes **exactly four** tools and `PILAH_verify` includes assess, assess_release, assess_semantic, assess_browser and verify_handoff. Verify workspace-trust rejection and source-revision invalidation after file changes. The test suite is intended for Linux/macOS/Windows on Node 22/24. No agent/browser is automatically spawned by PILAH.
+Verify MCP `tools/list` exposes **exactly four** tools and `pilah_verify` includes assess, assess_release, assess_semantic, assess_browser and verify_handoff. Verify workspace-trust rejection and source-revision invalidation after file changes. The test suite is intended for Linux/macOS/Windows on Node 22/24. No agent/browser is automatically spawned by PILAH.
 
 ## 3. Frozen 18-case external acceptance matrix
 Use `tests/fixtures/stockroom-acceptance-18.json` for IDs F01–F18; every case begins **not tested**. The external runner must issue **real HTTP/browser/database** operations against each generated app copied from frozen ZIPs.
@@ -37,11 +37,11 @@ No unit-test name, human prose or custom JSON witness list may be accepted as pr
 
 ## 4. Machine evidence and signed trust
 - Report each scenario with source revision, test report hash, timestamp, runner metadata and actual external assertions. Attach browser/build digest and observed backend row counts.
-- For browser results, `PILAH_verify(operation="assess_browser",artifact="...")` must return `inconclusive` or `evidence-present-unattested` unless separately corroborated; it must **never** certify production readiness.
-- `PILAH_verify(operation="assess_semantic",artifact="...")` computes structural scenario conditions but **never** authenticates a self-supplied runner.
+- For browser results, `pilah_verify(operation="assess_browser",artifact="...")` must return `inconclusive` or `evidence-present-unattested` unless separately corroborated; it must **never** certify production readiness.
+- `pilah_verify(operation="assess_semantic",artifact="...")` computes structural scenario conditions but **never** authenticates a self-supplied runner.
 - Set up a separate, frozen acceptance registry at `~/.config/pilah/acceptance-registry.json` with matching scenario IDs, requirement SHA-256 digests, criticality, and required evidence types. **Absent or altered scope must block release eligibility**. The coding agent may not edit this file.
 - Set up `~/.config/pilah/trusted-evaluators.json` with evaluator **public** keys under independent user control, and sign each evidence payload with the evaluator private key after running the actual tests.
-- `PILAH_verify(operation="assess_release",artifact="...")` only offers eligible-for-review when signatures, revisions, required evidence types and critical blockers are all satisfied. A valid signature does not itself prove that tests executed honestly.
+- `pilah_verify(operation="assess_release",artifact="...")` only offers eligible-for-review when signatures, revisions, required evidence types and critical blockers are all satisfied. A valid signature does not itself prove that tests executed honestly.
 - Treat critical unproven cases as blockers and preserve report state `inconclusive`.
 
 ## 5. Benchmark attribution and privacy
@@ -59,11 +59,11 @@ No unit-test name, human prose or custom JSON witness list may be accepted as pr
 
 The `v2.0.1` candidate includes PR #36 at `67ea5888caf61751952c8a7daa1eb222d738d4b6`. Before live release testing, verify the local plan/assessment contract:
 
-1. `PILAH_verify(operation="plan")` accepts unique typed `id`, `given`, `when`, `then` and `evidence_type`. For browser/visual paths it additionally requires `viewport`, `ui_state` and `reference`. It must start at **not_tested**.
+1. `pilah_verify(operation="plan")` accepts unique typed `id`, `given`, `when`, `then` and `evidence_type`. For browser/visual paths it additionally requires `viewport`, `ui_state` and `reference`. It must start at **not_tested**.
 2. A passing local build/JUnit/TAP/JSON report can only prove its **named test assertion**. `completion.fully_verified` remains false; browser, visual, hardware, security or independent claims must not receive a local report PASS without real external evidence.
-3. `PILAH_evidence(operation="save_checkpoint")` records only explicit bounded `decisions` and `pending_tests`; `model_recovery` detects an old source revision as **stale**. No raw secrets or resume automation.
-4. `PILAH_evidence(operation="tool_recovery")` offers **nonexecuting** repair guidance for bad arguments, browser context loss, timeouts, denial, missing files or edit conflicts. It must never echo a private raw error body or bypass authorization.
-5. `PILAH_context(action="orchestration")` never launches workers; parallel native modes require low dependency and **independent file ownership**, and explicit user consent.
+3. `pilah_evidence(operation="save_checkpoint")` records only explicit bounded `decisions` and `pending_tests`; `model_recovery` detects an old source revision as **stale**. No raw secrets or resume automation.
+4. `pilah_evidence(operation="tool_recovery")` offers **nonexecuting** repair guidance for bad arguments, browser context loss, timeouts, denial, missing files or edit conflicts. It must never echo a private raw error body or bypass authorization.
+5. `pilah_context(action="orchestration")` never launches workers; parallel native modes require low dependency and **independent file ownership**, and explicit user consent.
 
 Automated post-merge CI has **213/213 Node assertions passing** on Ubuntu Node 22 and **4/4 OS/runtime jobs**. Its local MCP stdio/SQLite E2E is **not** a replacement for the external test harness described above. The frozen STOCKROOM baseline applications are known-defective **negative controls**, so record their observed failures honestly rather than treating those apps as passing release criteria. The independent evaluator must define exactly what successful PILAH detection/refusal means.
 

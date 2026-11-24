@@ -1,8 +1,8 @@
 # PILAH Independent Release Assessment (#4)
 
-`PILAH_verify(operation="assess")` checks named JUnit/TAP/JSON assertions **only**. It now states `release_ready:false` even when tests pass.
+`pilah_verify(operation="assess")` checks named JUnit/TAP/JSON assertions **only**. It now states `release_ready:false` even when tests pass.
 
-For critical release readiness, use `PILAH_verify(operation="assess_release",artifact="reports/release.json")` in an authorized workspace or `node scripts/evaluate-acceptance.mjs release.json [trusted-public-keys.json]` offline.
+For critical release readiness, use `pilah_verify(operation="assess_release",artifact="reports/release.json")` in an authorized workspace or `node scripts/evaluate-acceptance.mjs release.json [trusted-public-keys.json]` offline.
 
 ## Trust configuration
 PILAH reads **public** Ed25519 evaluator keys from `~/.config/pilah/trusted-evaluators.json` when using the MCP action. A user/independent CI administrator must provision and protect this file **outside the coding agent's project**. Example:
@@ -29,10 +29,10 @@ A signed test result is not proof that the agent submitted every required scenar
 Place the registry at `~/.config/pilah/acceptance-registry.json` outside the generated application workspace:
 
 ```json
-{"schema":"pilah-acceptance-registry-v1","scenarios":[{"id":"offline-restart","requirement_sha256":"64-character-sha256-of-the-exact-requirement","critical":true,"required_evidence_types":["browser","integration"]}]}
+{"schema":"<registry-schema-id-from-source>","scenarios":[{"id":"offline-restart","requirement_sha256":"64-character-sha256-of-the-exact-requirement","critical":true,"required_evidence_types":["browser","integration"]}]}
 ```
 
-The registry is read by `PILAH_verify(operation="assess_release")`. The CLI `scripts/evaluate-acceptance.mjs` also accepts an optional pinned-registry path after the trust-keys path.
+The registry is read by `pilah_verify(operation="assess_release")`. The CLI `scripts/evaluate-acceptance.mjs` also accepts an optional pinned-registry path after the trust-keys path.
 
 Without a matching registry, `release_ready` stays false even if all submitted assertions have valid signatures. A true result means eligible for independent review of signed evidence, not proof of test execution or production certification. File permissions and reviewer keys must be protected by the user's OS.
 
