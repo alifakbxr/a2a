@@ -1,65 +1,56 @@
-# PILAH Documentation Index
+# PILAH documentation
 
-> **Current main-branch status (23 Nov 2026; supersedes older branch-freeze notes):** [PR #105](https://github.com/alifakbxr/a2a/pull/105) promoted `v2.0.1` into `main` at `733c0cb`. The [main merge CI](https://github.com/alifakbxr/a2a/actions/runs/45202036041) must be checked for its actual result. The original F01–F18 live acceptance, installed Antigravity agent-selection tests, Guardian overhead and controlled Native/A2A trials remain **unverified** in [main validation backlog](MAIN_VALIDATION_BACKLOG.md). Old pre-main instructions in dated sections below are historical. **No package release was made.**
+**Current project:** PILAH v2.1.0 source on [`alifakbxr/a2a`](https://github.com/alifakbxr/a2a). The repository has **not** been renamed on GitHub and `@aliip/pilah` publication is not verified. Node.js >=22.13.0 is required.
 
+Start with the [README](../README.md) for source setup and CLI usage, [build status](../BUILD_STATUS.md) for tested behavior, and [validation backlog](MAIN_VALIDATION_BACKLOG.md) for the outstanding host-run and F01–F18 checks. The four current public tools are `pilah_context`, `pilah_impact`, `pilah_verify`, `pilah_evidence`. Legacy `a2a_*` names remain callable aliases, not recommended usage.
 
-
-**Current brand:** PILAH — Project Intelligence, Logic, Analysis & Handoffs; legacy paths and identifiers are retained for migration. Current source repository remains `alifakbxr/a2a` until a separate GitHub rename. New public MCP tools use `pilah_*`; local environment/data paths preserve `A2A_*` compatibility.
-
-**Current target:** [`v2.0.1`](https://github.com/alifakbxr/a2a/tree/v2.0.1), Node >=22.13.0, four public MCP tools, local-first/native-first. **Status: CI-passing development candidate, not production released.** The version branch contains behavioral reliability [PR #36](https://github.com/alifakbxr/a2a/pull/36). External release acceptance remains open in [#15](https://github.com/alifakbxr/a2a/issues/15).
+**Evidence boundary:** Passing unit/CI tests does not mean an installed Antigravity host, app/browser behavior, token-saving benchmark, or independently signed release has passed. No public package publication has been authorized.
 
 ## Start here
 
-| Purpose | Document |
-| --- | --- |
-| Minimal engineering method and Claude/Antigravity comparison | [Engineering method](ENGINEERING_METHOD.md) |
-| Lean CI budget and evidence-first tuning | [CI & Efficiency Strategy](CI_EFFICIENCY.md) |
-| Intro, setup, modes, examples | [Repository README](../README.md) |
-| Implementation and evidence status | [Build status](../BUILD_STATUS.md) |
-| MCP actions, criterion schemas, database tables | [Contracts](CONTRACTS.md) |
-| Module boundaries, index, evidence flow | [Architecture](ARCHITECTURE.md) |
-| Native-first agent behavior and tool minimization | [Workflow](NATIVE_FIRST_WORKFLOW.md) |
-| Checkpoints and recovery after failure | [Checkpoint & recovery](CHECKPOINT_RECOVERY.md) |
-| Agent behavior findings, 5 Whys, regressions | [Behavioral Five Whys](BEHAVIORAL_5_WHYS_V2_0_1.md) |
-| Native-first adaptive diagnosis and falsifiable RCA experiments | [Adaptive 5 Whys workflow](ADAPTIVE_RCA_WORKFLOW.md) |
-| Workspace safety and local privacy | [Security](SECURITY.md) |
-| Compatibility of stacks/Antigravity surfaces | [Compatibility](COMPATIBILITY.md) |
+- [Engineering method & Claude Code comparison](ENGINEERING_METHOD.md)
+- [MCP tools, arguments and evidence contracts](CONTRACTS.md)
+- [Components, data flow and boundaries](ARCHITECTURE.md)
+- [When to call PILAH; native-first workflow](NATIVE_FIRST_WORKFLOW.md)
+- [Supported stacks, Node and Antigravity environments](COMPATIBILITY.md)
+- [Workspace trust, privacy and threat model](SECURITY.md)
 
-## Verification and benchmark
+## Operations and evidence
 
-| Question | Document |
-| --- | --- |
-| What test coverage should A2A suggest? | [Risk guidance](RISK_GUIDANCE.md) |
-| What do local browser/semantic reports prove? | [Semantic and browser evidence](SEMANTIC_EVIDENCE.md) |
-| How is independent evidence checked? | [Acceptance gate](ACCEPTANCE_GATE.md) |
-| How to execute actual external F01–F18? | [Independent runbook](INDEPENDENT_ACCEPTANCE_RUNBOOK.md) |
-| What happened with the frozen baseline archives? | [STOCKROOM preflight](STOCKROOM_BENCHMARK_RECHECK_2026_11_18.md) |
-| How are A/B and token metrics interpreted? | [A/B evaluation](AB_EVALUATION.md) · [Token efficiency](TOKEN_EFFICIENCY.md) · [Token provenance](TOKEN_PROVENANCE.md) · [Conversation history](CONVERSATION_USAGE.md) |
-| What do observable agent traces indicate? | [Trace comparison](AGENT_TRACE_BENCHMARK.md) · [Decision review](AGENT_DECISION_REVIEW.md) · [Intervention ledger](INTERVENTION_LEDGER.md) · [Private export](PRIVATE_BENCHMARK_EXPORT.md) |
+- [One-job PR CI, three-job main CI; honest token benchmarking](CI_EFFICIENCY.md)
+- [Release checklist and required live tests](RELEASE.md)
+- [Signed, fail-closed publication gate](RELEASE_AUTHORIZATION.md)
+- [What is not yet independently proven](MAIN_VALIDATION_BACKLOG.md)
+- [Evidence and release acceptance criteria](ACCEPTANCE_GATE.md)
+- [STOCKROOM F01–F18 independent test runbook](INDEPENDENT_ACCEPTANCE_RUNBOOK.md)
+- [Risk-aware test recommendations](RISK_GUIDANCE.md)
+- [Browser, semantic and local proof boundaries](SEMANTIC_EVIDENCE.md)
+- [Opt-in checkpoints and recovery](CHECKPOINT_RECOVERY.md)
+- [Optional native agent teamwork](ORCHESTRATION_ADVISOR.md)
+- [Local conversation token diagnostics](CONVERSATION_USAGE.md)
+- [What token counts can and cannot establish](TOKEN_PROVENANCE.md)
+- [Controlled Native-versus-PILAH evaluation](AB_EVALUATION.md)
+- [Observed MCP intervention logging](INTERVENTION_LEDGER.md)
 
-## Operations and release
+## Historical A2A audits and research — reference only
 
-| Subject | Document |
-| --- | --- |
-| Current release engineering | [Release](RELEASE.md) |
-| Fail-closed signed publish gate | [Release authorization](RELEASE_AUTHORIZATION.md) |
-| Version branch provenance and acceptance checklist | [v2.0.1 traceability](V2_0_1_TRACEABILITY.md) |
-| Opt-in native subagent/teamwork advice | [Orchestration](ORCHESTRATION_ADVISOR.md) |
-| Evidence-guided maintenance conventions | [Open-source engineering standards](OPEN_SOURCE_ENGINEERING_STANDARDS.md) |
-| Original integration history | [Pre-vNext historical audit](PRE_VNEXT_INTEGRATION.md) |
-| Earlier plugin incident/root-cause analysis | [Foundational Five Whys](5-WHYS.md) · [Always-On Five Whys](ALWAYS_ON_5_WHYS.md) · [Security and reliability audit](SECURITY_RELIABILITY_AUDIT_V2_0_1.md) |
-| External research sources (documentation-only) | [Sources](SOURCES.md) |
+These dated records explain earlier decisions; they are **not current installation, CI or release instructions**. Some deliberately retain legacy names and outdated branch status as evidence of the original audit.
 
-## Sources of truth and terminology
+- [Initial Five Whys review](5-WHYS.md)
+- [Earlier Always-On incident analysis](ALWAYS_ON_5_WHYS.md)
+- [Adaptive RCA design history](ADAPTIVE_RCA_WORKFLOW.md)
+- [Agent decision findings](AGENT_DECISION_REVIEW.md)
+- [Historical agent trace evaluation](AGENT_TRACE_BENCHMARK.md)
+- [v2.0.1 behavioral Five Whys](BEHAVIORAL_5_WHYS_V2_0_1.md)
+- [Engineering standards research](OPEN_SOURCE_ENGINEERING_STANDARDS.md)
+- [Pre-vNext migration and audit](PRE_VNEXT_INTEGRATION.md)
+- [Earlier private-export design](PRIVATE_BENCHMARK_EXPORT.md)
+- [v2.0.1 security audit](SECURITY_RELIABILITY_AUDIT_V2_0_1.md)
+- [Historical research references](SOURCES.md)
+- [Frozen source preflight snapshot](STOCKROOM_BENCHMARK_RECHECK_2026_11_18.md)
+- [Earlier token-efficiency review](TOKEN_EFFICIENCY.md)
+- [v2.0.1 issue/PR provenance](V2_0_1_TRACEABILITY.md)
 
-1. **Executable contracts:** `src/tools.mjs`, generated `schemas/mcp-tools.json`, `schemas/database.sql`, `plugin.json`, `hooks.json`. This index links to explanatory documentation; code wins if they conflict.
-2. **Implementation evidence:** merged [PR #36](https://github.com/alifakbxr/a2a/pull/36) and cross-platform [post-merge CI](https://github.com/alifakbxr/a2a/actions/runs/44325007116). Automated Node MCP E2E is **not** an installed Antigravity acceptance test.
-3. **Local test result:** named JUnit/TAP/JSON assertions are not independent proof of business/visual behavior. Planning is not testing; `completion.fully_verified` is deliberately false for local reports.
-4. **Real release eligibility:** actual external test runner observations, frozen F01–F18 criteria, independent signatures, matched repeated benchmark and human approval. **Unfulfilled**.
-5. **Historical docs:** some preserve earlier PR numbers or observed pre-fix behavior for traceability; do not use those as installation/operation instructions over current contracts.
+## Sources of truth
 
-Do not upload private user transcripts, credential-containing logs, or frozen application archives to this public repository.
-
-**20 Nov 2026 engineering audit:** P0 release signatures and Git execution boundary, malformed JUnit, source/report provenance, session/trust boundaries and protected workspace diagnostics have been corrected in merged PRs #81–#85; PR #86 improves safe MCP intervention measurement and plugin skill-exclusion diagnostics; PR #88 adds PreToolUse reporter correlation. Combined 9-job CI [passed](https://github.com/alifakbxr/a2a/actions/runs/44706443191). Live agent selection #71 and independent release acceptance #15 are **still open**; do not promote this branch.
-
-**23 November 2026 current implementation:** [PRs #94–#98](https://github.com/alifakbxr/a2a/pulls?q=is%3Apr+is%3Amerged+base%3Av2.0.1) add optional native-first routing, correct eager MCP call accounting, and an opt-in Context Guardian without default per-turn overhead. [Latest combined 9-job CI passed](https://github.com/alifakbxr/a2a/actions/runs/45165794296). Live model selection, measured token benefit, external F01–F18 acceptance and explicit main promotion still require independent proof in #71, #92, #91 and #15 respectively.
+The executable `src/tools.mjs`, `plugin.json`, `mcp_config.json`, `hooks.json`, `schemas/mcp-tools.json` and `schemas/database.sql` supersede historical prose. Publication requires the signed gates in [release authorization](RELEASE_AUTHORIZATION.md). Never commit private conversation transcripts, archived project source or credentials.

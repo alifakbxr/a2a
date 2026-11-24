@@ -18,7 +18,7 @@ const readme=content['README.md'];
 const tick=String.fromCharCode(96);
 
 test('documentation covers every Markdown page from a single versioned navigation index',()=>{
- assert.ok(index.includes('v2.0.1'));
+ assert.ok(index.includes('PILAH'));
  for(const file of files.filter(f=>f.startsWith('docs/')&&f!=='docs/README.md')){
    assert.ok(index.includes(file.slice(5)),'Undocumented page: '+file);
  }
@@ -57,8 +57,10 @@ test('README, contracts, skill, plugin and CLI agree on version, four tools and 
    assert.match(help.stdout,new RegExp('\\b'+command+'\\b'));
    assert.ok(readme.includes('scripts/a2a.mjs '+command),'README docs missing CLI: '+command);
  }
- assert.match(readme,/not been promoted/);
- assert.match(readme,/issue #15|release gate #15/i);
+ assert.match(readme,/PILAH/);
+ assert.match(readme,/3\/3/,'README must state the last known tested main CI scope');
+ assert.match(readme,/F01[–-]F18/,'README must disclose unverified external acceptance');
+ assert.doesNotMatch(readme,/not been promoted|the branch has not been promoted|issue #15 remains open/i,'Historical release instructions must not be presented as current');
 });
 
 test('every operation declared in executable MCP schema appears in contracts',()=>{
@@ -81,21 +83,25 @@ test('published docs distinguish local proof, external release gate, and active 
  assert.ok(types.has('PostToolUse'));
  assert.ok(!types.has('PreInvocation'));
  for(const file of ['README.md','BUILD_STATUS.md','docs/ARCHITECTURE.md','docs/RELEASE.md','docs/CONTRACTS.md']){
-   assert.ok(/not.tested|unverified|external acceptance|NO.GO|not production|not released|release gate|No merge to/i.test(content[file]),file+': acceptance boundary missing');
+   assert.ok(/not.tested|unverified|independent|NO.GO|not production|not released|release gate/i.test(content[file]),file+': acceptance boundary missing');
  }
- assert.ok(content['docs/RELEASE.md'].includes('44325007116'));
- assert.ok(content['BUILD_STATUS.md'].includes('213/213'));
- assert.ok(content['BUILD_STATUS.md'].includes('4/4'));
+ assert.ok(content['docs/RELEASE.md'].includes('9-job'),'Full pre-release CI matrix must remain documented');
+ assert.ok(content['BUILD_STATUS.md'].includes('3/3'),'Current main CI results required');
+ assert.ok(content['BUILD_STATUS.md'].includes('PR #107'),'PILAH source rebrand must be traceable');
+ assert.ok(content['BUILD_STATUS.md'].includes('PR #108'),'CI reduction must be traceable');
  assert.ok(content['docs/SECURITY.md'].includes('explicitly saved local Markdown'));
  assert.ok(!content['skills/pilah/SKILL.md'].includes('not fixed by this workflow'));
 });
 
 test('current documentation does not misstate closed audit issues or release readiness',()=>{
  const build=read('BUILD_STATUS.md');
- assert.match(build,/PR #69/);
- assert.doesNotMatch(build,/other independently open P1\/P2 findings #54[–-]#61 remain tracked/);
- assert.match(build,/main branch remains unchanged/i);
- assert.match(build,/issue #15/);
+ assert.match(build,/PILAH/);
+ assert.match(build,/main/);
+ assert.match(build,/NO-GO/);
+ assert.doesNotMatch(build,/main branch remains unchanged|Do not merge into `main` yet|#15 remains open/i);
+ assert.match(read('docs/README.md'),/Historical A2A audits and research/);
+ assert.match(read('docs/MAIN_VALIDATION_BACKLOG.md'),/deferred\/superseded/);
+ assert.match(read('docs/ENGINEERING_METHOD.md'),/Lean evaluation loop/);
  const compatibility=read('docs/COMPATIBILITY.md');
  assert.match(compatibility,/node_version_manager_path/);
  assert.match(compatibility,/USERPROFILE/);

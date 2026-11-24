@@ -24,7 +24,7 @@ PILAH means **Project Intelligence, Logic, Analysis & Handoffs**. Its mission is
 | Verification | Native terminal, tests, web/browser integrations | Native terminal, browser and IDE acceptance | Treat local tests as local, not independent app proof |
 | Context and cost | Usage varies by model/tool and workflows | Usage varies by model/tier and host context | Never claim PILAH token reductions without matched observed trials |
 
-**What not to port:** Claude plugin installation syntax, Claude-only `CLAUDE.md` discovery assumptions, autonomous review subagents on every edit, model-based hooks running on every invocation, or another 10–20 skills. Adding them would increase maintenance and risk rather than simplify A2A.
+**What not to port:** Claude plugin installation syntax, Claude-only `CLAUDE.md` discovery assumptions, autonomous review subagents on every edit, model-based hooks running on every invocation, or another 10–20 skills. Adding them would increase maintenance and risk rather than simplify PILAH.
 
 ## Smallest complete change — decision procedure
 
@@ -34,6 +34,32 @@ PILAH means **Project Intelligence, Logic, Analysis & Handoffs**. Its mission is
 4. For significant risk, reproduce failure and run the smallest discriminating test before fixing. Re-test the exact affected behavior.
 5. If still uncertain, make one precise PILAH MCP call. Do not automatically chain tools.
 6. Finish with a concise proof ledger: changed, verified, not verified, known limits.
+
+## Further 2026 harness research: what PILAH adopts
+
+The following sources inform **design decisions**; none proves a percent improvement for PILAH or authorizes automatic modifications.
+
+| Evidence | Finding and scope | PILAH decision |
+| --- | --- | --- |
+| [Anthropic Agent Skills](https://www.anthropic.com/research/equipping-agents-for-the-real-world-with-agent-skills) | On-demand filesystem-backed skills use progressive disclosure | Keep one short skill with links to references, no mandatory library of agent personas |
+| [Empirical harness study](https://arxiv.org/abs/2609.20804), [minimal harness comparison](https://arxiv.org/abs/2609.40303) | Bash-capable models can be effective with minimal action surfaces; task/model changes may reverse the result | Permit native short scripts, do not remove the scoped four MCP operations without matched A/B tests |
+| [MCP specification changelog, July 2026](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/docs/specification/2026-07-28/changelog.mdx) | OAuth applies to relevant HTTP servers; sampling and observability semantics have changed across protocol revisions | Keep local stdio MCP and workspace trust. No remote OAuth gateway, remote sampling, OTel exporter or daemon until an actual requirement exists |
+| [GEPA optimize_anything](https://arxiv.org/abs/2605.19633) | A benchmark-specific ARC-AGI setup reports Gemini Flash rising from 32.5% to 89.5% through optimized architecture | Use offline human-reviewed instruction ablation with frozen regression tasks, never autonomous production prompt rewrites |
+| [LinkedIn knowledge-graph RAG research](https://arxiv.org/abs/2404.17723) | One deployed support-workflow study reports a 28.6% median ticket resolution-time reduction | Reuse PILAH's local static graph; do not introduce a vector DB, PageRank service or persistent user-profile scoring by default |
+| [Revolut self-hosting case report](https://www.theregister.com/ai-and-ml/2026/11/03/british-fintech-revolut-slashes-ai-coding-costs-10x-by-cutting-out-claude-and-going-self-hosted/) | Revolut reports ~90% lower inference expense from a **large self-hosted model/GPU setup**, not a validated plugin optimization | Do not copy infrastructure economics to a local Antigravity plugin |
+| [Antigravity overview](https://antigravity.google/docs/overview) | Host has its own subagents, schedules, tools and verification | Rely on host-native opt-in capabilities; do not create sidecars or a second orchestration runtime |
+
+**Unverified or non-portable:** a universal 2× Bash/MCP ratio, a generic 1M→60k-token code-mode effect, >90% cache hit rate in PILAH, 3× GraphRAG accuracy across codebases, and Humanity's Last Exam gains from reflective memory. These are specific studies, demonstrations, or not independently reproduced here. They are **not acceptance criteria or marketing claims**.
+
+### Lean evaluation loop
+
+1. Fix a representative source snapshot, evaluation rubric, security negatives and success definition.
+2. Compare native Antigravity and PILAH at matched model, effort, permissions and hardware; counterbalance run order.
+3. Measure official model tokens where available, wall time, tool failures, successful task completion and **cost per independently accepted task**. Missing provider usage stays `unknown`.
+4. Make a single versioned change to the skill or tool surface; rerun the same suite plus unseen holdout tasks.
+5. Reject regression, misleading green tests, invented provenance and lower-cost failures. Require review before merging. **No automatic self-improvement daemon.**
+
+See [CI and evaluation](CI_EFFICIENCY.md), [A/B methodology](AB_EVALUATION.md) and [unverified live acceptance](MAIN_VALIDATION_BACKLOG.md).
 
 ## Brand/compatibility status
 

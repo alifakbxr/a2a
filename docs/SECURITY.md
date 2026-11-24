@@ -1,4 +1,4 @@
-# Threat Model and Safety Boundaries
+# PILAH — threat model and safety boundaries
 
 ## Trust boundaries
 
@@ -6,7 +6,7 @@
 2. **MCP to filesystem:** workspaces must be explicitly authorized via the CLI (`node scripts/a2a.mjs allow <path>`) or present in Antigravity's built-in user trust lists (IDE `state.vscdb` Workspace Trust `content.trust.model.key` and CLI `trustedWorkspaces`), configurable via `autoTrust` (`antigravity-trust` | `active-only` | `project-markers` | `off`). Explicit revocation overrides all automatic trust. `active-only` requires a workspace found in both the IDE/CLI trust sources and the latest bounded SessionStart hook record; untrusted process arguments are never accepted as authorization. `project-markers` is an opt-in historical-project discovery mode and must not be used as a substitute for independently reviewed authorization. Protected roots (`/`, `~`, `~/Documents`, `~/Downloads`, `~/Desktop`, `~/Music`, `~/Pictures`, `~/Videos`, `~/.config`, `~/.gemini`, `~/.ssh`, `~/.aws`, `~/.gnupg`, `tmpdir`) are always denied, and upward ancestor authorization is blocked.
 3. **MCP to storage:** indexed code metadata, hashes, evidence, telemetry counters **and explicitly saved local Markdown artifact/checkpoint content** may be persisted in `PLUGIN_DATA` (`a2a.sqlite`). Do not store credentials in user-authored notes; a bounded assignment detector is defense in depth, not full secret detection. Workspace data is keyed by a SHA-256-derived canonical path identity. The DB is local; no outbound network listener is created.
 4. **External test artifacts:** machine-readable reports may be inaccurate or adversarial. Hashing detects later modification but is **not** an authenticity signature; confidence is scoped to supplied artifacts.
-5. **Native Antigravity:** A2A never increases Google permissions, bypasses sandbox prompts, accesses private endpoints, or impersonates the user's account.
+5. **Native Antigravity:** PILAH never increases Google permissions, bypasses sandbox prompts, accesses private endpoints, or impersonates the user's account.
 
 ## Denied behavior
 

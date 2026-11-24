@@ -1,25 +1,19 @@
-# Main validation backlog — A2A v2.0.1
+# PILAH — independent validation backlog
 
-**Updated:** 23 November 2026. **Main promotion:** [PR #105](https://github.com/alifakbxr/a2a/pull/105), merge commit `733c0cb0f4218f18278c4df5d7649c66485c04f9`.
+**Updated 24 November 2026.** Source `main` uses PILAH `2.1.0`; GitHub repository remains [`alifakbxr/a2a`](https://github.com/alifakbxr/a2a). Legacy A2A issues #15, #71, #91, #92 are closed as **deferred/superseded**, not as successfully tested.
 
-The maintainer explicitly chose to **merge into main first, test from main, and close the old release-gate issues**. Administrative closure does not mean that outstanding external tests passed. This document records their exact outstanding scope independently of issue state.
+## What automated tests establish
 
-## Established by automated tests
-- The original `v2.0.1` integration commit `b80c39d` passed [9/9 CI](https://github.com/alifakbxr/a2a/actions/runs/45200683112), testing Linux, macOS and Windows × Node 22, 24 and 26.13.1.
-- [Main promotion CI](https://github.com/alifakbxr/a2a/actions/runs/45202036041) tests the merge commit. Check the actual run conclusion; do not claim it passed until it completes.
-- The original STOCKROOM source archives were syntax-checked (Native 101/101 PHP files; A2A 80/80) but their runtime acceptance was **not** established.
+- PILAH rebrand passed the [9-job Node 22/24/26.13.1 × three-OS CI matrix](https://github.com/alifakbxr/a2a/actions/runs/45210477925) at the PR #107 source revision.
+- CI/router optimization passed [3/3 main Node 24 jobs](https://github.com/alifakbxr/a2a/actions/runs/45212940464) at commit `3b168e3`.
+- Original frozen STOCKROOM snapshots passed PHP **syntax** checks (Native 101/101, A2A 80/80), not live F01–F18. PHP extensions, an isolated DB and browser execution were unavailable.
 
-## Unverified and deliberately deferred (prior issues #15, #71, #91, #92)
-1. **Installed Antigravity MCP adoption (#71):** exact main version installed; `agy plugin validate --strict`; four A2A tools discoverable; workspace permission-denial negative control; manually exercise safe calls; unforced qualified cross-file task and trivial no-call control; independently inspect parent/subagent observable traces. Do not infer token savings from call counts.
-2. **Context Guardian (#91):** verify default-off, explicit opt-in, absolute Node binary under desktop NVM, other hooks preserved, clean disable, no automatic compact, and live per-invocation latency/CPU/prompt injection overhead. Document the user-global hooks configuration exception; do not assert token savings from step heuristics.
-3. **Routing and economy claims (#92):** at least five matched Native versus A2A real-host trials per qualified high-risk task, matched model and effort, counterbalanced task order, independently graded task outcomes and negative controls. Use official token usage only when available; otherwise record unknown. No preemptive savings claim.
-4. **Independent STOCKROOM F01–F18 (#15):** provision isolated PHP HTTP application, required PHP extensions and DB driver, real two-connection concurrent last-stock and transfer races, full browser process restart/offline recovery, tenant and role denial, refund/ledger/payment reconciliation, exactly-once retries, source/build binding, and frozen independent negative-control registry. The executable scenario definitions are in `tests/fixtures/stockroom-acceptance-18.json` and `docs/INDEPENDENT_ACCEPTANCE_RUNBOOK.md`.
-5. **External release eligibility:** independent signed evidence, frozen evaluator-owned acceptance registry, privacy review, maintainer approval of the exact release commit and successful authorization checks. Until then **no tag, npm or GitHub package publication and no production certification**.
+## Required independent work
 
-## Disposition of original issues
+1. **Installed PILAH adoption (#71):** run `agy plugin validate --strict .`, inspect `agy plugin list`, check all four `pilah_*` tools in the actual IDE, permission-denial negatives, spontaneous qualified cross-file use, and a trivial no-call control. Inspect actual parent/subagent traces.
+2. **Guardian overhead (#91):** default-off, explicit enabling, preserved user hooks, absolute NVM Node binary, clean disable, and measured per-invocation host latency, CPU and token overhead. No automatic compaction.
+3. **Native vs PILAH (#92):** at least five counterbalanced trials per variant with matching model, effort, source snapshot, permissions and independent task rubric. Record provider-reported usage if available, elapsed time, turns, tool failures, accepted tasks; report missing usage as unknown. See [A/B methodology](AB_EVALUATION.md).
+4. **STOCKROOM F01–F18 (#15):** run isolated real PHP HTTP/DB/browser scenarios including tenant and role denials, refund/ledger reconciliation, true two-connection concurrency, offline recovery across browser process restarts, exactly-once retries, stale-build checks and frozen independent negative controls. See [scenario fixture](../tests/fixtures/stockroom-acceptance-18.json) and [runbook](INDEPENDENT_ACCEPTANCE_RUNBOOK.md).
+5. **Release authority:** frozen evaluator-owned registry, signed machine evidence, independent privacy review and detached approval bound to the exact commit. Verify with the [fail-closed authorization mechanism](RELEASE_AUTHORIZATION.md).
 
-Old pre-main issues #15, #71, #91 and #92 can be closed at the maintainer's explicit request with reason `not_planned` / superseded, **not `completed`** for any unexecuted external test. This tracks deferral, not proof of compliance. Re-open or file focused follow-up issues when host-run results identify regressions.
-
-## Interpretation
-
-**Merged into main ≠ tested in real IDE ≠ independently accepted ≠ published.** Historical documents stating that main remained frozen are dated snapshots superseded by this document and PR #105. The A2A source promotion is complete; independent release validation remains pending.
+**Merged to main ≠ installed in a real IDE ≠ independently accepted ≠ published.** No CI PASS, native advice or self-reported transcript substitutes for unexecuted host/app scenarios.

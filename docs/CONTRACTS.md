@@ -1,14 +1,12 @@
-# PILAH public MCP contract
+# PILAH — MCP contracts and data dictionary
 
-The four default operations are `pilah_context`, `pilah_impact`, `pilah_verify`, and `pilah_evidence`. Previous `a2a_*` and `verifykit_*` names remain callable for compatibility but are not listed by default. Persisted A2A data schemas and env vars are deliberately unchanged during migration.
-
-# A2A Contracts and Data Dictionary — v2.0.1 candidate
+The four public tools are `pilah_context`, `pilah_impact`, `pilah_verify`, and `pilah_evidence`. Old `a2a_*` and `verifykit_*` names remain callable but are excluded from the default tool list. Existing A2A settings and local database identities remain unchanged to preserve user data.
 
 **Executable source of truth:** [`src/tools.mjs`](../src/tools.mjs), [generated MCP schema](../schemas/mcp-tools.json), [SQLite DDL](../schemas/database.sql), [plugin manifest](../plugin.json), [hooks](../hooks.json). Current contracts supersede historical examples in earlier audit notes. Documentation is not an executable verifier.
 
 ## MCP surface
 
-Four public, JSON-RPC 2.0 **stdio** tools. Every tool requires an **authorized absolute `workspace`**. Legacy `verifykit_*` aliases remain callable, but `tools/list` only exposes them when `A2A_LEGACY_TOOL_ALIASES=1`.
+Four public, JSON-RPC 2.0 **stdio** tools. Every tool requires an **authorized absolute `workspace`**. Legacy `a2a_*` and `verifykit_*` aliases are callable but only listed when `A2A_LEGACY_TOOL_ALIASES=1`.
 
 | MCP tool | `action` / `operation` | Meaning |
 | --- | --- | --- |
