@@ -18,6 +18,8 @@ These inspect source syntax, full Node tests, MCP/schema/manifest contract, runt
 
 ## Installed Antigravity gate
 
+Run `node scripts/pilah.mjs host-check` on the machine with the actual Antigravity CLI. It must report a local preflight result and explicitly preserves `live_agent_adoption: not_tested`; that result is **not** a substitute for in-IDE behavioral acceptance.
+
 Run `agy plugin validate --strict .` and inspect `agy plugin list` on the exact source. Test the four new `pilah_*` MCP tools with authorized and denied workspaces in actual Antigravity. Check plugin restart, NVM Node PATH, lazy tool discovery, user workspace trust, worktrees and meaningful native project tests. A source-level MCP subprocess test is not a live plugin test.
 
 ## Independent application and release gate
