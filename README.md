@@ -4,9 +4,9 @@
 
 PILAH helps coding agents find relevant cross-file context, reason about change impact, plan verification and track evidence **only when native tools cannot efficiently resolve the uncertainty**. PILAH does **not** edit project files, run shell commands, launch agents, replace Antigravity, or guarantee token savings.
 
-[**CI:** view the repository's Actions tab · [Documentation](docs/README.md) · [MIT License](LICENSE)
+**CI:** view the repository's Actions tab · [Documentation](docs/README.md) · [MIT License](LICENSE)
 
-> **Source status — 24 November 2026:** The plugin is named **PILAH** (manifest `2.1.0`); the GitHub repository URL is still the existing repository. The package manifest uses `@aliip/pilah`, but **publication is not verified**. The source-level CI passed on the latest main push (3/3 OS jobs on Node 24). Real installed Antigravity adoption, independent STOCKROOM F01–F18 runtime acceptance and matched token benchmarks are **not yet verified**. See [current status](BUILD_STATUS.md) and [validation backlog](docs/MAIN_VALIDATION_BACKLOG.md).
+> **Source status — 24 November 2026:** The plugin is named **PILAH** (manifest `2.1.0`); the repository is accessed through the current URL displayed in GitHub's **Code** menu. The package manifest uses `@aliip/pilah`, but **publication is not verified**. The source-level CI passed on the latest main push (3/3 OS jobs on Node 24). Real installed Antigravity adoption, independent STOCKROOM F01–F18 runtime acceptance and matched token benchmarks are **not yet verified**. See [current status](BUILD_STATUS.md) and [validation backlog](docs/MAIN_VALIDATION_BACKLOG.md).
 
 ## What it provides
 
@@ -40,7 +40,7 @@ Do not rely on the unpublished `@aliip/pilah` package identifier as an installat
 
 ## CLI from a checkout
 
-The source entrypoint remains `scripts/pilah.mjs` for backward compatibility, and the package manifest declares `pilah` as its preferred binary name. The following commands are **CLI subcommands**, not guaranteed Antigravity slash commands:
+The supported source CLI is `scripts/pilah.mjs`, and the package manifest declares `pilah` as its preferred binary name. The following commands are **CLI subcommands**, not guaranteed Antigravity slash commands:
 
 ```sh
 node scripts/pilah.mjs help
@@ -81,12 +81,11 @@ Send the following arguments to `pilah_verify` with `operation="plan"`:
 
 Planning produces `not_tested` until evidence exists. A passing build or a local test report is **not** proof of real printer hardware, UI state, security, browser behavior or independent release acceptance. Run the actual tests with native Antigravity tools and report the names of the tests that ran. See [MCP contracts](docs/CONTRACTS.md), [security](docs/SECURITY.md) and [independent acceptance](docs/INDEPENDENT_ACCEPTANCE_RUNBOOK.md).
 
-## Migrating from PILAH
+## Compatibility with earlier installations
 
-- New default tool names: `pilah_context`, `pilah_impact`, `pilah_verify`, `pilah_evidence`.
-- Old `PILAH_*` and `verifykit_*` MCP calls remain callable compatibility aliases; `the corresponding legacy configuration setting=1` exposes aliases in tool listing only when explicitly requested.
-- The `pilah` executable alias, `PILAH_*` configuration variables, and legacy local data directories are intentionally **retained** to protect existing installations. Do not delete their data or migrate them by renaming folders blindly.
-- The GitHub repository name has **not** been changed to `pilah`; installation links use the real source location until an actual repository rename.
+Public MCP tools use the `pilah_*` prefix. Previous tool and CLI aliases, environment settings and local data remain supported internally, so existing installations retain their workspace authorization and saved history. For the exact compatibility identifiers, consult [tool definitions](src/tools.mjs) and [security source](src/security.mjs). Do not guess or rename configuration keys.
+
+Use the repository URL from the GitHub **Code** menu to clone. Do not delete existing configuration or database folders when installing PILAH.
 
 ## Testing, CI and release
 
