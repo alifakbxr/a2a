@@ -6,7 +6,7 @@ const paths={type:'array',items:{type:'string',maxLength:500},maxItems:200};
 const BASE_SPECS = [
   {
     name:'context',
-    description:'Read-only scoped project symbols, files and cross-file relationships; not full runtime coverage.',
+    description:'Scoped project symbols and file relations; static only.',
     inputSchema:{
       type:'object',
       additionalProperties:false,
