@@ -22,6 +22,12 @@ PILAH is a **local-first, native-first engineering support layer** for Google An
 | [RCA](../src/rca.mjs) | Bounded hypothesis and falsification notes | Local evidence is not independent causal proof |
 | [Router](../src/workflow-router.mjs) | Deterministic native-only versus scoped PILAH advice | Does not switch models or auto-call tools |
 
+## Versioned graph index
+
+`src/scanner.mjs` includes an explicit `GRAPH_INDEX_VERSION` in each source snapshot fingerprint. This invalidates a previously persisted SQLite dependency graph when PILAH's static parsing semantics are upgraded, even if project files themselves are untouched. The engine rebuilds the graph using the authorized workspace's current files. This is distinct from user edits: the source-index revision may change after a plugin update, intentionally invalidating prior evidence freshness claims rather than reusing relationships from an older scanner.
+
+Do not automatically increment this version for documentation changes. Bump it when symbol/import/relationship generation changes and preserve a regression test that loads an older index revision. Existing workspace grants, user notes and project source are not deleted.
+
 ## Engineering flow
 
 1. **Native first.** If the task is clear, use zero PILAH calls. Prefer existing project code or platform primitives before adding code.

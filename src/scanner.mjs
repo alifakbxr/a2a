@@ -297,4 +297,7 @@ export function discoverTestCommands(index,root=null){const names=new Set(index.
   const testFiles=index.files.filter(f=>isTestFile(f.path)).map(f=>f.path).slice(0,100);
   return {suggestions,testFiles,note:'Commands are candidates, not audited safe. Run only with Antigravity native permissions, after inspecting scripts.'};
 }
-export function snapshotOf(index){return sha256([...index.files.map(f=>f.path+':'+f.hash),...(index.skippedHashes||[]),index.integrityComplete===false?'source-integrity-incomplete':'source-integrity-complete'].sort().join('\n'))}
+// Bump whenever scanner/graph semantics change: a stable source revision alone
+// must not reuse relation rows from a previous installed PILAH algorithm.
+export const GRAPH_INDEX_VERSION='pilah-graph-v2';
+export function snapshotOf(index){return sha256([GRAPH_INDEX_VERSION,...index.files.map(f=>f.path+':'+f.hash),...(index.skippedHashes||[]),index.integrityComplete===false?'source-integrity-incomplete':'source-integrity-complete'].sort().join('\n'))}
