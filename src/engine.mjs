@@ -22,6 +22,7 @@ export class Engine {
   constructor({store}={}) {this.store=store||new Store();this.owned=!store;}
   close(){if(this.owned)this.store.close()}
   sync(workspace,{verifyIntegrity=false}={}){
+    const scanStarted=performance.now();
     const root=requireAuthorizedWorkspace(workspace),wsId=this.store.register(root);
     const cachedFiles=new Map(this.store.all('SELECT path,content_sha AS hash,language,bytes,mtime_ms,ctime_ms FROM files WHERE workspace_id=?',wsId).map(r=>[r.path,r]));
     const index=discover(root,{cachedFiles:verifyIntegrity?null:cachedFiles}), git=gitHead(root);
@@ -53,7 +54,7 @@ export class Engine {
         });
       }
     }
-    return {root,wsId,revision,index,git,snapshot,skipped:index.skipped,scan_stats:index.scan_stats,source_integrity_complete:index.integrityComplete!==false};
+    return {root,wsId,revision,index,git,snapshot,skipped:index.skipped,scan_stats:{...index.scan_stats,sync_duration_ms:Math.round((performance.now()-scanStarted)*100)/100},source_integrity_complete:index.integrityComplete!==false};
   }
   resolveMeta(workspace){
     const root=requireAuthorizedWorkspace(workspace),wsId=this.store.register(root);
@@ -134,7 +135,7 @@ export class Engine {
         },
         ...(compact?{compact:true}:{}),
       };
-      this.store.recordTelemetry(s.wsId,{toolName:'pilah_context',action:'skeleton',rawScopeTokens:totalRaw,responseTokens:estimateTokens(JSON.stringify(payload))});
+      this.store.recordTelemetry(s.wsId,{toolName:'pilah_context',action:'skeleton',rawScopeTokens:totalRaw,responseTokens:estimateTokens(JSON.stringify(payload)),scanStats:s.scan_stats});
       return payload;
     }
 
@@ -169,7 +170,7 @@ export class Engine {
       const matchedFiles=new Set(qRes.nodes.map(n=>n.file).filter(Boolean));
       let rawBytes=0;
       for(const fp of matchedFiles) rawBytes+=fileBytes.get(fp)||0;
-      this.store.recordTelemetry(s.wsId,{toolName:'pilah_context',action:'query',rawScopeTokens:estimateTokens(rawBytes),responseTokens:estimateTokens(JSON.stringify(payload))});
+      this.store.recordTelemetry(s.wsId,{toolName:'pilah_context',action:'query',rawScopeTokens:estimateTokens(rawBytes),responseTokens:estimateTokens(JSON.stringify(payload)),scanStats:s.scan_stats});
       return payload;
     }
     if(action==='freshness'){
@@ -276,7 +277,7 @@ export class Engine {
       }:{}),
       ...(compact?{compact:true}:{}),
     };
-    this.store.recordTelemetry(s.wsId,{toolName:'pilah_impact',action:'impact',rawScopeTokens:estimateTokens(rawScopeBytes),responseTokens:estimateTokens(JSON.stringify(payload))});
+    this.store.recordTelemetry(s.wsId,{toolName:'pilah_impact',action:'impact',rawScopeTokens:estimateTokens(rawScopeBytes),responseTokens:estimateTokens(JSON.stringify(payload)),scanStats:s.scan_stats});
     return payload;
   }
   verify({workspace,operation='plan',criteria=[],changed=[],worker_name,artifact,allow_stale,persist_plan=false,plan_id=null}={}){

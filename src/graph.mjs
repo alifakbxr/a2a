@@ -70,7 +70,8 @@ export function rankFallbackTests(changed,available,limit=5){
     const name=file.split('/').at(-1).replace(/\.[^.]+$/,'').toLowerCase();
     let score=0;
     for(const stem of stems)if(stem.length>=3&&(name.includes(stem)||stem.includes(name.replace(/test|spec/g,''))))score=Math.max(score,stem===name?3:2);
-    return {file,score};
+    const sameModule=changed.some(p=>p.split('/').slice(0,-1).join('/')===file.split('/').slice(0,-1).join('/'));
+    return {file,score:score+(score>0&&sameModule?1:0)};
   }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.file.localeCompare(b.file)).slice(0,limit).map(x=>x.file);
 }
 

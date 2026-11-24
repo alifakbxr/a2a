@@ -147,6 +147,18 @@ function importsFrom(text,language,ext=''){
     const re=/^\s*use\s+(?!function\b|const\b)([A-Za-z_][\w\\]*)(?:\s+as\s+\w+)?\s*;/gm;
     let m;while((m=re.exec(cleaned))!==null && matches.length<120)matches.push(m[1]);
   }
+  if(language==='php'){
+    // Composer PSR-4 grouped class imports are explicit file relationships,
+    // unlike runtime container bindings. Do not guess missing target classes.
+    const grouped=/^\s*use\s+([A-Za-z_][\w\\]*\\)\s*\{([^{};\n]{1,1000})\}\s*;/gm;
+    let group;
+    while((group=grouped.exec(cleaned))!==null && matches.length<120){
+      for(const item of group[2].split(',').slice(0,30)){
+        const m=item.trim().match(/^([A-Za-z_][\w\\]*)(?:\s+as\s+[A-Za-z_]\w*)?$/);
+        if(m)matches.push(group[1]+m[1]);
+      }
+    }
+  }
   return [...new Set(matches)];
 }
 function localConfigAliases(files){
@@ -299,5 +311,5 @@ export function discoverTestCommands(index,root=null){const names=new Set(index.
 }
 // Bump whenever scanner/graph semantics change: a stable source revision alone
 // must not reuse relation rows from a previous installed PILAH algorithm.
-export const GRAPH_INDEX_VERSION='pilah-graph-v2';
+export const GRAPH_INDEX_VERSION='pilah-graph-v3';
 export function snapshotOf(index){return sha256([GRAPH_INDEX_VERSION,...index.files.map(f=>f.path+':'+f.hash),...(index.skippedHashes||[]),index.integrityComplete===false?'source-integrity-incomplete':'source-integrity-complete'].sort().join('\n'))}

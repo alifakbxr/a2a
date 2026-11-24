@@ -541,6 +541,10 @@ export function analyzeWorkspaceTokens(index, changedFiles = [], telemetrySummar
     calls:Math.max(0,Number(telemetrySummary?.calls)||0),
     estimated_scope_tokens:Math.max(0,Number(telemetrySummary?.raw_scope_tokens)||0),
     estimated_tool_response_tokens:Math.max(0,Number(telemetrySummary?.response_tokens)||0),
+    scan_read_files:Math.max(0,Number(telemetrySummary?.scan_read_files)||0),
+    scan_reused_files:Math.max(0,Number(telemetrySummary?.scan_reused_files)||0),
+    scan_read_bytes:Math.max(0,Number(telemetrySummary?.scan_read_bytes)||0),
+    average_scan_duration_ms:telemetrySummary?.average_scan_duration_ms??null,
     data_quality:'estimated_character_count',
     note:'These are approximate tool/source payload sizes, NOT actual model usage. Summed tool calls may overlap and cached content is not accounted for.',
   };

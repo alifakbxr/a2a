@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {Engine} from '../src/engine.mjs';
+import {exportRedacted} from '../src/redacted-export.mjs';
 import {sqliteApiName} from '../src/sqlite-compat.mjs';
 import {nodeVersionManagerAdvisory} from '../src/node-runtime.mjs';
 import pkg from '../package.json' with {type:'json'};
@@ -42,6 +43,7 @@ Commands:\n  doctor [--public]          inspect runtime, workspace trust and mod
   allow <absolute-workspace> authorize one project manually
   revoke <absolute-workspace> revoke one project
   inspect <workspace>        index project & show code graph coverage
+  export-redacted            print privacy-safe aggregate SQLite diagnostics (no workspace paths or text)
   tokens [--json] [--limit 10] [--conversation ID] [--include-subagents] [--usage-file output.json] read all Antigravity conversation usage locally
   context-health --conversation ID [--milestone-complete] read-only milestone advice (no recurring hook)
   route --profile economy|balanced|deep-review --task simple|cross-file|change-impact|verification|recovery [--risk low|medium|high|critical] [--uncertain] [--unknown-scope] non-executing native-first recommendation
@@ -62,7 +64,11 @@ Commands:\n  doctor [--public]          inspect runtime, workspace trust and mod
   mcp                        start PILAH stdio server via src/mcp.mjs`);process.exit(0);
 }
 try{
-  if(cmd==='host-check'){
+  if(cmd==='export-redacted'){
+    if(argv.length)throw Error('Usage: pilah export-redacted');
+    print(exportRedacted());
+  }
+  else if(cmd==='host-check'){
     if(argv.length)throw Error('Usage: pilah host-check');
     const result=checkHost();print(result);
     if(result.status==='blocked'||result.status==='partial')process.exitCode=2;

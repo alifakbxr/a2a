@@ -26,3 +26,7 @@
 - [ ] Verify registry uploads/install behavior and independently signed authorization for the exact release commit
 
 No local CI/assistant-generated observations satisfy these checkboxes. Failed, stale, partial or unobserved results remain unaccepted.
+
+## Batch 5 host validation prerequisites
+
+Run the source-level test suite and manual 9-job Node 22/24/26 compatibility matrix. On an actual Antigravity installation, use `pilah host-check`, `agy plugin validate --strict .`, and the H01–H06 protocol; log the exact source SHA. Only an independent evaluator can mark F01–F18, privacy approval, native-vs-PILAH A/B token savings, and registry installation as PASS. No self-signed or synthetic test output satisfies these gates.

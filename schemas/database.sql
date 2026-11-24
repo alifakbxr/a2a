@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS rca_experiments (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS rca_experiments_history ON rca_experiments(workspace_id,hypothesis_id,created_at DESC);
-CREATE TABLE IF NOT EXISTS telemetry (workspace_id TEXT NOT NULL, tool_name TEXT NOT NULL, action TEXT NOT NULL, raw_scope_tokens INTEGER NOT NULL DEFAULT 0, response_tokens INTEGER NOT NULL DEFAULT 0, tokens_saved INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS telemetry (workspace_id TEXT NOT NULL, tool_name TEXT NOT NULL, action TEXT NOT NULL, raw_scope_tokens INTEGER NOT NULL DEFAULT 0, response_tokens INTEGER NOT NULL DEFAULT 0, tokens_saved INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, scan_duration_ms REAL, scan_read_files INTEGER, scan_reused_files INTEGER, scan_read_bytes INTEGER);
 CREATE INDEX IF NOT EXISTS telemetry_by_ws ON telemetry(workspace_id,created_at DESC);
 CREATE TABLE IF NOT EXISTS side_questions (id TEXT PRIMARY KEY, workspace_id TEXT, conversation_id TEXT NOT NULL, parent_conversation_id TEXT, title TEXT, question TEXT NOT NULL, summary TEXT, status TEXT NOT NULL DEFAULT 'resolved', transcript_path TEXT, metadata_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS side_q_conv ON side_questions(conversation_id);

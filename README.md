@@ -107,3 +107,7 @@ Routine CI now uses **1 full-suite PR job** on Ubuntu/Node 24, **3 jobs on main*
 - [Status](BUILD_STATUS.md) · [Outstanding independent validation](docs/MAIN_VALIDATION_BACKLOG.md)
 
 [MIT](LICENSE) © 2026 Alif Akbar and contributors.
+
+## Privacy-safe diagnostic export
+
+Run `node scripts/pilah.mjs export-redacted` to print a bounded JSON summary with only table row counts and aggregate, allowlisted tool telemetry. It never exports workspace paths, queries, source code, raw transcript, or artifact contents. Exporting does not claim provider token savings or independently verified agent outcomes. Share the JSON only after reviewing it.
