@@ -10,7 +10,7 @@ Output contains per-call step, sanitized tool name, result classification, next 
 
 **Important:** a successful `pilah_impact` invocation does not prove PILAH saved tokens or produced a better application. Such statements require matched independent Native/PILAH runs, observable outcome checks and provider-reported usage where available. The ledger may miss calls unavailable in the archived transcript.
 
-Current behavioral reliability implementation is in PR #36, merged to `v2.0.1`, but its local E2E does not validate third-party model outcomes. See [trace comparison](AGENT_TRACE_BENCHMARK.md), [token provenance](TOKEN_PROVENANCE.md), and [A/B evaluation](AB_EVALUATION.md).
+Current behavioral reliability implementation is in PR #36, merged to `v2.0.1`, but its local E2E does not validate third-party model outcomes. See [token provenance](TOKEN_PROVENANCE.md).
 
 ### 20 November 2026 classification update
 

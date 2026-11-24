@@ -1,6 +1,6 @@
 # PILAH — build and validation status
 
-**As of 24 November 2026:** PILAH is on `main` with source manifest version `2.1.0`. The canonical repository remains `the existing repository` until a separate GitHub rename. `@aliip/pilah` is the package manifest name, **not confirmation of publication**.
+**As of 24 November 2026:** PILAH is on `main` with source manifest version `1.0.0`. The canonical repository remains `the existing repository` until a separate GitHub rename. `@aliip/pilah` is the package manifest name, **not confirmation of publication**.
 
 | Area | Observable evidence | Boundary |
 | --- | --- | --- |
@@ -10,8 +10,8 @@
 | Engineering hardening | PRs #111–#115 | MCP contracts, directional graph, SAFE handoffs, consent-gated privacy, Python imports, and fail-closed CLI host preflight passed their PR suites; no live host proof |
 | Installed Antigravity | [Backlog](docs/MAIN_VALIDATION_BACKLOG.md) | No complete independent live-host acceptance for PILAH |
 | Context Guardian overhead | [Backlog](docs/MAIN_VALIDATION_BACKLOG.md) | Host per-invocation latency/CPU/token effect not measured |
-| Token savings | [A/B evaluation](docs/AB_EVALUATION.md) | Not established through matched independent trials |
-| Real STOCKROOM F01–F18 | [Independent runbook](docs/INDEPENDENT_ACCEPTANCE_RUNBOOK.md) | Runtime HTTP/DB/browser cases not established as PASS |
+| Token savings | [Validation backlog](docs/MAIN_VALIDATION_BACKLOG.md) | Not established through matched independent trials |
+| Real Acceptance F01–F18 | [Independent runbook](docs/INDEPENDENT_ACCEPTANCE_RUNBOOK.md) | Runtime HTTP/DB/browser cases not established as PASS |
 | npm / GitHub Package / tagged release | [Release authorization](docs/RELEASE_AUTHORIZATION.md) | **NO-GO** without signed external evidence and approval |
 
 Green CI means the complete checked-in test suite and static release checks passed for the specified commit and runner—not actual browser, printing, database race, installed plugin, autonomous tool selection, or cost evidence. Keep missing acceptance marked **not tested**.

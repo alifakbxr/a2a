@@ -12,7 +12,7 @@ PILAH provides read-only local evidence assessment via:
 
 The browser contract is `<browser-evidence-schema-id-from-source>`. It requires a scenario ID, source fingerprint, build artifact SHA-256, claimed served build hash, browser version, runner version, timestamps, executed assertions, and optional hashed local artifact references. PILAH recomputes referenced artifact file hashes locally using workspace-safety rules. A matching pair of digest strings is **not** proof that the expected build was served; external harness/CI review remains necessary. Screenshots by themselves are not functional assertions.
 
-The 18 predefined negative-control cases from STOCKROOM are listed in `tests/fixtures/stockroom-acceptance-18.json`. They are **frozen acceptance specifications**, not completed independent browser/PHP E2E results. Backend isolation, payment and exactly-once invariants still require independently executed test runners.
+The 18 predefined negative-control cases are listed in `tests/fixtures/acceptance-18.json`. They are **frozen acceptance specifications**, not completed independent browser/PHP E2E results. Backend isolation, payment and exactly-once invariants still require independently executed test runners.
 
 PILAH does not control Chrome, install dependencies, run arbitrary project commands or bypass approvals.
 

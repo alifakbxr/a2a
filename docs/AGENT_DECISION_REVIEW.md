@@ -14,4 +14,4 @@ The external review JSON identifies `reviewer.role="independent"` and annotation
 
 The utility validates that referenced observable steps exist and summarizes **reviewer-reported judgments**. It cannot certify reviewer independence, inspect hidden chain-of-thought, authenticate raw transcript observations, or demonstrate that an PILAH intervention caused better code. Store transcripts privately; remove credentials and user content before any sharing.
 
-**Current context:** behavioral reliability PR #36 merged into `v2.0.1`, with local MCP/SQLite E2E passing. Live Antigravity/18-case acceptance remains open in #15. See [5 Whys](BEHAVIORAL_5_WHYS_V2_0_1.md) and [A/B protocol](AB_EVALUATION.md).
+**Current context:** behavioral reliability PR #36 merged into `v2.0.1`, with local MCP/SQLite E2E passing. Live Antigravity/18-case acceptance remains open in #15. See [5 Whys](BEHAVIORAL_5_WHYS_V2_0_1.md).

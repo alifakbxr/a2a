@@ -2,14 +2,14 @@
   "$schema": "https://antigravity.google/schemas/v1/plugin.json",
   "name": "pilah",
   "displayName": "PILAH",
-  "version": "2.1.0",
+  "version": "1.0.0",
   "description": "PILAH (Project Intelligence, Logic, Analysis & Handoffs): native-first engineering context, minimal-change guidance and evidence-scoped verification for Google Antigravity.",
   "logo": "assets/logo.svg",
   "author": {
     "name": "Alif Akbar"
   },
   "license": "MIT",
-  "repository": "https://github.com/alifakbxr/a2a",
+  "repository": "https://github.com/alifakbxr/pilah",
   "keywords": [
     "pilah",
     "engineering",

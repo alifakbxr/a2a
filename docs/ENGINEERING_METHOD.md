@@ -59,7 +59,7 @@ The following sources inform **design decisions**; none proves a percent improve
 4. Make a single versioned change to the skill or tool surface; rerun the same suite plus unseen holdout tasks.
 5. Reject regression, misleading green tests, invented provenance and lower-cost failures. Require review before merging. **No automatic self-improvement daemon.**
 
-See [CI and evaluation](CI_EFFICIENCY.md), [A/B methodology](AB_EVALUATION.md) and [unverified live acceptance](MAIN_VALIDATION_BACKLOG.md).
+See [CI and evaluation](CI_EFFICIENCY.md) and [unverified live acceptance](MAIN_VALIDATION_BACKLOG.md).
 
 ## Brand and compatibility status
 

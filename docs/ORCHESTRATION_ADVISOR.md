@@ -33,4 +33,4 @@
 
 Even when recommended, `user_approval_required:true`, `automatic_worker_launch:false`. Prevent file ownership conflicts, validate worker MCP permissions independently, and require a named handoff test via `pilah_verify(operation="verify_handoff")`. Parallel execution can cost **more** time/tokens and does not inherently improve quality.
 
-The code-level requirements were strengthened in behavioral issue #34, merged through PR #36. Live native capability availability and actual productivity benefits still need an independently controlled test. See [workflow](NATIVE_FIRST_WORKFLOW.md) and [A/B protocol](AB_EVALUATION.md).
+The code-level requirements were strengthened in behavioral issue #34, merged through PR #36. Live native capability availability and actual productivity benefits still need an independently controlled test. See [workflow](NATIVE_FIRST_WORKFLOW.md).

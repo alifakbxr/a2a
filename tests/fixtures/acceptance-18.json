@@ -1,6 +1,6 @@
 {
   "schema": "a2a-adversarial-registry-v1",
-  "origin": "STOCKROOM Benchmark #1 2026-11-18",
+  "origin": "Production Acceptance Benchmark #1 2026-11-18",
   "immutable_fixtures": true,
   "notes": "Frozen external acceptance cases. This registry is a specification, not evidence that any generated application passed. The original user source ZIPs remain unchanged.",
   "scenarios": [

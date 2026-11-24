@@ -6,7 +6,7 @@ PILAH helps coding agents find relevant cross-file context, reason about change 
 
 **CI:** view the repository's Actions tab · [Documentation](docs/README.md) · [MIT License](LICENSE)
 
-> **Source status — 24 November 2026:** The plugin is named **PILAH** (manifest `2.1.0`); the repository is accessed through the current URL displayed in GitHub's **Code** menu. The package manifest uses `@aliip/pilah`, but **publication is not verified**. The source-level CI passed on the latest main push (3/3 OS jobs on Node 24). Real installed Antigravity adoption, independent STOCKROOM F01–F18 runtime acceptance and matched token benchmarks are **not yet verified**. See [current status](BUILD_STATUS.md) and [validation backlog](docs/MAIN_VALIDATION_BACKLOG.md).
+> **Source status — 24 November 2026:** The plugin is named **PILAH** (manifest `1.0.0`); the repository is accessed through the current URL displayed in GitHub's **Code** menu. The package manifest uses `@aliip/pilah`, but **publication is not verified**. The source-level CI passed on the latest main push (3/3 OS jobs on Node 24). Real installed Antigravity adoption, independent Acceptance F01–F18 runtime validation and matched token benchmarks are **not yet verified**. See [current status](BUILD_STATUS.md) and [validation backlog](docs/MAIN_VALIDATION_BACKLOG.md).
 
 ## What it provides
 

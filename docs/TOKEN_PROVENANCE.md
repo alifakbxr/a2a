@@ -12,4 +12,4 @@ The future benchmark must validate worker inclusion and exact plugin overhead ag
 
 ## Current developer status
 
-The PR #36 behavioral work added recovery and evidence scopes but **did not** add a provider usage API or promise token savings. Local MCP/SQLite E2E is not a controlled Native/PILAH model-token benchmark. See [evaluation](AB_EVALUATION.md) and open acceptance.
+The PR #36 behavioral work added recovery and evidence scopes but **did not** add a provider usage API or promise token savings. Local MCP/SQLite E2E is not a controlled Native/PILAH model-token benchmark. See open acceptance.

@@ -1,6 +1,6 @@
 {
   "name": "@aliip/pilah",
-  "version": "2.1.0",
+  "version": "1.0.0",
   "description": "PILAH (Project Intelligence, Logic, Analysis & Handoffs): native-first engineering context, minimal-change guidance and evidence-scoped verification for Google Antigravity.",
   "type": "module",
   "main": "src/engine.mjs",
@@ -13,12 +13,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alifakbxr/a2a.git"
+    "url": "git+https://github.com/alifakbxr/pilah.git"
   },
   "bugs": {
-    "url": "https://github.com/alifakbxr/a2a/issues"
+    "url": "https://github.com/alifakbxr/pilah/issues"
   },
-  "homepage": "https://github.com/alifakbxr/a2a#readme",
+  "homepage": "https://github.com/alifakbxr/pilah#readme",
   "license": "MIT",
   "engines": {
     "node": ">=22.13.0"

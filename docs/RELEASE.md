@@ -1,6 +1,6 @@
 # PILAH — release process
 
-**Current status: NO-GO (24 November 2026).** Source `main` includes PILAH `2.1.0`; externally signed F01–F18 and installed Antigravity host acceptance are **not verified**. No source merge, tag or green CI authorizes publishing on its own. Repository is still `the existing repository`; `@aliip/pilah` has not been verified as published.
+**Current status: NO-GO (24 November 2026).** Source `main` includes PILAH `1.0.0`; externally signed F01–F18 and installed Antigravity host acceptance are **not verified**. No source merge, tag or green CI authorizes publishing on its own. Repository is still `the existing repository`; `@aliip/pilah` has not been verified as published.
 
 ## Source quality gate
 
@@ -25,7 +25,7 @@ Run `agy plugin validate --strict .` and inspect `agy plugin list` on the exact 
 ## Independent application and release gate
 
 - Execute the frozen [STOCKROOM F01–F18 scenarios](INDEPENDENT_ACCEPTANCE_RUNBOOK.md) in a real, isolated HTTP/database/browser environment, including negative and concurrency cases.
-- Run matched [Native-vs-PILAH A/B evaluations](AB_EVALUATION.md). Avoid false claims about quota percentages and token savings.
+- Run matched Native-vs-PILAH evaluations under controlled trials. Avoid false claims about quota percentages and token savings.
 - Review privacy, evidence source revisions, scope binding and named test provenance. False PASS or stale signatures must fail closed.
 - Satisfy the [independently signed package-release authorization](RELEASE_AUTHORIZATION.md), including immutable registry, evaluator keys, trusted F01–F18 results and human approval for the exact `main` commit.
 - Only after authorization should the separately guarded npm/GitHub Packages workflows publish. The source manifest alone is not proof of package availability.

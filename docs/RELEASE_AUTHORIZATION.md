@@ -1,6 +1,6 @@
 # PILAH — independently authorized releases
 
-**Status: NO-GO.** PILAH's source manifest is version `2.1.0`, but independent installed-host and F01–F18 acceptance have not been completed and signed. A green CI, merged PR, Git tag, manual workflow dispatch or GitHub Release is **not** authorization to publish.
+**Status: NO-GO.** PILAH's source manifest is version `1.0.0`, but independent installed-host and F01–F18 acceptance have not been completed and signed. A green CI, merged PR, Git tag, manual workflow dispatch or GitHub Release is **not** authorization to publish.
 
 ## Executable authority
 

@@ -22,7 +22,7 @@ node scripts/pilah.mjs doctor
 Verify MCP `tools/list` exposes **exactly four** tools and `pilah_verify` includes assess, assess_release, assess_semantic, assess_browser and verify_handoff. Verify workspace-trust rejection and source-revision invalidation after file changes. The test suite is intended for Linux/macOS/Windows on Node 22/24. No agent/browser is automatically spawned by PILAH.
 
 ## 3. Frozen 18-case external acceptance matrix
-Use `tests/fixtures/stockroom-acceptance-18.json` for IDs F01–F18; every case begins **not tested**. The external runner must issue **real HTTP/browser/database** operations against each generated app copied from frozen ZIPs.
+Use `tests/fixtures/acceptance-18.json` for IDs F01–F18; every case begins **not tested**. The external runner must issue **real HTTP/browser/database** operations against each generated app copied from frozen ZIPs.
 
 - F01–F03: deny unauthorized roles and foreign-store/related IDs, then query the database for zero changes.
 - F04–F07: verify exact price, tax, payments, duplicate-line refund and money-only refund stock invariants.

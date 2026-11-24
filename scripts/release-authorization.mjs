@@ -12,7 +12,7 @@ const SHA=/^[a-f0-9]{40}$/;
 const digest=x=>typeof x==='string'&&/^[a-f0-9]{64}$/i.test(x);
 const check=(ok,msg)=>{if(!ok)throw new Error(msg)};
 const isObject=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
-const EXPECTED_REPO='alifakbxr/a2a';
+const CANONICAL_REPOS=['alifakbxr/pilah','alifakbxr/a2a'];
 const REQUIRED_SCENARIOS=Array.from({length:18},(_,i)=>'F'+String(i+1).padStart(2,'0'));
 
 // Canonicalize the complete unsigned manifest, not only commit metadata.
@@ -61,7 +61,7 @@ export function assertPublishAuthorized({
  repository,eventName,ref,checkoutSha,mainSha,approvedSha,packageVersion,
  manifest,trustKeys,registry
 }={}){
- check(repository===EXPECTED_REPO,'Publishing permitted only from the canonical repository');
+ check(CANONICAL_REPOS.includes(repository),'Publishing permitted only from the canonical repository');
  check(SHA.test(checkoutSha||'')&&SHA.test(mainSha||'')&&checkoutSha===mainSha,'Release must exactly match the current main HEAD');
  check(SHA.test(approvedSha||'')&&approvedSha===checkoutSha,'Independent maintainer-approved release commit is missing or differs');
  check(typeof packageVersion==='string'&&/^\d+\.\d+\.\d+$/.test(packageVersion),'Invalid package version');

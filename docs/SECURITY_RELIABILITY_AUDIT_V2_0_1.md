@@ -48,7 +48,7 @@ Follow issue #15 for independent acceptance and [v2.0.1 traceability](./V2_0_1_T
 
 After the initial audit, package publication was made **fail-closed** through an external frozen registry, independently signed scenario evidence, release-attesting Ed25519 reviewer signature, exact `main` SHA match, exact tag/version match, and a separately configured maintainer-approved SHA. Both npm and GitHub Packages workflows reject unapproved releases, including manual dispatch. A spoofable Linux process-argv source of workspace auto-trust was removed. `active-only` auto-trust now intersects IDE/CLI trust state with the current bounded hook workspace rather than treating process names or bare hook paths as grants. No new third-party runtime dependencies were introduced.
 
-The private frozen STOCKROOM ZIPs were located and checked independently: 82/82 PHP syntax checks and a Vite build passed for Native; 61/61 PHP syntax checks and a Vite build passed for the PILAH-generated app. PHPUnit **could not start** for either because DOM, mbstring and XMLWriter were absent, so the full 18-case live acceptance remains blocked. See [Release Authorization](./RELEASE_AUTHORIZATION.md) and [Frozen STOCKROOM local rerun](./STOCKROOM_BENCHMARK_RECHECK_2026_11_18.md).
+The private frozen acceptance ZIPs were located and checked independently: 82/82 PHP syntax checks and a Vite build passed for Native; 61/61 PHP syntax checks and a Vite build passed for the PILAH-generated app. PHPUnit **could not start** for either because DOM, mbstring and XMLWriter were absent, so the full 18-case live acceptance remains blocked. See [Release Authorization](./RELEASE_AUTHORIZATION.md).
 
 ## Behavioral reliability follow-up and interpretation
 

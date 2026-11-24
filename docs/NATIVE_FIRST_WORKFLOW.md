@@ -1,6 +1,6 @@
 # PILAH — native-first workflow
 
-**Current workflow for PILAH v2.1.0** on Antigravity; replaces historical PILAH branch instructions. The plugin does not launch agents, run browser/terminal tools, edit source, bypass permissions or automatically switch models.
+**Current workflow for PILAH v1.0.0** on Antigravity; replaces historical PILAH branch instructions. The plugin does not launch agents, run browser/terminal tools, edit source, bypass permissions or automatically switch models.
 
 ## Choose the least expensive sufficient path
 
