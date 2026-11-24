@@ -141,6 +141,34 @@ export class Store {
       }
     });
   }
+  // Local privacy control: only rows associated with an explicitly authorized
+  // workspace. Unscoped historical notes and project artifacts on disk remain untouched.
+  workspaceDataCounts(workspace){
+    const canonical=realpathIfExists(workspace);
+    const row=this.get('SELECT id FROM workspaces WHERE canonical_path=?',canonical);
+    const tables=['revisions','files','nodes','edges','evidence','runs','incidents','hypotheses',
+      'rca_experiments','telemetry','side_questions','artifact_versions','model_recovery_state',
+      'recovery_checkpoints','acceptance_plans'];
+    const counts={};
+    for(const table of tables)counts[table]=row?this.get(`SELECT COUNT(*) AS n FROM ${table} WHERE workspace_id=?`,row.id)?.n||0:0;
+    return {registered:!!row,workspace_id:row?.id||null,counts,
+      total_rows:Object.values(counts).reduce((a,b)=>a+b,0),
+      limits:'Only workspace-scoped SQLite rows; does not delete source files, evidence artifacts on disk, trust grants, or unscoped historical entries.'};
+  }
+  purgeWorkspaceData(workspace,{confirmed=false}={}){
+    if(confirmed!==true)throw Error('Workspace data purge requires explicit confirmation');
+    const pre=this.workspaceDataCounts(workspace);
+    if(!pre.registered)return {...pre,purged:false,reason:'Workspace has no stored records'};
+    const tableOrder=['acceptance_plans','revisions','files','nodes','edges','evidence',
+      'runs','hypotheses','rca_experiments','incidents','telemetry','side_questions',
+      'artifact_versions','model_recovery_state','recovery_checkpoints'];
+    this.transaction(()=>{
+      for(const table of tableOrder)this.run(`DELETE FROM ${table} WHERE workspace_id=?`,pre.workspace_id);
+      this.run('DELETE FROM workspaces WHERE id=?',pre.workspace_id);
+    });
+    return {purged:true,deleted_rows:pre.total_rows,workspace_id:pre.workspace_id,
+      limits:pre.limits,follow_up:'If necessary, separately delete files you explicitly retained outside the SQLite store.'};
+  }
   recordTelemetry(wsId,{toolName,action,rawScopeTokens=0,responseTokens=0}){
     const raw=Math.max(0,Math.round(rawScopeTokens));
     const resp=Math.max(0,Math.round(responseTokens));
