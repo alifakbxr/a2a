@@ -6,7 +6,7 @@ PILAH is a **local-first, native-first engineering support layer** for Google An
 
 - **Plugin:** `plugin.json`, `mcp_config.json`, `hooks.json`, `rules/AGENTS.md`, `skills/pilah/SKILL.md`.
 - **Four public MCP tools:** `pilah_context`, `pilah_impact`, `pilah_verify`, `pilah_evidence`. They use JSON-RPC 2.0 over stdio and require an authorized absolute workspace. `pilah_context` is the only eager tool; others are lazy.
-- **Compatibility:** callable `a2a_*` and `verifykit_*` tool aliases, `scripts/a2a.mjs`, `A2A_*` environment variables, and preexisting local storage paths remain supported; the default tool listing exposes only PILAH.
+- **Compatibility:** callable `PILAH_*` and `verifykit_*` tool aliases, `scripts/pilah.mjs`, `PILAH_*` environment variables, and preexisting local storage paths remain supported; the default tool listing exposes only PILAH.
 - **Runtime:** Node.js >=22.13.0 with built-in SQLite, no third-party npm runtime dependency, no automatic network service and no arbitrary project-command MCP tool.
 
 ## Components

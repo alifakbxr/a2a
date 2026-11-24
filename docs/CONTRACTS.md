@@ -1,12 +1,12 @@
 # PILAH — MCP contracts and data dictionary
 
-The four public tools are `pilah_context`, `pilah_impact`, `pilah_verify`, and `pilah_evidence`. Old `a2a_*` and `verifykit_*` names remain callable but are excluded from the default tool list. Existing A2A settings and local database identities remain unchanged to preserve user data.
+The four public tools are `pilah_context`, `pilah_impact`, `pilah_verify`, and `pilah_evidence`. Old `PILAH_*` and `verifykit_*` names remain callable but are excluded from the default tool list. Existing PILAH settings and local database identities remain unchanged to preserve user data.
 
 **Executable source of truth:** [`src/tools.mjs`](../src/tools.mjs), [generated MCP schema](../schemas/mcp-tools.json), [SQLite DDL](../schemas/database.sql), [plugin manifest](../plugin.json), [hooks](../hooks.json). Current contracts supersede historical examples in earlier audit notes. Documentation is not an executable verifier.
 
 ## MCP surface
 
-Four public, JSON-RPC 2.0 **stdio** tools. Every tool requires an **authorized absolute `workspace`**. Legacy `a2a_*` and `verifykit_*` aliases are callable but only listed when `A2A_LEGACY_TOOL_ALIASES=1`.
+Four public, JSON-RPC 2.0 **stdio** tools. Every tool requires an **authorized absolute `workspace`**. Legacy `PILAH_*` and `verifykit_*` aliases are callable but only listed when `the corresponding legacy configuration setting=1`.
 
 | MCP tool | `action` / `operation` | Meaning |
 | --- | --- | --- |
@@ -15,7 +15,7 @@ Four public, JSON-RPC 2.0 **stdio** tools. Every tool requires an **authorized a
 | `pilah_verify` | `plan`, `assess`, `verify_handoff`, `assess_release`, `assess_semantic`, `assess_browser` | Test planning, scoped local machine results, independent signed release assessment |
 | `pilah_evidence` | `list`, `runs`, `incidents`, `record_incident`, `add_hypothesis`, `assess_hypothesis`, `hypotheses`, `delete_incident`, `side_questions`, `record_side_question`, `artifact_versions`, `artifact_diff`, `snapshot_artifact`, `save_checkpoint`, `model_recovery`, `tool_recovery` | Revision-bound evidence, incident hypotheses, explicit checkpoints, bounded recovery guidance |
 
-The public operation enums above reflect current `src/tools.mjs`. Additional engine-internal compatibility aliases may exist but are not guaranteed as public input enums. A2A cannot launch native commands, edit project source, run browsers, force model selection or guarantee upstream agent obedience.
+The public operation enums above reflect current `src/tools.mjs`. Additional engine-internal compatibility aliases may exist but are not guaranteed as public input enums. PILAH cannot launch native commands, edit project source, run browsers, force model selection or guarantee upstream agent obedience.
 
 ### Scope binding and privacy (19 November re-audit)
 
@@ -27,7 +27,7 @@ Pass `plan_id` on `pilah_verify(operation="assess")`. Provide evidence bindings 
 
 PostToolUse native test provenance is **fail-closed**: only an unambiguous numeric exit code zero, without tool error, may set `succeeded:true`. A missing, malformed, conflicting or nonzero exit status does not authenticate a native test run.
 
-Automatic full-content brain Markdown snapshots are **disabled by default**; opt in with `a2a artifact-autosnapshot on` and disable with `off`. Opt-in stores raw local artifact content; disabling does not erase previous versions. User-invoked `snapshot_artifact` is separate.
+Automatic full-content brain Markdown snapshots are **disabled by default**; opt in with `pilah artifact-autosnapshot on` and disable with `off`. Opt-in stores raw local artifact content; disabling does not erase previous versions. User-invoked `snapshot_artifact` is separate.
 
 ### Verification plan: typed acceptance
 
@@ -81,16 +81,16 @@ A plan returns `not_tested` plus `completion.fully_verified:false`. For `assess`
 
 ### Native teamwork
 
-`pilah_context(action="orchestration",task=...)` accepts user-declared tier, available native commands, workstreams, dependencies, milestones, long horizon, hard reasoning and `file_ownership` (`independent`/`shared`/`unknown`). Parallel modes require **independent ownership and low dependencies** plus confirmed command availability. A2A never creates workers and always requires user approval.
+`pilah_context(action="orchestration",task=...)` accepts user-declared tier, available native commands, workstreams, dependencies, milestones, long horizon, hard reasoning and `file_ownership` (`independent`/`shared`/`unknown`). Parallel modes require **independent ownership and low dependencies** plus confirmed command availability. PILAH never creates workers and always requires user approval.
 
 ## MCP resources
 
 | URI | Meaning |
 | --- | --- |
-| `a2a://status` | Plugin version and mode flags with redacted counts and booleans only; MCP never returns home/data directories or workspace paths |
-| `a2a://tokens/session` | Local session diagnostics; internal counters are not provider-verified token billing |
-| `a2a://workspace/summary` | Active workspace static index and coverage |
-| `a2a://side-questions` | Opt-in recorded side-question history |
+| `pilah://status` | Plugin version and mode flags with redacted counts and booleans only; MCP never returns home/data directories or workspace paths |
+| `pilah://tokens/session` | Local session diagnostics; internal counters are not provider-verified token billing |
+| `pilah://workspace/summary` | Active workspace static index and coverage |
+| `pilah://side-questions` | Opt-in recorded side-question history |
 
 ## SQLite (`node:sqlite`, local)
 
@@ -113,7 +113,7 @@ Privacy caveat: explicitly saved artifact versions and checkpoints **can contain
 
 - **JUnit XML:** exact testcase elements and suite counters reconciled; missing/incomplete reports are inconclusive.
 - **TAP:** assertion lines, optional plan and skipped/failing cases respected.
-- **A2A JSON:** `a2a-test-report-v1` or legacy `verifykit-test-report-v1` with `completed:true` and individual case states.
+- **PILAH JSON:** `legacy JSON report format` or legacy `verifykit-test-report-v1` with `completed:true` and individual case states.
 - **Local reports:** hashed, source-revision-bound, scoped to named assertions. A filename, test name or self-asserted run is not process authentication.
 - **Semantic/browser structural reviews:** local **unattested** observations, not an independent witness.
 - **External release assessment:** pinned acceptance registry, evaluator Ed25519 signatures per required case, exact source revision, and separate signed reviewer approval tied to the exact `main` commit/version. See [acceptance](ACCEPTANCE_GATE.md) and [publish gate](RELEASE_AUTHORIZATION.md).
@@ -123,17 +123,17 @@ Privacy caveat: explicitly saved artifact versions and checkpoints **can contain
 - `node >=22.13.0` and built-in `node:sqlite`, with no third-party runtime package dependencies. Node 26.11+ uses `sqlite.Database`; Node 22 uses the compatible `sqlite.DatabaseSync` fallback. Cross-platform Node 22/24/26.13.1 tests and NVM launcher notes are documented in [Compatibility](COMPATIBILITY.md).
 - Local JSON-RPC messages are bounded; tool responses larger than **64 KiB** are rejected, not silently truncated into a false complete verdict. Reduce requested scope.
 - Workspace authorization, protected roots, symlink checks and explicit revocation take precedence over convenience. Hooks only record limited local metadata; there is **no `PreInvocation`** hook.
-- No third-party browser, runtime model API, prompt content upload or remote A2A telemetry.
+- No third-party browser, runtime model API, prompt content upload or remote PILAH telemetry.
 
 For actual error behavior and constraints, consult the executable [MCP server](../src/mcp.mjs), [verification](../src/verification.mjs), [acceptance matrix](../src/acceptance-matrix.mjs), [model recovery](../src/model-recovery.mjs), and [native recovery](../src/native-tool-recovery.mjs).
 
 ## Compact output and prompt-budget contract (issue #44)
 
-New installations default to `On-Demand` (**no automatic A2A calls or SessionStart injection**) and `Compact` (**bounded result payloads**). `node scripts/a2a.mjs compact off` explicitly restores fuller responses and persists until changed. Existing explicit user settings have precedence.
+New installations default to `On-Demand` (**no automatic PILAH calls or SessionStart injection**) and `Compact` (**bounded result payloads**). `node scripts/pilah.mjs compact off` explicitly restores fuller responses and persists until changed. Existing explicit user settings have precedence.
 
 In Compact, `pilah_context(action="skeleton")` limits previews to 4,800 characters total, 1,600 per file, and six previewed files out of up to 20 requested. Requested-but-omitted paths are returned with `skipped:true` and reason `compact_file_budget`; partial previews carry `truncated:true`, and summary counters disclose omissions. `action="query"` caps static relation rows at 12 and sets `relations_truncated:true` plus `relations_before_compaction` when necessary. This count refers to the query response *before compaction*, not total possible project edges. Impact `summary:true` retains its existing risk/uncertainty/coverage semantics.
 
-Only local payload bytes/characters and heuristic estimates are measurable by these APIs; neither the skill nor the `a2a tokens` CLI can prove provider billing or net token savings. Tool outputs that are truncated must not be presented as complete analysis. See [token efficiency](TOKEN_EFFICIENCY.md).
+Only local payload bytes/characters and heuristic estimates are measurable by these APIs; neither the skill nor the `pilah tokens` CLI can prove provider billing or net token savings. Tool outputs that are truncated must not be presented as complete analysis. See [token efficiency](TOKEN_EFFICIENCY.md).
 
 ## Adaptive RCA / 5 Whys contract (issue #48)
 
@@ -159,18 +159,18 @@ The native `PostToolUse` hook accepts current `write_file`/`edit_file` operation
 
 JUnit parsing refuses commented-out testcases, unsupported DTDs, incomplete structure and spurious failure tags inside system logs/CDATA; both single- and double-quoted attributes are accepted. TAP requires exactly one valid numeric `1..N` plan, in-order assertions, and treats `Bail out!` as failed and TODO/SKIP assertions as non-passing. Unsupported reports return inconclusive, never silently passed. This is a **conservative parser**, not a complete XML/TAP specification implementation; external signed acceptance is separate.
 
-The CLI `tokens` absolute workspace argument and `artifacts snapshot|list|diff|show` now use explicit `fs`/`path` imports and a bounded symlink-safe `active-session.json` reader. Cross-platform artifact root falls back to `getHomeDir()`. These local test/CLI fixes have no effect on the independent release gate [#15](https://github.com/alifakbxr/a2a/issues/15).
+The CLI `tokens` absolute workspace argument and `artifacts snapshot|list|diff|show` now use explicit `fs`/`path` imports and a bounded symlink-safe `active-session.json` reader. Cross-platform artifact root falls back to `getHomeDir()`. These local test/CLI fixes have no effect on the independent release gate #15.
 
 
 ## v2.0.1 reliability and privacy contract updates (19 November 2026)
 
 - Four public MCP tools remain. `pilah_evidence` includes opt-in Adaptive 5 Whys RCA operations; local hypotheses remain non-causal suggestions unless supported by exact source-bound machine assertions.
-- `a2a://status` returns redacted workspace **counts** and booleans only, not host paths or per-project names. `resources/read` errors sanitize authorization failures.
+- `pilah://status` returns redacted workspace **counts** and booleans only, not host paths or per-project names. `resources/read` errors sanitize authorization failures.
 - `hooks.json` recognizes native `write_file`, `edit_file`, `write_to_file`, `replace_file_content`, `multi_replace_file_content` tool events; native test evidence rejects indirect or spoofed commands.
 - `tools/list` enforces a 6,500-byte serialized contract budget with bounded IDs and criteria. Removed unused `pilah_context.conversation_id`, `pilah_context.transcript_path`, and `pilah_evidence.version_number`; deprecated `allow_stale` never permits PASS.
-- Syntax validation recursively covers all source and script `.mjs` files on all CI/runtime-publish gates. `a2a doctor` advises about shell-managed Node version manager paths without executing a shell or changing user configuration.
+- Syntax validation recursively covers all source and script `.mjs` files on all CI/runtime-publish gates. `pilah doctor` advises about shell-managed Node version manager paths without executing a shell or changing user configuration.
 
-See [security](SECURITY.md), [compatibility](COMPATIBILITY.md), and [release gate #15](https://github.com/alifakbxr/a2a/issues/15). A2A v2.0.1 is **not** externally certified or authorized for publishing.
+See [security](SECURITY.md), [compatibility](COMPATIBILITY.md), and release gate #15. PILAH v2.0.1 is **not** externally certified or authorized for publishing.
 
 ## File safety and workspace origin (v2.0.1)
 

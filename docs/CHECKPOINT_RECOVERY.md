@@ -1,10 +1,10 @@
-# A2A Checkpoints and Recovery — current v2.0.1 contract
+# PILAH Checkpoints and Recovery — current v2.0.1 contract
 
-A2A has **two separate recovery mechanisms**. Neither automatically resumes a model, selects a quota group, launches a native tool or proves task completion.
+PILAH has **two separate recovery mechanisms**. Neither automatically resumes a model, selects a quota group, launches a native tool or proves task completion.
 
 ## 1. Explicit workspace checkpoint via MCP
 
-Use `a2a_evidence(operation="save_checkpoint")` with an authorized workspace and a concrete conversation ID. This stores bounded explicit notes in private local SQLite.
+Use `PILAH_evidence(operation="save_checkpoint")` with an authorized workspace and a concrete conversation ID. This stores bounded explicit notes in private local SQLite.
 
 ```json
 {
@@ -21,13 +21,13 @@ Use `a2a_evidence(operation="save_checkpoint")` with an authorized workspace and
 
 `task_summary` is <=500 characters. Each of the four arrays has up to eight nonempty statements of <=200 characters. These are **user/agent-supplied notes**, not attested results; `verified` remains `false`. Recognizable plaintext password/API key/token/cookie assignments are rejected, but the filter is a defense-in-depth heuristic, **not a guarantee** that every secret format will be detected. Never store credentials.
 
-Call `a2a_evidence(operation="model_recovery",conversation_id="conv-test-1234")` to inspect an existing checkpoint. The response includes `source_revision`, `source_revision_matches` and `source_freshness`. If code changes, old notes remain readable but become **stale**; re-read code and rerun tests before continuing.
+Call `PILAH_evidence(operation="model_recovery",conversation_id="conv-test-1234")` to inspect an existing checkpoint. The response includes `source_revision`, `source_revision_matches` and `source_freshness`. If code changes, old notes remain readable but become **stale**; re-read code and rerun tests before continuing.
 
-When Antigravity provides model invocation/stop metadata through supported hooks, A2A records only sanitized failure category and bounded model name, **not** raw provider errors or credentials. Error classifications are heuristic, not a quota API.
+When Antigravity provides model invocation/stop metadata through supported hooks, PILAH records only sanitized failure category and bounded model name, **not** raw provider errors or credentials. Error classifications are heuristic, not a quota API.
 
 ## 2. Native tool recovery guidance (no interception)
 
-Use `a2a_evidence(operation="tool_recovery")` after a native browser, MCP, filesystem or terminal error *only when useful*:
+Use `PILAH_evidence(operation="tool_recovery")` after a native browser, MCP, filesystem or terminal error *only when useful*:
 
 ```json
 {
@@ -51,7 +51,7 @@ Optional `error_hint` (max 400 chars) is classified heuristically but **never st
 | `edit_conflict` | Reopen changed file, recompute patch and rerun related tests |
 | `unknown` | Inspect native diagnostics; do not retry blindly |
 
-A2A returns `automatic_execution:false` and `retry_same_input:false`; repeated attempts trigger escalation guidance. The agent is free to ignore advice, and A2A is **not** a native tool proxy.
+PILAH returns `automatic_execution:false` and `retry_same_input:false`; repeated attempts trigger escalation guidance. The agent is free to ignore advice, and PILAH is **not** a native tool proxy.
 
 ## 3. Read-only checkpoint from an Antigravity CLI event stream
 
@@ -77,10 +77,10 @@ Store raw headless event streams only in a private location. Do not publish cook
 
 ## Re-audit note: checkpoint versus acceptance plan
 
-A task checkpoint holds **unverified** decisions and pending tests; it is not a frozen acceptance manifest. For optional complete-scope assessment use `a2a_verify(plan,persist_plan:true)` and pass its `plan_id` to `a2a_verify(assess)`. The plan is persisted only by explicit request and is bound to the source revision. `model_recovery` notes remain separate and never count as a passing test.
+A task checkpoint holds **unverified** decisions and pending tests; it is not a frozen acceptance manifest. For optional complete-scope assessment use `PILAH_verify(plan,persist_plan:true)` and pass its `plan_id` to `PILAH_verify(assess)`. The plan is persisted only by explicit request and is bound to the source revision. `model_recovery` notes remain separate and never count as a passing test.
 
 ## What this does not prove
 
 An opt-in checkpoint, a locally passing named test, and a stream-derived reported pass are different evidence classes. None establishes independent HTTP/browser/DB behavior, end-user visual parity, F01–F18 STOCKROOM acceptance, or publication eligibility.
 
-See [MCP contracts](CONTRACTS.md), [workflow](NATIVE_FIRST_WORKFLOW.md), [behavioral root causes](BEHAVIORAL_5_WHYS_V2_0_1.md), and [release #15](https://github.com/alifakbxr/a2a/issues/15).
+See [MCP contracts](CONTRACTS.md), [workflow](NATIVE_FIRST_WORKFLOW.md), [behavioral root causes](BEHAVIORAL_5_WHYS_V2_0_1.md), and release #15.

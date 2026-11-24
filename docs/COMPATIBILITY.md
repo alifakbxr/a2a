@@ -17,7 +17,7 @@ PILAH is language-agnostic in its **file, evidence, and MCP contracts**. Static 
 | C/C++ | CMakeLists.txt | quoted include references | ctest candidate | compiler flags and headers incomplete |
 | Multi-language monorepo | multiple manifests | cross-file local relationships | per-ecosystem candidate list | aliases and service contracts require external evidence |
 
-**Run test commands only with native Antigravity permissions after inspecting the project scripts.** A2A does not install missing test infrastructure or promise identical cross-stack verification depth.
+**Run test commands only with native Antigravity permissions after inspecting the project scripts.** PILAH does not install missing test infrastructure or promise identical cross-stack verification depth.
 
 ## Antigravity surface support
 
@@ -26,7 +26,7 @@ PILAH is language-agnostic in its **file, evidence, and MCP contracts**. Static 
 - **CLI:** MCP/plugin contract and headless operation remain native (`antigravity-cli/settings.json` `trustedWorkspaces` supported, filtered by protected roots).
 - **SDK:** not used to proxy models or run third-party agents. A separately written SDK client could call this standard MCP server if supported.
 
-Availability and model permissions depend on the actual Antigravity version and account; A2A never assumes universal `/swarm` or `/teamwork` in IDE.
+Availability and model permissions depend on the actual Antigravity version and account; PILAH never assumes universal `/swarm` or `/teamwork` in IDE.
 
 ## Runtime and evidence compatibility (PILAH 2.1.0)
 
@@ -36,15 +36,15 @@ Node.js **>=22.13.0** is required for built-in `node:sqlite`. CI now runs the **
 
 ### NVM and Antigravity desktop PATH
 
-A2A declares `"command": "node"` in `mcp_config.json` and invokes `node` from its hooks. It resolves **whichever Node binary is in the Antigravity process's PATH**, which may differ from the interactive shell. An NVM-only Node installation may not be present when Antigravity is started from a desktop launcher.
+PILAH declares `"command": "node"` in `mcp_config.json` and invokes `node` from its hooks. It resolves **whichever Node binary is in the Antigravity process's PATH**, which may differ from the interactive shell. An NVM-only Node installation may not be present when Antigravity is started from a desktop launcher.
 
-For Linux/NVM diagnosis, check both `command -v node` and `node scripts/a2a.mjs doctor` inside a source checkout. Doctor now reports `node`, `node_binary`, `sqlite_api` and `sqlite_version`. If Antigravity cannot start its MCP server, verify the **IDE's inherited environment** and launch the IDE from a shell that has initialized NVM, or configure its process environment via the platform's supported mechanism. Do not hardcode one user's NVM path in the public plugin manifest.
+For Linux/NVM diagnosis, check both `command -v node` and `node scripts/pilah.mjs doctor` inside a source checkout. Doctor now reports `node`, `node_binary`, `sqlite_api` and `sqlite_version`. If Antigravity cannot start its MCP server, verify the **IDE's inherited environment** and launch the IDE from a shell that has initialized NVM, or configure its process environment via the platform's supported mechanism. Do not hardcode one user's NVM path in the public plugin manifest.
 
-The CI test does not have access to the user's Pop!_OS GUI session; a live Antigravity plugin validation and MCP smoke remain required by [release gate #15](https://github.com/alifakbxr/a2a/issues/15).
+The CI test does not have access to the user's Pop!_OS GUI session; a live Antigravity plugin validation and MCP smoke remain required by release gate #15.
 
 ### Non-login PATH advisory
 
-`a2a doctor` reports `node_version_manager_path` and `path_advisory` when `process.execPath` is under common user-scoped NVM, fnm, Volta, asdf or nodenv layouts. This is a read-only warning: an interactive terminal's PATH does **not** prove a desktop-launched Antigravity process can spawn the same binary, and no shell probe, installation or config mutation is performed. Node 22.13+ remains required.
+`pilah doctor` reports `node_version_manager_path` and `path_advisory` when `process.execPath` is under common user-scoped NVM, fnm, Volta, asdf or nodenv layouts. This is a read-only warning: an interactive terminal's PATH does **not** prove a desktop-launched Antigravity process can spawn the same binary, and no shell probe, installation or config mutation is performed. Node 22.13+ remains required.
 
 ### Cross-platform HOME and path boundaries
 
@@ -52,31 +52,31 @@ The CI test does not have access to the user's Pop!_OS GUI session; a live Antig
 
 ### Skill inclusion versus plugin MCP availability
 
-An enabled plugin and four green MCP tools do not imply the A2A skill metadata is in the **current** agent context. Antigravity may exclude skills through a global `~/.gemini/config/skills.json`, workspace `.agents/skills.json`, or subagent context filtering. Run `node scripts/a2a.mjs doctor` to inspect the **global manifest only** (`skill_discovery`), then check `/skills` in the actual IDE/CLI session and `agy plugin validate --strict`. `/skills reload` refreshes CLI discovery without invoking an A2A MCP tool. Do not automatically remove exclusions or duplicate the skill in a second location. An `Excluded` indicator is not by itself proof of an MCP server outage or evidence that the model would choose A2A when included.
+An enabled plugin and four green MCP tools do not imply the PILAH skill metadata is in the **current** agent context. Antigravity may exclude skills through a global `~/.gemini/config/skills.json`, workspace `.agents/skills.json`, or subagent context filtering. Run `node scripts/pilah.mjs doctor` to inspect the **global manifest only** (`skill_discovery`), then check `/skills` in the actual IDE/CLI session and `agy plugin validate --strict`. `/skills reload` refreshes CLI discovery without invoking an PILAH MCP tool. Do not automatically remove exclusions or duplicate the skill in a second location. An `Excluded` indicator is not by itself proof of an MCP server outage or evidence that the model would choose PILAH when included.
 
 ### Native reporter provenance (PreToolUse + PostToolUse)
 
-A2A captures a bounded, private pre-run fingerprint only when a direct native test command declares a known report file. PostToolUse binds the reporter to the same conversation and tool step and requires it to be created or changed during that run; unchanged reports, missing preflight context and ambiguous executions remain unverified. This never auto-approves a command, reads model thinking, or treats a local named PASS as independent acceptance. The single-use fingerprint contains only hashed command identity and reporter hashes, not raw test logs or terminal arguments.
+PILAH captures a bounded, private pre-run fingerprint only when a direct native test command declares a known report file. PostToolUse binds the reporter to the same conversation and tool step and requires it to be created or changed during that run; unchanged reports, missing preflight context and ambiguous executions remain unverified. This never auto-approves a command, reads model thinking, or treats a local named PASS as independent acceptance. The single-use fingerprint contains only hashed command identity and reporter hashes, not raw test logs or terminal arguments.
 
 ### Eager core context vs lazy advanced MCP tools (issue #71)
 
-Antigravity defaults MCP tool definitions to **lazy**: a model must locate cached server schema files and call `call_mcp_tool`, even when a hook mentions the tool by name. The 21 Nov 2026 forensic archive contains 13 full transcripts, 227 planner responses and 611 native calls but **zero A2A/MCP calls** with an injected A2A Always-On policy in all 13; this proves no *observed invocation*, not that the tool was available to each model or that using it would have improved quality. Our original Always-On policy used direct `a2a_context(...)` syntax without explaining lazy tool discovery, a confirmed configuration/instruction mismatch.
+Antigravity defaults MCP tool definitions to **lazy**: a model must locate cached server schema files and call `call_mcp_tool`, even when a hook mentions the tool by name. The 21 Nov 2026 forensic archive contains 13 full transcripts, 227 planner responses and 611 native calls but **zero PILAH/MCP calls** with an injected PILAH Always-On policy in all 13; this proves no *observed invocation*, not that the tool was available to each model or that using it would have improved quality. Our original Always-On policy used direct `PILAH_context(...)` syntax without explaining lazy tool discovery, a confirmed configuration/instruction mismatch.
 
-To make **one** high-value entrypoint directly discoverable, `mcp_config.json` now marks `pilah_context` **eager**; `pilah_impact`, `pilah_verify` and `pilah_evidence` stay lazy to avoid registering four schemas every turn. Eager increases the fixed per-turn schema/context footprint even when unused. Native-first and zero **actual calls** for simple tasks remain mandatory; eager must not be used to game intervention counts. Plugin settings may still disable MCP, and subagent MCP inheritance is controlled by Antigravity. To verify: upgrade installed plugin, restart parent/subagent sessions, inspect `/mcp` and `/skills` and run an eligible read-only audit without mentioning A2A. A full actual model-selection A/B must still be conducted independently; no performance gains are claimed from this static change.
+To make **one** high-value entrypoint directly discoverable, `mcp_config.json` now marks `pilah_context` **eager**; `pilah_impact`, `pilah_verify` and `pilah_evidence` stay lazy to avoid registering four schemas every turn. Eager increases the fixed per-turn schema/context footprint even when unused. Native-first and zero **actual calls** for simple tasks remain mandatory; eager must not be used to game intervention counts. Plugin settings may still disable MCP, and subagent MCP inheritance is controlled by Antigravity. To verify: upgrade installed plugin, restart parent/subagent sessions, inspect `/mcp` and `/skills` and run an eligible read-only audit without mentioning PILAH. A full actual model-selection A/B must still be conducted independently; no performance gains are claimed from this static change.
 
 Official reference: https://antigravity.google/docs/mcp (Tool loading: lazy vs eager).
 
 ### Context-health (opt-in initial phase, issue #91)
 
-The `context-health --conversation ID [--milestone-complete]` command reuses A2A's bounded local history parser once when explicitly requested. It uses planner step counts from conversation start only (not active token occupancy or steps since the last compact), never executes a compact command, never reads other sessions when an explicit valid ID is given and never installs a PreInvocation hook. An automatically running Context Guardian requires performance and host integration evidence before it can be enabled. The `--milestone-complete` state is user-reported, not independently verified by A2A.
+The `context-health --conversation ID [--milestone-complete]` command reuses PILAH's bounded local history parser once when explicitly requested. It uses planner step counts from conversation start only (not active token occupancy or steps since the last compact), never executes a compact command, never reads other sessions when an explicit valid ID is given and never installs a PreInvocation hook. An automatically running Context Guardian requires performance and host integration evidence before it can be enabled. The `--milestone-complete` state is user-reported, not independently verified by PILAH.
 
 ### Opt-in native Context Guardian (issue #91)
 
-The standalone `node scripts/context-guardian.mjs status|enable|disable` CLI installs **only the A2A-owned** `a2a-context-guardian` `PreInvocation` hook into the user's global `~/.gemini/config/hooks.json` after an explicit `enable` command. It preserves other user hooks, refuses conflicting or malformed configurations and cleanly removes its own hook on `disable`. No new global MCP server or third-party dependency is installed.
+The standalone `node scripts/context-guardian.mjs status|enable|disable` CLI installs **only the PILAH-owned** `pilah-context-guardian` `PreInvocation` hook into the user's global `~/.gemini/config/hooks.json` after an explicit `enable` command. It preserves other user hooks, refuses conflicting or malformed configurations and cleanly removes its own hook on `disable`. No new global MCP server or third-party dependency is installed.
 
 Default: disabled **with no per-turn child process**. While enabled, it reads **only Antigravity-provided** `initialNumSteps` and `invocationNum` metadata. Yellow review starts at 80 planner steps with reminders only every 35 invocations; red handoff review starts at 140 steps with 25-invocation cadence. These are UX heuristics, **not current active-context tokens or billing/quota metrics**. Uses an ephemeral message and makes **no** automatic compact/clear request. It cannot reliably detect unfinished tasks, so all advice says to finish the atomic edit/test before a handoff. No transcript text is read, state retained, or external request made.
 
-Changing hook configuration may require restarting the Antigravity session. Antigravity's own tool and permission rules remain authoritative. If another process changes the hooks manifest concurrently or the A2A-owned slot is occupied, the installer refuses to clobber it. This is a validated **implementation**, not proven token savings; installed-IDE latency/utility and parent/subagent behavior still require live acceptance. See [Google Antigravity hooks](https://antigravity.google/docs/hooks).
+Changing hook configuration may require restarting the Antigravity session. Antigravity's own tool and permission rules remain authoritative. If another process changes the hooks manifest concurrently or the PILAH-owned slot is occupied, the installer refuses to clobber it. This is a validated **implementation**, not proven token savings; installed-IDE latency/utility and parent/subagent behavior still require live acceptance. See [Google Antigravity hooks](https://antigravity.google/docs/hooks).
 
 
 ### Opt-in Context Guardian runtime path
