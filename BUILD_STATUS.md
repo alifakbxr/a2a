@@ -6,7 +6,8 @@
 | --- | --- | --- |
 | PILAH rebrand | PR #107, 9/9 matrix | Source-level Node 22/24/26.13.1 CI across three OS |
 | Reduced CI and native routing | PR #108 | 1 full-suite job/PR, 3 on main, 9 manually available |
-| Latest known main source CI | Run #45212940464 | **3/3** Ubuntu/macOS/Windows Node 24 jobs passed at `3b168e3` |
+| Latest verified main source CI | Run #45313799636 | **3/3** Ubuntu/macOS/Windows Node 24 jobs passed at `9426397` |
+| Engineering hardening | PRs #111–#115 | MCP contracts, directional graph, SAFE handoffs, consent-gated privacy, Python imports, and fail-closed CLI host preflight passed their PR suites; no live host proof |
 | Installed Antigravity | [Backlog](docs/MAIN_VALIDATION_BACKLOG.md) | No complete independent live-host acceptance for PILAH |
 | Context Guardian overhead | [Backlog](docs/MAIN_VALIDATION_BACKLOG.md) | Host per-invocation latency/CPU/token effect not measured |
 | Token savings | [A/B evaluation](docs/AB_EVALUATION.md) | Not established through matched independent trials |
