@@ -41,6 +41,10 @@ For meaningful quality comparisons, pin an evaluator-owned acceptance suite and 
 
 Official Antigravity features: [Teamwork](https://antigravity.google/docs/teamwork/), [native worktrees](https://antigravity.google/docs/cli/projects/), [plugin skill/MCP/hook architecture](https://antigravity.google/docs/build-plugins/).
 
+## Host acceptance boundary
+
+`node scripts/pilah.mjs host-check` performs a fail-closed, read-only Antigravity CLI/plugin-list preflight **only when the host is installed locally**. If the CLI is missing, it returns blocked. Even a successful local preflight leaves live agent tool choice, security denials and browser outcomes `not_tested`. Capture independent host evidence before any Native-vs-PILAH performance claim.
+
 ## Closed-loop evaluation, without an autonomous self-modifier
 
 1. Freeze a representative task suite: simple edit, cross-file issue, security denial, integration regression, debugging and complex feature.
