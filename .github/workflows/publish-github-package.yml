@@ -28,16 +28,19 @@ jobs:
           npm test
           node scripts/check-release.mjs
 
-      - name: Verify independently authorized release candidate (if configured)
-        if: ${{ secrets.A2A_RELEASE_EVIDENCE_B64 != '' }}
+      - name: Verify independently authorized release candidate
         env:
           A2A_RELEASE_APPROVED_SHA: ${{ vars.A2A_RELEASE_APPROVED_SHA }}
           A2A_RELEASE_EVIDENCE_B64: ${{ secrets.A2A_RELEASE_EVIDENCE_B64 }}
           A2A_RELEASE_TRUST_KEYS_B64: ${{ secrets.A2A_RELEASE_TRUST_KEYS_B64 }}
           A2A_RELEASE_REGISTRY_B64: ${{ secrets.A2A_RELEASE_REGISTRY_B64 }}
         run: |
-          git fetch origin main --no-tags
-          node scripts/release-authorization.mjs
+          if [ -n "$A2A_RELEASE_EVIDENCE_B64" ]; then
+            git fetch origin main --no-tags
+            node scripts/release-authorization.mjs
+          else
+            echo "A2A_RELEASE_EVIDENCE_B64 not configured, skipping external gate"
+          fi
 
       - name: Configure package name for GitHub Packages
         run: |
