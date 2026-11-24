@@ -20,7 +20,7 @@ export function classifyModelFailure(error){
 }
 export function modelRecoveryAdvice(category){
   const base={automatic_switch:false,model_availability:'not_checked',quota:'not_checked',
-    selection:'Use the native model selector or /model; A2A cannot switch the active model.'};
+    selection:'Use the native model selector or /model; PILAH cannot switch the active model.'};
   switch(category){
     case 'quota_exhausted':return {...base,action:'check_quota_and_choose',message:'Open /usage and inspect remaining quota by model group. If an eligible group has capacity, select a model manually with /model. Availability is not verified.'};
     case 'rate_limited':return {...base,action:'respect_native_retry',message:'Rate limiting is not proof the weekly quota is exhausted. Respect native retry/backoff and check /usage; do not retry endlessly or rotate accounts.'};
@@ -74,9 +74,9 @@ export function observeModelInvocation(store,wsId,{conversationId,modelName}){
     if(!notify)return {notice:null,model_changed:changed};
     const checkpoint=store.get('SELECT conversation_id FROM recovery_checkpoints WHERE workspace_id=? AND conversation_id=?',wsId,conversationId);
     // No untrusted free-text task notes embedded as high-priority instructions.
-    const notice='A2A assisted recovery: '+(changed?'The user-selected model changed. ':'A model invocation previously failed. ')+
+    const notice='PILAH assisted recovery: '+(changed?'The user-selected model changed. ':'A model invocation previously failed. ')+
       (incident?'Observed error category: '+incident+' (heuristic, not verified quota). ':'')+
-      (checkpoint?'Explicit task checkpoint available via a2a_evidence(operation="model_recovery"). ':'')+
+      (checkpoint?'Explicit task checkpoint available via pilah_evidence(operation="model_recovery"). ':'')+
       'Verify current files and test state. Never claim the last task completed, auto-switch models or retry blindly.';
     return {notice,model_changed:changed,checkpoint_available:Boolean(checkpoint)};
   });

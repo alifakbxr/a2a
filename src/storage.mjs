@@ -145,7 +145,7 @@ export class Store {
     const raw=Math.max(0,Math.round(rawScopeTokens));
     const resp=Math.max(0,Math.round(responseTokens));
     const saved=0; // Deprecated schema column: there is no observed native baseline.
-    this.run('INSERT INTO telemetry(workspace_id,tool_name,action,raw_scope_tokens,response_tokens,tokens_saved,created_at) VALUES(?,?,?,?,?,?,?)',wsId,String(toolName||'a2a'),String(action||''),raw,resp,saved,new Date().toISOString());
+    this.run('INSERT INTO telemetry(workspace_id,tool_name,action,raw_scope_tokens,response_tokens,tokens_saved,created_at) VALUES(?,?,?,?,?,?,?)',wsId,String(toolName||'pilah'),String(action||''),raw,resp,saved,new Date().toISOString());
     try {
       this.run('DELETE FROM telemetry WHERE workspace_id=? AND id NOT IN (SELECT id FROM telemetry WHERE workspace_id=? ORDER BY created_at DESC LIMIT 500)', wsId, wsId);
     } catch {}

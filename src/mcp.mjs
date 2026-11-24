@@ -10,14 +10,16 @@ import {getSessionTokenUsage} from './tokens.mjs';
 import {classifyMcpFailure} from './mcp-diagnostics.mjs';
 
 const server={name:'pilah',version:pkg.version}, engine=new Engine();
+// Stdio currently implements the 2025-03-26 handshake contract only.
+const MCP_PROTOCOL='2025-03-26';
 const io=readline.createInterface({input:process.stdin,crlfDelay:Infinity,terminal:false});
 const answer=(id,result,error)=>{
-  const message={jsonrpc:'2.0',id,...(error?{error:{code:error.code||-32603,message:String(error.message||error).slice(0,300)}}:{result})};
+  const message={jsonrpc:'2.0',id,...(error?{error:{code:error.code||-32603,message:String(error.message||error).slice(0,300),...(error.data?{data:error.data}:{})}}:{result})};
   process.stdout.write(JSON.stringify(message)+'\n');
 };
 
 const RESOURCES = [
-  {uri:'pilah://status',name:'PILAH Status',description:'Current A2A modes and redacted workspace counts; no local paths.',mimeType:'application/json'},
+  {uri:'pilah://status',name:'PILAH Status',description:'Current PILAH modes and redacted workspace counts; no local paths.',mimeType:'application/json'},
   {uri:'pilah://tokens/session',name:'PILAH Session Diagnostics',description:'Local session event counts only; model token totals require official Antigravity CLI JSON output.',mimeType:'application/json'},
   {uri:'pilah://workspace/summary',name:'PILAH Workspace Summary',description:'Active workspace graph coverage and estimated source inventory; not model token usage.',mimeType:'application/json'},
   {uri:'pilah://side-questions',name:'PILAH Side Questions',description:'Recorded Antigravity side questions (/btw) and exploration notes.',mimeType:'application/json'},
@@ -80,7 +82,11 @@ function readResource(uri){
 function route(req){
   if(req?.jsonrpc!=='2.0'||typeof req.method!=='string')throw Object.assign(new Error('Invalid JSON-RPC request'),{code:-32600});
   switch(req.method){
-    case 'initialize':return {protocolVersion:req.params?.protocolVersion||'2025-03-26',capabilities:{tools:{listChanged:false},resources:{subscribe:false,listChanged:false}},serverInfo:server};
+    case 'initialize':{
+      const requested=req.params?.protocolVersion??MCP_PROTOCOL;
+      if(requested!==MCP_PROTOCOL)throw Object.assign(new Error('Unsupported MCP protocol version; supported: '+MCP_PROTOCOL),{code:-32602,data:{requested:typeof requested==='string'?requested.slice(0,40):null,supported:[MCP_PROTOCOL]}});
+      return {protocolVersion:MCP_PROTOCOL,capabilities:{tools:{listChanged:false},resources:{subscribe:false,listChanged:false}},serverInfo:server};
+    }
     case 'ping':return {};
     case 'tools/list':return {tools:getListedTools()};
     case 'tools/call':{

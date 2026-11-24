@@ -18,7 +18,7 @@ export function classifyMcpFailure(toolName,error){
  if(/Workspace is not authorized/i.test(msg)){
   return {status:'error',code:'workspace_authorization_required',
    message:'Workspace is not authorized for PILAH.',
-   next_step:'Ask the user to trust the ordinary project in Antigravity, or use node <PLUGIN_ROOT>/scripts/a2a.mjs allow <workspace> from the installed plugin. Never bypass protected roots.'};
+   next_step:'Ask the user to trust the ordinary project in Antigravity, or use node <PLUGIN_ROOT>/scripts/pilah.mjs allow <workspace> from the installed plugin. Never bypass protected roots.'};
  }
  if(/protected root|system directory|Symlink access denied|sensitive file denied|escapes authorized|Path escapes|outside workspace|Permission denied/i.test(msg)){
   return {status:'error',code:'workspace_access_denied',
