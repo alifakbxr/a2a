@@ -4,7 +4,7 @@ PILAH has **two separate recovery mechanisms**. Neither automatically resumes a 
 
 ## 1. Explicit workspace checkpoint via MCP
 
-Use `PILAH_evidence(operation="save_checkpoint")` with an authorized workspace and a concrete conversation ID. This stores bounded explicit notes in private local SQLite.
+Use `pilah_evidence(operation="save_checkpoint")` with an authorized workspace and a concrete conversation ID. This stores bounded explicit notes in private local SQLite.
 
 ```json
 {
@@ -21,13 +21,13 @@ Use `PILAH_evidence(operation="save_checkpoint")` with an authorized workspace a
 
 `task_summary` is <=500 characters. Each of the four arrays has up to eight nonempty statements of <=200 characters. These are **user/agent-supplied notes**, not attested results; `verified` remains `false`. Recognizable plaintext password/API key/token/cookie assignments are rejected, but the filter is a defense-in-depth heuristic, **not a guarantee** that every secret format will be detected. Never store credentials.
 
-Call `PILAH_evidence(operation="model_recovery",conversation_id="conv-test-1234")` to inspect an existing checkpoint. The response includes `source_revision`, `source_revision_matches` and `source_freshness`. If code changes, old notes remain readable but become **stale**; re-read code and rerun tests before continuing.
+Call `pilah_evidence(operation="model_recovery",conversation_id="conv-test-1234")` to inspect an existing checkpoint. The response includes `source_revision`, `source_revision_matches` and `source_freshness`. If code changes, old notes remain readable but become **stale**; re-read code and rerun tests before continuing.
 
 When Antigravity provides model invocation/stop metadata through supported hooks, PILAH records only sanitized failure category and bounded model name, **not** raw provider errors or credentials. Error classifications are heuristic, not a quota API.
 
 ## 2. Native tool recovery guidance (no interception)
 
-Use `PILAH_evidence(operation="tool_recovery")` after a native browser, MCP, filesystem or terminal error *only when useful*:
+Use `pilah_evidence(operation="tool_recovery")` after a native browser, MCP, filesystem or terminal error *only when useful*:
 
 ```json
 {
@@ -77,7 +77,7 @@ Store raw headless event streams only in a private location. Do not publish cook
 
 ## Re-audit note: checkpoint versus acceptance plan
 
-A task checkpoint holds **unverified** decisions and pending tests; it is not a frozen acceptance manifest. For optional complete-scope assessment use `PILAH_verify(plan,persist_plan:true)` and pass its `plan_id` to `PILAH_verify(assess)`. The plan is persisted only by explicit request and is bound to the source revision. `model_recovery` notes remain separate and never count as a passing test.
+A task checkpoint holds **unverified** decisions and pending tests; it is not a frozen acceptance manifest. For optional complete-scope assessment use `pilah_verify(plan,persist_plan:true)` and pass its `plan_id` to `pilah_verify(assess)`. The plan is persisted only by explicit request and is bound to the source revision. `model_recovery` notes remain separate and never count as a passing test.
 
 ## What this does not prove
 
