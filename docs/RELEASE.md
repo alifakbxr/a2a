@@ -34,7 +34,7 @@ See [build status](../BUILD_STATUS.md) and [open evidence backlog](MAIN_VALIDATI
 
 ## Package identity and fail-closed publication
 
-The primary public npmjs package is `@aliip/pilah@1.0.1`. The GitHub Packages counterpart is `@alifakbxr/pilah@1.0.1`. The old `@alifakbxr/a2a@2.1.0` artifact remains a legacy compatibility release, not a new release target. CLI aliases in source remain supported. Do not republish an immutable legacy version.
+The primary public npmjs package is `@aliip/pilah@1.0.1`. The GitHub Packages counterpart is `@alifakbxr/pilah@1.0.1`. The old package artifact remains a frozen legacy compatibility release, not a new release target. CLI aliases in source remain supported. Do not republish an immutable legacy version.
 
 Both workflows **always** execute `scripts/release-authorization.mjs`; no evidence or mismatched approval must fail before network publication. A registry version check may skip only when the exact version is confirmed present. A verified E404 is treated as not-yet-published; authentication, access, and network failures must fail, not be labeled "already exists". After successful publication, verify the exact registry version.
 
