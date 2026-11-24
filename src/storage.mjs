@@ -44,6 +44,7 @@ export class Store {
     this.#ensureColumn('workspaces','current_revision_id','TEXT');
     this.#ensureColumn('files','mtime_ms','REAL');
     this.#ensureColumn('files','ctime_ms','REAL');
+    for(const [name,type] of [['scan_duration_ms','REAL'],['scan_read_files','INTEGER'],['scan_reused_files','INTEGER'],['scan_read_bytes','INTEGER']])this.#ensureColumn('telemetry',name,type);
     this.#ensureColumn('artifact_versions','workspace_id','TEXT');
     // Upgrade old v2.0.1 RCA tables BEFORE applying DDL indexes that depend
     // on newly added columns. Other user data and incidents are preserved.
@@ -170,17 +171,20 @@ export class Store {
     return {purged:true,deleted_rows:pre.total_rows,workspace_id:pre.workspace_id,
       limits:pre.limits,follow_up:'If necessary, separately delete files you explicitly retained outside the SQLite store.'};
   }
-  recordTelemetry(wsId,{toolName,action,rawScopeTokens=0,responseTokens=0}){
+  recordTelemetry(wsId,{toolName,action,rawScopeTokens=0,responseTokens=0,scanStats=null}){
     const raw=Math.max(0,Math.round(rawScopeTokens));
     const resp=Math.max(0,Math.round(responseTokens));
     const saved=0; // Deprecated schema column: there is no observed native baseline.
-    this.run('INSERT INTO telemetry(workspace_id,tool_name,action,raw_scope_tokens,response_tokens,tokens_saved,created_at) VALUES(?,?,?,?,?,?,?)',wsId,String(toolName||'pilah'),String(action||''),raw,resp,saved,new Date().toISOString());
+    const count=v=>Number.isSafeInteger(v)&&v>=0?v:null;
+    const ms=Number.isFinite(scanStats?.sync_duration_ms)&&scanStats.sync_duration_ms>=0?Math.min(600000,scanStats.sync_duration_ms):null;
+    this.run('INSERT INTO telemetry(workspace_id,tool_name,action,raw_scope_tokens,response_tokens,tokens_saved,created_at,scan_duration_ms,scan_read_files,scan_reused_files,scan_read_bytes) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+      wsId,String(toolName||'pilah'),String(action||''),raw,resp,saved,new Date().toISOString(),ms,count(scanStats?.read_files),count(scanStats?.reused_files),count(scanStats?.read_bytes));
     try {
       this.run('DELETE FROM telemetry WHERE workspace_id=? AND id NOT IN (SELECT id FROM telemetry WHERE workspace_id=? ORDER BY created_at DESC LIMIT 500)', wsId, wsId);
     } catch {}
   }
   getTelemetrySummary(wsId){
-    const row=this.get('SELECT COUNT(*) AS calls, COALESCE(SUM(raw_scope_tokens),0) AS raw_scope_tokens, COALESCE(SUM(response_tokens),0) AS response_tokens FROM telemetry WHERE workspace_id=?',wsId);
+    const row=this.get('SELECT COUNT(*) AS calls, COALESCE(SUM(raw_scope_tokens),0) AS raw_scope_tokens, COALESCE(SUM(response_tokens),0) AS response_tokens, COALESCE(SUM(scan_read_files),0) AS scan_read_files, COALESCE(SUM(scan_reused_files),0) AS scan_reused_files, COALESCE(SUM(scan_read_bytes),0) AS scan_read_bytes, ROUND(AVG(scan_duration_ms),2) AS average_scan_duration_ms FROM telemetry WHERE workspace_id=?',wsId);
     return row||{calls:0,raw_scope_tokens:0,response_tokens:0};
   }
   recordSideQuestion({
