@@ -55,12 +55,17 @@ node scripts/pilah.mjs autotrust active-only
 node scripts/pilah.mjs allow /absolute/path/to/project
 node scripts/pilah.mjs revoke /absolute/path/to/project
 node scripts/pilah.mjs inspect /absolute/path/to/project
+node scripts/pilah.mjs privacy status /absolute/path/to/project
 node scripts/pilah.mjs impact /absolute/path/to/project src/auth.js
 node scripts/pilah.mjs tokens --limit 5 --json
 node scripts/pilah.mjs route --profile economy --task cross-file --uncertain
 ```
 
 **Defaults:** On-Demand and Compact. Always-On remains opt-in and does not require a tool call for simple tasks. Context Guardian is separate, also opt-in, and does not compact conversations automatically. `tokens` distinguishes observed metadata and estimates from provider-reported usage; **model token savings cannot be inferred from a smaller response or fewer MCP calls**.
+
+For intentionally clearing locally stored workspace records, run `node scripts/pilah.mjs privacy purge /absolute/path/to/project --confirm-purge`. This deletes only the project's scoped SQLite records; it **does not** delete source files, evidence artifacts on disk, trust grants, or unscoped historic notes. Back up anything you need first.
+
+`inspect` includes bounded file-scan I/O diagnostics. Use `node benchmarks/bench.mjs` to measure cold/warm local indexing, rather than treating bytes scanned as model token usage.
 
 ## Verification example
 
