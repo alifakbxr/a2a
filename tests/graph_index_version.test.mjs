@@ -22,7 +22,7 @@ test('upgrading scanner graph semantics rebuilds old persisted relations even wh
   write('lib/consumer.js',"import {calc} from './provider.js';\nexport const out=calc();\n");
   authorizeWorkspace(project);engine=new Engine();
   const first=engine.sync(project);
-  assert.equal(GRAPH_INDEX_VERSION,'pilah-graph-v2');
+  assert.equal(GRAPH_INDEX_VERSION,'pilah-graph-v3');
   assert.ok(engine.impact({workspace:project,changed:['lib/provider.js']}).observed_consumers.includes('lib/consumer.js'));
   const legacyInner=sha256([...first.index.files.map(f=>f.path+':'+f.hash),
     ...(first.index.skippedHashes||[]),'source-integrity-complete'].sort().join('\n'));
