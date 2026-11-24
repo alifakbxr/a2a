@@ -20,7 +20,7 @@ test('impact follows reverse imports, never incorrectly classifies providers as 
   const write=(name,body)=>{const full=path.join(work,name);fs.mkdirSync(path.dirname(full),{recursive:true});fs.writeFileSync(full,body)};
   write('package.json',JSON.stringify({name:'graph-fixture'}));
   write('lib/base.js','export function base(){return 1}\n');
-  write('lib/target.js',"import {base} from './base.js';\nexport const target=base();\n");
+  write('lib/target.js',"import {base} from './base.js';\nexport function target(){return base()}\n");
   write('app/consumer.js',"import {target} from '../lib/target.js';\nexport const value=target;\n");
   write('app/entry.js',"import {value} from './consumer.js';\nexport const entry=value;\n");
   write('app/unrelated.js',"import {base} from '../lib/base.js';\nexport const unrelated=base();\n");
