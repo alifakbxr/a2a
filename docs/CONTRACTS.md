@@ -1,12 +1,12 @@
 # PILAH — MCP contracts and data dictionary
 
-The four public tools are `pilah_context`, `pilah_impact`, `pilah_verify`, and `pilah_evidence`. Old `PILAH_*` and `verifykit_*` names remain callable but are excluded from the default tool list. Existing PILAH settings and local database identities remain unchanged to preserve user data.
+The four public tools are `pilah_context`, `pilah_impact`, `pilah_verify` and `pilah_evidence`. Earlier names remain callable compatibility aliases, hidden from default discovery. Existing configuration keys and database identities are retained internally.
 
 **Executable source of truth:** [`src/tools.mjs`](../src/tools.mjs), [generated MCP schema](../schemas/mcp-tools.json), [SQLite DDL](../schemas/database.sql), [plugin manifest](../plugin.json), [hooks](../hooks.json). Current contracts supersede historical examples in earlier audit notes. Documentation is not an executable verifier.
 
 ## MCP surface
 
-Four public, JSON-RPC 2.0 **stdio** tools. Every tool requires an **authorized absolute `workspace`**. Legacy `PILAH_*` and `verifykit_*` aliases are callable but only listed when `the corresponding legacy configuration setting=1`.
+Four public, JSON-RPC 2.0 **stdio** tools. Every tool requires an authorized absolute `workspace`. The legacy tool-list option remains available, but its exact identifier is defined in [tool source](../src/tools.mjs); do not invent a renamed setting.
 
 | MCP tool | `action` / `operation` | Meaning |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ Pass `plan_id` on `pilah_verify(operation="assess")`. Provide evidence bindings 
 
 PostToolUse native test provenance is **fail-closed**: only an unambiguous numeric exit code zero, without tool error, may set `succeeded:true`. A missing, malformed, conflicting or nonzero exit status does not authenticate a native test run.
 
-Automatic full-content brain Markdown snapshots are **disabled by default**; opt in with `pilah artifact-autosnapshot on` and disable with `off`. Opt-in stores raw local artifact content; disabling does not erase previous versions. User-invoked `snapshot_artifact` is separate.
+Automatic full-content brain Markdown snapshots are **disabled by default**; opt in with `node scripts/pilah.mjs artifact-autosnapshot on` and disable with `off`. Opt-in stores raw local artifact content; disabling does not erase previous versions. User-invoked `snapshot_artifact` is separate.
 
 ### Verification plan: typed acceptance
 
@@ -113,7 +113,7 @@ Privacy caveat: explicitly saved artifact versions and checkpoints **can contain
 
 - **JUnit XML:** exact testcase elements and suite counters reconciled; missing/incomplete reports are inconclusive.
 - **TAP:** assertion lines, optional plan and skipped/failing cases respected.
-- **PILAH JSON:** `legacy JSON report format` or legacy `verifykit-test-report-v1` with `completed:true` and individual case states.
+- **JSON machine reports:** the parser supports existing serialized report formats with explicit completion and individual testcase states. See [verification source](../src/verification.mjs) for the exact accepted identifiers.
 - **Local reports:** hashed, source-revision-bound, scoped to named assertions. A filename, test name or self-asserted run is not process authentication.
 - **Semantic/browser structural reviews:** local **unattested** observations, not an independent witness.
 - **External release assessment:** pinned acceptance registry, evaluator Ed25519 signatures per required case, exact source revision, and separate signed reviewer approval tied to the exact `main` commit/version. See [acceptance](ACCEPTANCE_GATE.md) and [publish gate](RELEASE_AUTHORIZATION.md).
