@@ -24,7 +24,7 @@ node scripts/pilah.mjs tokens --json
 node scripts/pilah.mjs tokens --usage-file agy-result.json
 ```
 
-Inside the agent, call `PILAH_context(action="tokens", history_scope="current")` for the latest session, or explicitly `history_scope="all"` for historical summaries.
+Inside the agent, call `pilah_context(action="tokens", history_scope="current")` for the latest session, or explicitly `history_scope="all"` for historical summaries.
 
 ## Privacy and coverage
 
@@ -49,4 +49,4 @@ The user-provided private Antigravity history used for [behavioral analysis](BEH
 
 ### MCP call identity (issue #71)
 
-Historical `PILAH_calls_seen` counts **observed MCP invocations only**. It recognizes direct eager names (`mcp_PILAH_PILAH_PILAH_context`), namespaced variants and lazy `call_mcp_tool` with the matching PILAH server/tool pair. A native `pilah tokens` diagnostic command is **not** an MCP intervention and must not inflate adoption. This remains tool-call metadata, not a model-selection or token-savings causal estimate. Additional user sessions must be collected locally and safely to prove actual IDE adoption.
+Historical `PILAH_calls_seen` counts **observed MCP invocations only**. It recognizes direct eager names (`mcp_pilah_pilah_PILAH_context`), namespaced variants and lazy `call_mcp_tool` with the matching PILAH server/tool pair. A native `pilah tokens` diagnostic command is **not** an MCP intervention and must not inflate adoption. This remains tool-call metadata, not a model-selection or token-savings causal estimate. Additional user sessions must be collected locally and safely to prove actual IDE adoption.

@@ -8,8 +8,8 @@
 
 1. **Fast path (zero RCA tool calls):** simple typo, isolated change or cause already reproduced and understood → native edit and targeted regression. Do not invoke PILAH merely to ask five questions.
 2. **RCA-lite (native reasoning, zero or one context/impact call):** for uncertain nontrivial bugs, state expected versus actual, the observed symptom, one or two *competing* causes, a falsifier for each and the cheapest differentiating experiment. A chain may stop after two or three Whys. No storage unless explicitly approved.
-3. **RCA-deep (opt-in):** recurrent failure, regression after a fix, inconsistent browser/printer result, concurrency, authorization, financial effects or multi-module ambiguity. If useful, one targeted `PILAH_context(query,limit=5)` OR `PILAH_impact(summary=true)`. The native Antigravity agent still runs experiments; PILAH records only explicitly approved, bounded structured notes.
-4. **Evidence:** use a real named unit/integration JUnit/TAP/PILAH JSON testcase with `PILAH_verify(assess)`. Do not infer a root cause from a successful build, UI test name, tester's narrative or the mere presence of an evidence ID.
+3. **RCA-deep (opt-in):** recurrent failure, regression after a fix, inconsistent browser/printer result, concurrency, authorization, financial effects or multi-module ambiguity. If useful, one targeted `pilah_context(query,limit=5)` OR `pilah_impact(summary=true)`. The native Antigravity agent still runs experiments; PILAH records only explicitly approved, bounded structured notes.
+4. **Evidence:** use a real named unit/integration JUnit/TAP/PILAH JSON testcase with `pilah_verify(assess)`. Do not infer a root cause from a successful build, UI test name, tester's narrative or the mere presence of an evidence ID.
 5. **Countermeasure:** minimize the fix; include controlled negative controls, recurrence scenario and non-regression cases. Re-check source revisions and evidence artifacts after any edit. Report separately what the test supports, what was refuted and what remains unverified.
 
 ## Explicit local RCA lifecycle (four existing MCP tools)
@@ -27,7 +27,7 @@
 }
 ```
 
-Invoke via `PILAH_evidence` only with user consent to retain RCA text locally. `root_cause` is retained for backwards compatibility but treated as a **candidate**, never verified. Incident state is `investigating`. A linked evidence ID is checked for authorized workspace, fresh source and intact artifact, but **does not prove relevance or cause**. A repeat incident signature may suggest a prior related incident ID, not its cause.
+Invoke via `pilah_evidence` only with user consent to retain RCA text locally. `root_cause` is retained for backwards compatibility but treated as a **candidate**, never verified. Incident state is `investigating`. A linked evidence ID is checked for authorized workspace, fresh source and intact artifact, but **does not prove relevance or cause**. A repeat incident signature may suggest a prior related incident ID, not its cause.
 
 ### 2. Create falsifiable hypothesis
 
@@ -49,7 +49,7 @@ Optional `parent_hypothesis_id` creates **branches** of a Why chain up to eight 
 
 ### 3. Run native test then assess it
 
-Run the controlled experiment with native Antigravity tools. Produce JUnit/TAP/PILAH JSON and assess the *exact named* unit/integration test with `PILAH_verify(operation="assess")`. Capture its `evidence_id`. Then:
+Run the controlled experiment with native Antigravity tools. Produce JUnit/TAP/PILAH JSON and assess the *exact named* unit/integration test with `pilah_verify(operation="assess")`. Capture its `evidence_id`. Then:
 
 ```json
 {
@@ -67,7 +67,7 @@ Allowed outcomes: `supports`, `refutes`, `inconclusive`. Results are `locally_su
 
 ### 4. Read status and re-evaluate when source changes
 
-`PILAH_evidence(operation="hypotheses",incident_id="...")` lists branches, recorded outcomes and source freshness; `operation="incidents"` shows candidate causes with `root_cause_verified:false`. When source changes, old hypotheses are reported `stale`; create a new reviewed hypothesis and run new tests. Do not silently reuse an earlier `locally_supported` status. The final response distinguishes **reproduced, locally supported, refuted, stale, blocked and untested**.
+`pilah_evidence(operation="hypotheses",incident_id="...")` lists branches, recorded outcomes and source freshness; `operation="incidents"` shows candidate causes with `root_cause_verified:false`. When source changes, old hypotheses are reported `stale`; create a new reviewed hypothesis and run new tests. Do not silently reuse an earlier `locally_supported` status. The final response distinguishes **reproduced, locally supported, refuted, stale, blocked and untested**.
 
 ## Safety and token budget
 
@@ -85,9 +85,9 @@ Source of truth: [`src/rca.mjs`](../src/rca.mjs), [MCP contracts](CONTRACTS.md),
 
 ### 5. Inspect bounded history or delete RCA notes
 
-In default Compact, `PILAH_evidence(operation="incidents"|"hypotheses")` returns up to **8** entries, including `total`, `more_available` and a proof-warning. Use `compact off` to inspect up to 50 records. Reading a prior locally supported/refuted hypothesis re-checks all its linked artifact hashes; missing/modified evidence changes the displayed status to **stale**, even if source revision itself is unchanged.
+In default Compact, `pilah_evidence(operation="incidents"|"hypotheses")` returns up to **8** entries, including `total`, `more_available` and a proof-warning. Use `compact off` to inspect up to 50 records. Reading a prior locally supported/refuted hypothesis re-checks all its linked artifact hashes; missing/modified evidence changes the displayed status to **stale**, even if source revision itself is unchanged.
 
-For explicit local cleanup, `PILAH_evidence(operation="delete_incident",incident_id="...",persist_rca=true,confirm_deletion=true)` logically removes **one** incident and its attached hypotheses, leaving independent test artifacts, acceptance plans and other incidents untouched. Require user approval: deletion cannot be undone through PILAH, but SQLite WAL/backups may retain old bytes, so it is **not cryptographic erasure**. Do not claim this deletes all related personal data.
+For explicit local cleanup, `pilah_evidence(operation="delete_incident",incident_id="...",persist_rca=true,confirm_deletion=true)` logically removes **one** incident and its attached hypotheses, leaving independent test artifacts, acceptance plans and other incidents untouched. Require user approval: deletion cannot be undone through PILAH, but SQLite WAL/backups may retain old bytes, so it is **not cryptographic erasure**. Do not claim this deletes all related personal data.
 
 Each assessment also appends a local immutable-in-application **experiment history entry** (observation, outcome, exact criterion, evidence IDs, revision and time). The `hypotheses` response returns up to three recent outcomes and the `experiments_total` count; it never upgrades those user-reported interpretations to independent proof. Deleting an incident logically deletes its hypotheses **and this experimental history**, leaving unrelated reports intact.
 

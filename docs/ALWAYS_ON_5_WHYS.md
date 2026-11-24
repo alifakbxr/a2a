@@ -21,7 +21,7 @@
 4. **Why** was it treated as a general context replacement? The policy encouraged skeletonization for every unfamiliar file.
 5. **Why** did this persist? The savings calculation compares hypothetical raw source with skeleton output, not two complete task traces.
 
-**Fix:** In Always-On, use `PILAH_context(action="query")` for names/locations. Use skeleton only for orientation, avoid the full-read duplication when the preview suffices, and use native reads for exact implementation. **Proof:** rule/skill contract review; require empirical A/B for net effect. A true semantic outline parser is out of scope and is not claimed.
+**Fix:** In Always-On, use `pilah_context(action="query")` for names/locations. Use skeleton only for orientation, avoid the full-read duplication when the preview suffices, and use native reads for exact implementation. **Proof:** rule/skill contract review; require empirical A/B for net effect. A true semantic outline parser is out of scope and is not claimed.
 
 ## Scenario 3 — Every meaningful edit causes a chain of optional checks
 1. **Why** does agent reasoning/tool output grow? It calls impact, context, plan, testing, assess and history in sequence.
@@ -30,7 +30,7 @@
 4. **Why** did impact contribute output bloat? The full response includes up to 25 affected items, multiple test files and telemetry.
 5. **Why** wasn't a light first-pass available? PILAH offered only the full impact payload.
 
-**Fix:** Add `PILAH_impact(summary=true)` as a one-call triage that caps affected/test previews but **retains risk, uncertainty, coverage flags, and full counts**. Expand only when needed. Skip token telemetry in summary. Do not automatically call `plan` and `assess` if direct report assessment suffices. **Proof:** summary contract and integration test ensure smaller payload and no missing uncertainty.
+**Fix:** Add `pilah_impact(summary=true)` as a one-call triage that caps affected/test previews but **retains risk, uncertainty, coverage flags, and full counts**. Expand only when needed. Skip token telemetry in summary. Do not automatically call `plan` and `assess` if direct report assessment suffices. **Proof:** summary contract and integration test ensure smaller payload and no missing uncertainty.
 
 ## Scenario 4 — High-frequency lifecycle hooks add repeated work
 1. **Why** is there overhead during each turn? The plugin spawns a Node process in `PreInvocation`.
@@ -60,7 +60,7 @@
 ## Acceptance criteria
 1. Default `on-demand` adds no startup instruction injection; explicit `always-on` injects one adaptive policy.
 2. Persistent rule fits a 400-character budget. `PreInvocation` does not spawn PILAH.
-3. `PILAH_impact(summary=true)` reports full risk/uncertainty and is smaller than the comparable full response on a dependency fixture.
+3. `pilah_impact(summary=true)` reports full risk/uncertainty and is smaller than the comparable full response on a dependency fixture.
 4. MCP `verify_handoff` accepts its documented parameters and does not require reports for research-only tasks.
 5. CI runs on Windows, macOS and Linux.
 6. Publish no net token savings percentage until controlled sessions demonstrate it.

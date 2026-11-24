@@ -18,7 +18,7 @@
 
 **Root-cause candidate:** missing explicit contract separating implementation, machine assertions, visual/hardware observations and independent acceptance; *not* proof of a single prompt/model bug.
 
-**Fix:** `PILAH_verify(operation="plan")` accepts optional structured criteria with `given/when/then`, `evidence_type`, source revision and UI state/viewport/reference. Planning is `not_tested` by default. Assessment returns criterion states and a separate `completion` object with `fully_verified:false` unless authenticated acceptance uses the distinct release path. Named local reports remain **local test assertions only**. For typed browser, visual, security, hardware and independent claims, ordinary local unit/build JSON cannot grant a PASS. Evidence cannot be retroactively promoted by task narrative.
+**Fix:** `pilah_verify(operation="plan")` accepts optional structured criteria with `given/when/then`, `evidence_type`, source revision and UI state/viewport/reference. Planning is `not_tested` by default. Assessment returns criterion states and a separate `completion` object with `fully_verified:false` unless authenticated acceptance uses the distinct release path. Named local reports remain **local test assertions only**. For typed browser, visual, security, hardware and independent claims, ordinary local unit/build JSON cannot grant a PASS. Evidence cannot be retroactively promoted by task narrative.
 
 **Regression scenario:** a build-only `passed` testcase offered as proof of a functioning duplicate-check-in printer, Figma hover, dynamic data or offline restart must remain **inconclusive/not_tested** for that higher-level behavior. A genuine named local integration test may pass its own narrow assertion, but never the overall independent completion gate.
 
@@ -46,7 +46,7 @@
 4. Why isn't failure easy to classify? Native tools expose varied messages while PILAH does not intercept their calls.
 5. Why is tool use inefficient? No concise, optional shared triage response for these failure classes.
 
-**Fix:** `PILAH_evidence(operation="tool_recovery")` gives bounded and privacy-safe guidance; it **never** runs, retries, modifies or proxies a native tool. Raw error hints aren't persisted or copied into responses. After repeated attempts it explicitly warns against identical retry loops. The tiny always-present rule and optional Always-On guidance remind the agent to check current state and proof scope.
+**Fix:** `pilah_evidence(operation="tool_recovery")` gives bounded and privacy-safe guidance; it **never** runs, retries, modifies or proxies a native tool. Raw error hints aren't persisted or copied into responses. After repeated attempts it explicitly warns against identical retry loops. The tiny always-present rule and optional Always-On guidance remind the agent to check current state and proof scope.
 
 **Regression scenario:** a `-32602` invalid `pageId` error yields schema/state inspection; lost browser execution context yields a fresh page/selector check; `403` yields **stop and request permission**, never bypass. Credential-bearing error text is never echoed.
 
