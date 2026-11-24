@@ -165,6 +165,11 @@ function resolveImport(rel,imp,known,language){
     else if(imp.endsWith('.mjs'))candidates.push(imp.slice(0,-4)+'.mts');
     else if(imp.endsWith('.cjs'))candidates.push(imp.slice(0,-4)+'.cts');
   }
+  // Python src-layout packages (e.g. src/pkg/mod.py) are resolved only
+  // when the exact indexed file exists; never synthesize external dependencies.
+  if(language==='python' && !imp.startsWith('src/')){
+    candidates.push('src/'+imp+'.py','src/'+imp+'/__init__.py');
+  }
   candidates.push(
     ...['.ts','.tsx','.mts','.cts','.js','.jsx','.mjs','.cjs','.py','.php','.gd','.json','.vue','.svelte','.h','.hpp','.rs'].map(s=>imp+s),
     ...['index.ts','index.tsx','index.mts','index.js','index.mjs','__init__.py','mod.rs'].map(s=>imp+'/'+s)
