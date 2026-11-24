@@ -309,6 +309,14 @@ export function nativeRunProvenance(store,root,changedFiles,relReport,reportHash
   }catch{return {matched:false,reason:'Native run provenance cannot be read'}}
 }
 
+// Outcome describes the handoff, not independently proven user acceptance.
+export function handoffOutcome(status,{verified=false,testsPassed=false}={}){
+  if(status==='stale')return 'stale';
+  if(status==='failed')return 'failed';
+  if(verified)return 'completed';
+  if(testsPassed||status==='blocked')return 'partial';
+  return 'unknown';
+}
 export function verifyHandoff(store,wsId,root,rev,{
   worker_name=null,
   changed=[],
@@ -349,6 +357,8 @@ export function verifyHandoff(store,wsId,root,rev,{
       operation:'verify_handoff',
       verified:false,
       status:'missing_evidence',
+      handoff_outcome:'unknown',
+      source_freshness:'unknown',
       worker:worker_name||null,
       revision:rev,
       changed_files:detectedChanged,
@@ -367,6 +377,8 @@ export function verifyHandoff(store,wsId,root,rev,{
       operation:'verify_handoff',
       verified:false,
       status:'stale',
+      handoff_outcome:'stale',
+      source_freshness:'stale',
       worker:worker_name||null,
       revision:rev,
       artifact:relArtifact,
@@ -527,6 +539,8 @@ export function verifyHandoff(store,wsId,root,rev,{
     tests_passed:testsPassed,
     deliverable_verified:deliverableVerified,
     status:derivedStatus,
+    handoff_outcome:handoffOutcome(derivedStatus,{verified,testsPassed}),
+    source_freshness:isFresh?'current-by-mtime-only':'stale',
     worker:worker_name||null,
     revision:rev,
     source_fingerprint:sourceFingerprint,
