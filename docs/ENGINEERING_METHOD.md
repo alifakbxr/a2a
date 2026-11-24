@@ -63,6 +63,6 @@ See [CI and evaluation](CI_EFFICIENCY.md), [A/B methodology](AB_EVALUATION.md) a
 
 ## Brand/compatibility status
 
-The new plugin identity, skill, four default MCP tools and package manifest are `pilah`. The existing `a2a_*` and `verifykit_*` tools are callable compatibility aliases; `A2A_*` settings and local data directories remain readable rather than silently moved. Existing installations need an explicit migration from the old Antigravity plugin name; do not keep both active unintentionally.
+The new plugin identity, skill, four default MCP tools and package manifest are `pilah`. The existing `PILAH_*` and `verifykit_*` tools are callable compatibility aliases; `PILAH_*` settings and local data directories remain readable rather than silently moved. Existing installations need an explicit migration from the old Antigravity plugin name; do not keep both active unintentionally.
 
-Repository **GitHub rename** and **npm publication** are separate ownership operations. Until those are actually performed, `github.com/alifakbxr/a2a` is the canonical source and `@aliip/pilah` is a source-package identifier, **not a claim that this package has been published**. External F01–F18/host benchmarks remain pending; see [main validation backlog](MAIN_VALIDATION_BACKLOG.md).
+Repository **GitHub rename** and **npm publication** are separate ownership operations. Until those are actually performed, `the repository URL` is the canonical source and `@aliip/pilah` is a source-package identifier, **not a claim that this package has been published**. External F01–F18/host benchmarks remain pending; see [main validation backlog](MAIN_VALIDATION_BACKLOG.md).
