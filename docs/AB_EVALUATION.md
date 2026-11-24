@@ -1,5 +1,7 @@
 # Reproducible Antigravity A/B evaluation (issue #3)
 
+**Representative candidate suite:** [six PILAH evaluation scenarios](../tests/fixtures/pilah-eval-scenarios.json) cover zero-call edits, cross-file impact, workspace denial, negative acceptance, stale handoff and complex UI/API work. The checked-in fixture is a reproducible *candidate*, not a signed independent evaluator-owned registry. Copy and freeze it outside the agent-controlled workspace before scoring. Every scenario starts `not_tested`; do not infer success or provider usage.
+
 This read-only evaluator consumes completed official `agy -p ... --output-format json` or `stream-json` captures. It **does not launch model runs**, claim equal quotas, or overwrite either benchmark application.
 
 Capture with the same prompt, task repository snapshot, model, thinking effort, permissions and independent acceptance suite. Record those settings in a manifest. Use a fresh workspace per run. Alternate or randomize order; at least five repetitions per variant are recommended. Keep source, environment and success criteria immutable.
