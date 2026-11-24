@@ -150,3 +150,29 @@ test('genuine signed FAILED evidence relabeled PASS is not authorized',()=>{
  e.outcome='passed';
  assert.throws(()=>assertPublishAuthorized(input),Error);
 });
+
+test('publish workflows never skip missing independent release evidence',()=>{
+ for(const file of ['.github/workflows/publish-npm.yml','.github/workflows/publish-github-package.yml']){
+  const yaml=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+  assert.doesNotMatch(yaml,/skipping external gate|if \[ -n "\$A2A_RELEASE_EVIDENCE_B64" \]/);
+  const gates=yaml.match(/node scripts\/release-authorization\.mjs/g)||[];
+  assert.ok(gates.length>=1,file+' must invoke authorization');
+  assert.match(yaml,/git fetch origin main --no-tags\s*\n\s*node scripts\/release-authorization\.mjs/);
+  assert.doesNotMatch(yaml,/npm publish\s*\|\|/);
+  assert.match(yaml,/npm view/);
+ }
+});
+
+test('publishing never suppresses registry errors or republishes the frozen legacy package',()=>{
+ const gh=fs.readFileSync(new URL('../.github/workflows/publish-github-package.yml',import.meta.url),'utf8');
+ const npm=fs.readFileSync(new URL('../.github/workflows/publish-npm.yml',import.meta.url),'utf8');
+ for(const yaml of [gh,npm]){
+  assert.match(yaml,/already_published/);
+  assert.match(yaml,/E404\|404 Not Found/);
+  assert.match(yaml,/exit 1/);
+  assert.doesNotMatch(yaml,/npm publish\s*\|\|/);
+ }
+ assert.doesNotMatch(gh,/pkg\.version = '2\.1\.0'|npm publish \|\|/);
+ assert.match(gh,/Verify GitHub Packages version/);
+ assert.match(npm,/Verified npmjs registry version/);
+});

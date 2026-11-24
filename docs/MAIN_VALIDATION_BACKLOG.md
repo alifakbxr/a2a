@@ -1,6 +1,6 @@
 # PILAH — independent validation backlog
 
-**Updated 24 November 2026.** Source `main` uses PILAH `1.0.0`; GitHub repository remains `the existing repository`. Legacy PILAH issues #15, #71, #91, #92 are closed as **deferred/superseded**, not as successfully tested.
+**Updated 24 November 2026.** Source `main` uses PILAH `1.0.1`; canonical GitHub repository is `alifakbxr/pilah`. Legacy PILAH issues #15, #71, #91, #92 are closed as **deferred/superseded**, not as successfully tested.
 
 ## What automated tests establish
 
@@ -17,3 +17,12 @@
 5. **Release authority:** frozen evaluator-owned registry, signed machine evidence, independent privacy review and detached approval bound to the exact commit. Verify with the [fail-closed authorization mechanism](RELEASE_AUTHORIZATION.md).
 
 **Merged to main ≠ installed in a real IDE ≠ independently accepted ≠ published.** No CI PASS, native advice or self-reported transcript substitutes for unexecuted host/app scenarios.
+
+## Current externally owned acceptance (NOT TESTED)
+
+- [ ] Antigravity H01–H06 on an installed host, record version, permissions, exact SHA, and genuine tool-selection traces
+- [ ] Five or more counterbalanced Native/PILAH trials per variant using independent, fixed acceptance and official token usage, with missing counters `null`
+- [ ] F01–F18 real HTTP/DB/browser negative and concurrency tests with evaluator-owned fixtures, signed evidence and independent privacy review
+- [ ] Verify registry uploads/install behavior and independently signed authorization for the exact release commit
+
+No local CI/assistant-generated observations satisfy these checkboxes. Failed, stale, partial or unobserved results remain unaccepted.

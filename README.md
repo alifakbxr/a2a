@@ -6,7 +6,7 @@ PILAH helps coding agents find relevant cross-file context, reason about change 
 
 **CI:** view the repository's Actions tab · [Documentation](docs/README.md) · [MIT License](LICENSE)
 
-> **Source status — 24 November 2026:** The plugin is named **PILAH** (manifest `1.0.1`); the repository is accessed through the current URL displayed in GitHub's **Code** menu. The package manifest uses `@aliip/pilah`, but **publication is not verified**. The source-level CI passed on the latest main push (3/3 OS jobs on Node 24). Real installed Antigravity adoption, independent Acceptance F01–F18 runtime validation and matched token benchmarks are **not yet verified**. See [current status](BUILD_STATUS.md) and [validation backlog](docs/MAIN_VALIDATION_BACKLOG.md).
+> **Source status — 24 November 2026:** The plugin is named **PILAH** (manifest `1.0.1`); the canonical repository is [alifakbxr/pilah](https://github.com/alifakbxr/pilah). The package manifest uses `@aliip/pilah`, but **publication is not verified**. The source-level CI passed on the latest main push (3/3 OS jobs on Node 24). Real installed Antigravity adoption, independent Acceptance F01–F18 runtime validation and matched token benchmarks are **not yet verified**. See [current status](BUILD_STATUS.md) and [validation backlog](docs/MAIN_VALIDATION_BACKLOG.md).
 
 ## What it provides
 
@@ -42,7 +42,7 @@ The optional `host-check` command only validates the CLI's plugin manifest and w
 
 Install/register this **source checkout** using the native plugin manager supported by your Antigravity version. If the `agy` CLI is available, validate it with `agy plugin validate --strict .` and inspect `agy plugin list`. These are **steps for your machine**, not claims of a completed live installation test. For real host acceptance criteria, see [the host-validation runbook](docs/HOST_VALIDATION.md). The bundle includes `plugin.json`, `mcp_config.json`, `hooks.json`, `rules/AGENTS.md` and `skills/pilah/SKILL.md`.
 
-Do not rely on the unpublished `@aliip/pilah` package identifier as an installation command. Avoid registering duplicate plugin instances unless explicitly intended.
+Do not assume npmjs publication from the manifest alone; independently verify the desired `@aliip/pilah` version in the npmjs registry before installing. Avoid registering duplicate plugin instances unless explicitly intended.
 
 ## CLI from a checkout
 
@@ -100,7 +100,7 @@ Use the repository URL from the GitHub **Code** menu to clone. Do not delete exi
 
 ## Testing, CI and release
 
-Routine CI now uses **1 full-suite PR job** on Ubuntu/Node 24, **3 jobs on main** (Ubuntu/macOS/Windows, Node 24), with the **full 9-job OS × Node 22/24/26.13.1 matrix** available by manually dispatching the workflow. A green repository CI run is not a live Antigravity acceptance or publication authorization. No automatic release or new package publication was performed.
+Routine CI now uses **1 full-suite PR job** on Ubuntu/Node 24, **3 jobs on main** (Ubuntu/macOS/Windows, Node 24), with the **full 9-job OS × Node 22/24/26.13.1 matrix** available by manually dispatching the workflow. A green repository CI run is not a live Antigravity acceptance or publication authorization. Package publication runs exist, but registry availability and independent release approval are separate checks; see the release process.
 
 - [Documentation index](docs/README.md) · [Architecture](docs/ARCHITECTURE.md) · [Compatibility](docs/COMPATIBILITY.md)
 - [CI and efficiency methodology](docs/CI_EFFICIENCY.md) · [Release process](docs/RELEASE.md)
