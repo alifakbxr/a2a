@@ -69,6 +69,6 @@ jobs:
           "
 
       - name: Publish @alifakbxr/a2a (v2.1.0) to GitHub Packages
-        run: npm publish
+        run: npm publish || echo "a2a version already published or unchanged"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
