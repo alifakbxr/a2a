@@ -1,6 +1,6 @@
 # PILAH — release process
 
-**Current status: NO-GO (24 November 2026).** Source `main` includes PILAH `1.0.0`; externally signed F01–F18 and installed Antigravity host acceptance are **not verified**. No source merge, tag or green CI authorizes publishing on its own. Repository is still `the existing repository`; `@aliip/pilah` has not been verified as published.
+**Current status: NO-GO (24 November 2026).** Source `main` includes PILAH `1.0.1`; externally signed F01–F18 and installed Antigravity host acceptance are **not verified**. No source merge, tag or green CI authorizes publishing on its own. Canonical repository: `alifakbxr/pilah`. The source npmjs package is `@aliip/pilah`; registry publication of the exact version must be independently verified.
 
 ## Source quality gate
 
@@ -31,3 +31,17 @@ Run `agy plugin validate --strict .` and inspect `agy plugin list` on the exact 
 - Only after authorization should the separately guarded npm/GitHub Packages workflows publish. The source manifest alone is not proof of package availability.
 
 See [build status](../BUILD_STATUS.md) and [open evidence backlog](MAIN_VALIDATION_BACKLOG.md). Legacy `v2.0.1` promotion instructions are historical in [traceability](V2_0_1_TRACEABILITY.md), not active release instructions.
+
+## Package identity and fail-closed publication
+
+The primary public npmjs package is `@aliip/pilah@1.0.1`. The GitHub Packages counterpart is `@alifakbxr/pilah@1.0.1`. The old `@alifakbxr/a2a@2.1.0` artifact remains a legacy compatibility release, not a new release target. CLI aliases in source remain supported. Do not republish an immutable legacy version.
+
+Both workflows **always** execute `scripts/release-authorization.mjs`; no evidence or mismatched approval must fail before network publication. A registry version check may skip only when the exact version is confirmed present. A verified E404 is treated as not-yet-published; authentication, access, and network failures must fail, not be labeled "already exists". After successful publication, verify the exact registry version.
+
+Check GitHub Actions logs for actual package upload (a successful job alone is not evidence), then independently query:
+```sh
+npm view @aliip/pilah@1.0.1 version --registry=https://registry.npmjs.org/
+# GitHub Packages requires authorized registry credentials:
+npm view @alifakbxr/pilah@1.0.1 version --registry=https://npm.pkg.github.com
+```
+Do not tag or trigger release workflows without the independent signed acceptance material specified in [release authorization](RELEASE_AUTHORIZATION.md).

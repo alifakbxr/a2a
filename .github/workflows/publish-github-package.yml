@@ -35,12 +35,9 @@ jobs:
           A2A_RELEASE_TRUST_KEYS_B64: ${{ secrets.A2A_RELEASE_TRUST_KEYS_B64 }}
           A2A_RELEASE_REGISTRY_B64: ${{ secrets.A2A_RELEASE_REGISTRY_B64 }}
         run: |
-          if [ -n "$A2A_RELEASE_EVIDENCE_B64" ]; then
-            git fetch origin main --no-tags
-            node scripts/release-authorization.mjs
-          else
-            echo "A2A_RELEASE_EVIDENCE_B64 not configured, skipping external gate"
-          fi
+          set -euo pipefail
+          git fetch origin main --no-tags
+          node scripts/release-authorization.mjs
 
       - name: Configure package name for @alifakbxr/pilah
         run: |
@@ -52,23 +49,35 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
 
-      - name: Publish @alifakbxr/pilah to GitHub Packages
-        run: npm publish || echo "pilah version already published or unchanged"
+      - name: Check GitHub Packages version
+        id: version_check
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure package name and version for @alifakbxr/a2a
         run: |
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.name = '@alifakbxr/a2a';
-            pkg.version = '2.1.0';
-            pkg.publishConfig = { registry: 'https://npm.pkg.github.com' };
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
+          set -euo pipefail
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VER=$(node -p "require('./package.json').version")
+          if EXISTS=$(npm view "$PKG_NAME@$PKG_VER" version --registry=https://npm.pkg.github.com 2>npm-view-error.txt); then
+            test "$EXISTS" = "$PKG_VER"
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+          elif grep -Eq '(E404|404 Not Found)' npm-view-error.txt; then
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+          else
+            cat npm-view-error.txt >&2
+            exit 1
+          fi
 
-      - name: Publish @alifakbxr/a2a (v2.1.0) to GitHub Packages
-        run: npm publish || echo "a2a version already published or unchanged"
+      - name: Publish @alifakbxr/pilah to GitHub Packages
+        if: steps.version_check.outputs.already_published == 'false'
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify GitHub Packages version
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VER=$(node -p "require('./package.json').version")
+          test "$(npm view "$PKG_NAME@$PKG_VER" version --registry=https://npm.pkg.github.com)" = "$PKG_VER"

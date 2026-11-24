@@ -41,12 +41,9 @@ jobs:
           A2A_RELEASE_TRUST_KEYS_B64: ${{ secrets.A2A_RELEASE_TRUST_KEYS_B64 }}
           A2A_RELEASE_REGISTRY_B64: ${{ secrets.A2A_RELEASE_REGISTRY_B64 }}
         run: |
-          if [ -n "$A2A_RELEASE_EVIDENCE_B64" ]; then
-            git fetch origin main --no-tags
-            node scripts/release-authorization.mjs
-          else
-            echo "A2A_RELEASE_EVIDENCE_B64 not configured, skipping external gate"
-          fi
+          set -euo pipefail
+          git fetch origin main --no-tags
+          node scripts/release-authorization.mjs
 
       - name: Verify Package Contents Hygiene
         run: |
@@ -78,12 +75,9 @@ jobs:
           A2A_RELEASE_TRUST_KEYS_B64: ${{ secrets.A2A_RELEASE_TRUST_KEYS_B64 }}
           A2A_RELEASE_REGISTRY_B64: ${{ secrets.A2A_RELEASE_REGISTRY_B64 }}
         run: |
-          if [ -n "$A2A_RELEASE_EVIDENCE_B64" ]; then
-            git fetch origin main --no-tags
-            node scripts/release-authorization.mjs
-          else
-            echo "A2A_RELEASE_EVIDENCE_B64 not configured, skipping external gate"
-          fi
+          set -euo pipefail
+          git fetch origin main --no-tags
+          node scripts/release-authorization.mjs
 
       - name: Check Current Version vs npm Registry
         id: version_check
@@ -94,19 +88,24 @@ jobs:
           echo "pkg_name=$PKG_NAME" >> $GITHUB_OUTPUT
           echo "pkg_ver=$PKG_VER" >> $GITHUB_OUTPUT
 
-          # Check if version already exists on npm
-          EXISTS=$(npm view "$PKG_NAME@$PKG_VER" version 2>/dev/null || true)
-          if [ "$EXISTS" = "$PKG_VER" ]; then
-            echo "Version $PKG_NAME@$PKG_VER is already published on npm."
-            echo "already_published=true" >> $GITHUB_OUTPUT
+          # Only confirmed 404 means a new version; auth/network failures must fail.
+          if EXISTS=$(npm view "$PKG_NAME@$PKG_VER" version --registry=https://registry.npmjs.org/ 2>npm-view-error.txt); then
+            if [ "$EXISTS" != "$PKG_VER" ]; then
+              echo "Registry returned unexpected version for $PKG_NAME" >&2
+              exit 1
+            fi
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+          elif grep -Eq '(E404|404 Not Found)' npm-view-error.txt; then
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Version $PKG_NAME@$PKG_VER is new and ready to publish."
-            echo "already_published=false" >> $GITHUB_OUTPUT
+            cat npm-view-error.txt >&2
+            exit 1
           fi
 
       - name: Publish to npmjs.com (Trusted Publisher OIDC or Token)
         if: steps.version_check.outputs.already_published == 'false'
         run: |
+          set -euo pipefail
           if [ -n "$NPM_AUTH_TOKEN" ]; then
             npm config set //registry.npmjs.org/:_authToken "$NPM_AUTH_TOKEN"
           fi
@@ -117,4 +116,5 @@ jobs:
       - name: Verification & Publication Summary
         if: steps.version_check.outputs.already_published == 'false'
         run: |
-          echo "🎉 Successfully published ${{ steps.version_check.outputs.pkg_name }}@${{ steps.version_check.outputs.pkg_ver }} to npmjs.com with SLSA provenance!"
+          test "$(npm view "${{ steps.version_check.outputs.pkg_name }}@${{ steps.version_check.outputs.pkg_ver }}" version --registry=https://registry.npmjs.org/)" = "${{ steps.version_check.outputs.pkg_ver }}"
+          echo "Verified npmjs registry version ${{ steps.version_check.outputs.pkg_name }}@${{ steps.version_check.outputs.pkg_ver }}"
