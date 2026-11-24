@@ -28,6 +28,21 @@ export function classifyMcpFailure(toolName,error){
  if(/ENOENT|no such file|does not exist|not found|cannot find (?:the )?(?:file|path)|unknown workspace|invalid workspace/i.test(msg)){
   return {status:'error',code:'workspace_not_found',message:'Requested workspace does not exist or is not accessible.',next_step:'Provide an existing authorized project path; no permissions are automatically changed.'};
  }
+ if(/Source integrity incomplete|Source revision differs|source.*stale|Acceptance plan.*different source_revision|Report.*stale/i.test(msg)){
+  return {status:'error',code:'source_freshness_unconfirmed',
+    message:'PILAH cannot verify that source and test evidence refer to the same revision.',
+    next_step:'Re-index the authorized workspace, rerun the affected native tests, and provide a new revision-bound report. Do not reuse prior PASS.'};
+ }
+ if(/No machine-readable test report|Required relative evidence artifact|No evidence artifact|Named test case.*not found/i.test(msg)){
+  return {status:'error',code:'evidence_missing',
+    message:'PILAH needs a bounded, named machine-readable test report.',
+    next_step:'Run the relevant native test with JUnit, TAP or supported JSON output, then provide the report path and exact test case.'};
+ }
+ if(/response exceeds 64 KiB|Evidence report exceeds|Evidence artifact exceeds|index_byte_budget_exceeded/i.test(msg)){
+  return {status:'error',code:'resource_limit',
+    message:'The requested analysis exceeds a bounded input or output limit.',
+    next_step:'Narrow the query, files, graph depth or evidence scope; do not disable input limits.'};
+ }
  if(/Unknown tool/i.test(msg)){
   return {status:'error',code:'unknown_tool',message:'Tool is not available.',
    available_tools:ALL_TOOLS.filter(x=>x.name.startsWith('pilah_')).map(x=>x.name),
