@@ -1,4 +1,4 @@
-# Independent validation runbook — A2A v2.0.1
+# Independent validation runbook — PILAH v2.0.1
 
 This is an **execution checklist**, not a report claiming these tests were run.
 Never modify the four original STOCKROOM benchmark ZIPs. Copy to disposable test workspaces.
@@ -11,15 +11,15 @@ PR #29 was merged into the dedicated `v2.0.1` branch at commit `049a5297fbd4c542
 - Separate browser profiles, isolated credentials, synthetic tenants/stores/users, and local test databases. Do not test mutations against production.
 - Independent evaluator generates test assertions and Ed25519 receipts; the coding agent must not control the signing key or its trusted public-key configuration.
 
-## 2. Local A2A quality gate (repository checkout)
+## 2. Local PILAH quality gate (repository checkout)
 ```sh
 npm test
 node scripts/check-release.mjs
 npm pack --dry-run
-node scripts/a2a.mjs doctor
+node scripts/pilah.mjs doctor
 ```
 
-Verify MCP `tools/list` exposes **exactly four** tools and `a2a_verify` includes assess, assess_release, assess_semantic, assess_browser and verify_handoff. Verify workspace-trust rejection and source-revision invalidation after file changes. The test suite is intended for Linux/macOS/Windows on Node 22/24. No agent/browser is automatically spawned by A2A.
+Verify MCP `tools/list` exposes **exactly four** tools and `PILAH_verify` includes assess, assess_release, assess_semantic, assess_browser and verify_handoff. Verify workspace-trust rejection and source-revision invalidation after file changes. The test suite is intended for Linux/macOS/Windows on Node 22/24. No agent/browser is automatically spawned by PILAH.
 
 ## 3. Frozen 18-case external acceptance matrix
 Use `tests/fixtures/stockroom-acceptance-18.json` for IDs F01–F18; every case begins **not tested**. The external runner must issue **real HTTP/browser/database** operations against each generated app copied from frozen ZIPs.
@@ -37,17 +37,17 @@ No unit-test name, human prose or custom JSON witness list may be accepted as pr
 
 ## 4. Machine evidence and signed trust
 - Report each scenario with source revision, test report hash, timestamp, runner metadata and actual external assertions. Attach browser/build digest and observed backend row counts.
-- For browser results, `a2a_verify(operation="assess_browser",artifact="...")` must return `inconclusive` or `evidence-present-unattested` unless separately corroborated; it must **never** certify production readiness.
-- `a2a_verify(operation="assess_semantic",artifact="...")` computes structural scenario conditions but **never** authenticates a self-supplied runner.
-- Set up a separate, frozen acceptance registry at `~/.config/a2a/acceptance-registry.json` with matching scenario IDs, requirement SHA-256 digests, criticality, and required evidence types. **Absent or altered scope must block release eligibility**. The coding agent may not edit this file.
-- Set up `~/.config/a2a/trusted-evaluators.json` with evaluator **public** keys under independent user control, and sign each evidence payload with the evaluator private key after running the actual tests.
-- `a2a_verify(operation="assess_release",artifact="...")` only offers eligible-for-review when signatures, revisions, required evidence types and critical blockers are all satisfied. A valid signature does not itself prove that tests executed honestly.
+- For browser results, `PILAH_verify(operation="assess_browser",artifact="...")` must return `inconclusive` or `evidence-present-unattested` unless separately corroborated; it must **never** certify production readiness.
+- `PILAH_verify(operation="assess_semantic",artifact="...")` computes structural scenario conditions but **never** authenticates a self-supplied runner.
+- Set up a separate, frozen acceptance registry at `~/.config/pilah/acceptance-registry.json` with matching scenario IDs, requirement SHA-256 digests, criticality, and required evidence types. **Absent or altered scope must block release eligibility**. The coding agent may not edit this file.
+- Set up `~/.config/pilah/trusted-evaluators.json` with evaluator **public** keys under independent user control, and sign each evidence payload with the evaluator private key after running the actual tests.
+- `PILAH_verify(operation="assess_release",artifact="...")` only offers eligible-for-review when signatures, revisions, required evidence types and critical blockers are all satisfied. A valid signature does not itself prove that tests executed honestly.
 - Treat critical unproven cases as blockers and preserve report state `inconclusive`.
 
 ## 5. Benchmark attribution and privacy
 - Compare Native versus old main versus isolated integration candidate in matched runs, and then consider Modern Web Guidance as a **separate** ablation.
 - Include repeated independent runs with matching model/effort/source/evaluator/environment; no reused capture bytes; report interrupted/quota/capacity states separately.
-- Distinguish provider-official usage from local transcript counters, worker overlap and unmeasured A2A overhead. No causal efficiency claim from Free Tier percentage alone.
+- Distinguish provider-official usage from local transcript counters, worker overlap and unmeasured PILAH overhead. No causal efficiency claim from Free Tier percentage alone.
 - Before sharing results, use the opt-in `scripts/export-benchmark.mjs` allowlist output, inspect it manually, and do not upload raw brain ZIPs, cookies or database secrets.
 
 ## 6. Merge policy
@@ -57,16 +57,16 @@ No unit-test name, human prose or custom JSON witness list may be accepted as pr
 
 ## Current v2.0.1 behavior-specific gates (merged PR #36)
 
-The `v2.0.1` candidate includes [PR #36](https://github.com/alifakbxr/a2a/pull/36) at `67ea5888caf61751952c8a7daa1eb222d738d4b6`. Before live release testing, verify the local plan/assessment contract:
+The `v2.0.1` candidate includes PR #36 at `67ea5888caf61751952c8a7daa1eb222d738d4b6`. Before live release testing, verify the local plan/assessment contract:
 
-1. `a2a_verify(operation="plan")` accepts unique typed `id`, `given`, `when`, `then` and `evidence_type`. For browser/visual paths it additionally requires `viewport`, `ui_state` and `reference`. It must start at **not_tested**.
+1. `PILAH_verify(operation="plan")` accepts unique typed `id`, `given`, `when`, `then` and `evidence_type`. For browser/visual paths it additionally requires `viewport`, `ui_state` and `reference`. It must start at **not_tested**.
 2. A passing local build/JUnit/TAP/JSON report can only prove its **named test assertion**. `completion.fully_verified` remains false; browser, visual, hardware, security or independent claims must not receive a local report PASS without real external evidence.
-3. `a2a_evidence(operation="save_checkpoint")` records only explicit bounded `decisions` and `pending_tests`; `model_recovery` detects an old source revision as **stale**. No raw secrets or resume automation.
-4. `a2a_evidence(operation="tool_recovery")` offers **nonexecuting** repair guidance for bad arguments, browser context loss, timeouts, denial, missing files or edit conflicts. It must never echo a private raw error body or bypass authorization.
-5. `a2a_context(action="orchestration")` never launches workers; parallel native modes require low dependency and **independent file ownership**, and explicit user consent.
+3. `PILAH_evidence(operation="save_checkpoint")` records only explicit bounded `decisions` and `pending_tests`; `model_recovery` detects an old source revision as **stale**. No raw secrets or resume automation.
+4. `PILAH_evidence(operation="tool_recovery")` offers **nonexecuting** repair guidance for bad arguments, browser context loss, timeouts, denial, missing files or edit conflicts. It must never echo a private raw error body or bypass authorization.
+5. `PILAH_context(action="orchestration")` never launches workers; parallel native modes require low dependency and **independent file ownership**, and explicit user consent.
 
-Automated [post-merge CI](https://github.com/alifakbxr/a2a/actions/runs/44325007116) has **213/213 Node assertions passing** on Ubuntu Node 22 and **4/4 OS/runtime jobs**. Its local MCP stdio/SQLite E2E is **not** a replacement for the external test harness described above. The frozen STOCKROOM baseline applications are known-defective **negative controls**, so record their observed failures honestly rather than treating those apps as passing release criteria. The independent evaluator must define exactly what successful A2A detection/refusal means.
+Automated post-merge CI has **213/213 Node assertions passing** on Ubuntu Node 22 and **4/4 OS/runtime jobs**. Its local MCP stdio/SQLite E2E is **not** a replacement for the external test harness described above. The frozen STOCKROOM baseline applications are known-defective **negative controls**, so record their observed failures honestly rather than treating those apps as passing release criteria. The independent evaluator must define exactly what successful PILAH detection/refusal means.
 
 ## 20 November 2026 addendum (current merged candidate)
 
-The security, session, provenance and MCP diagnostics corrections in merged PRs #81–#86 and #88 are integrated into `v2.0.1`; the final combined 9-job Ubuntu/macOS/Windows × Node 22/24/26.13.1 [CI run](https://github.com/alifakbxr/a2a/actions/runs/44706443191) passed. Prior 213/213 and 4/4 statistics above are **historical snapshots**, not this candidate's current CI counts. Recent native test evidence requires an actual `PreToolUse` + matching `PostToolUse` pair and a reporter artifact created/changed during that invocation. This is still **local named-test provenance only** and cannot satisfy the independently signed F01–F18 acceptance requirement by itself. Issue #71 remains open for new installed-IDE agent-choice/skill-inclusion trials; issue #15 remains open for real external HTTP/DB/browser tests and approval. Maintain the original frozen source archives and do not publish or promote to `main`.
+The security, session, provenance and MCP diagnostics corrections in merged PRs #81–#86 and #88 are integrated into `v2.0.1`; the final combined 9-job Ubuntu/macOS/Windows × Node 22/24/26.13.1 CI run passed. Prior 213/213 and 4/4 statistics above are **historical snapshots**, not this candidate's current CI counts. Recent native test evidence requires an actual `PreToolUse` + matching `PostToolUse` pair and a reporter artifact created/changed during that invocation. This is still **local named-test provenance only** and cannot satisfy the independently signed F01–F18 acceptance requirement by itself. Issue #71 remains open for new installed-IDE agent-choice/skill-inclusion trials; issue #15 remains open for real external HTTP/DB/browser tests and approval. Maintain the original frozen source archives and do not publish or promote to `main`.
