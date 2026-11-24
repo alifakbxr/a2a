@@ -1,6 +1,6 @@
 {
   "name": "@aliip/pilah",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "PILAH (Project Intelligence, Logic, Analysis & Handoffs): native-first engineering context, minimal-change guidance and evidence-scoped verification for Google Antigravity.",
   "type": "module",
   "main": "src/engine.mjs",
