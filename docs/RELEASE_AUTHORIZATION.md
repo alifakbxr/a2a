@@ -1,6 +1,6 @@
-# Independently authorized A2A package releases
+# PILAH — independently authorized package releases
 
-**Status:** Fail-closed on `v2.0.1`. This document describes a gate, **not approval to release**.
+**Status (24 November 2026):** PILAH `2.1.0` source is on `main`. This document describes a **fail-closed gate**, not authorization to tag or publish. `A2A_*` release environment variables and the `alifakbxr/a2a` repository identity remain in force for compatibility.
 
 Both `.github/workflows/publish-npm.yml` and `.github/workflows/publish-github-package.yml` run `node scripts/release-authorization.mjs` **before publication**. A tag, manually dispatched workflow, passing CI, or GitHub Release announcement alone cannot authorize publication.
 
@@ -27,7 +27,7 @@ The `A2A_RELEASE_EVIDENCE_B64` manifest contains the usual `revision`, `evaluato
   "release_target": {
     "repository": "alifakbxr/a2a",
     "commit_sha": "<40-character approved main commit>",
-    "version": "2.0.1",
+    "version": "2.1.0",
     "acceptance_registry_sha256": "<hex SHA-256 of JSON.stringify(pinned registry)>",
     "real_antigravity_validation": true,
     "privacy_reviewed": true,
