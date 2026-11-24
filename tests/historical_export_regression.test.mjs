@@ -32,6 +32,12 @@ function withProject(fn){
 test('persisted hash cache requires ctime in addition to mtime and size',()=>withProject(({engine,root,write})=>{
   write('lib/provider.js','export const key=1;\n');
   write('lib/use.js',"import {key} from './provider.js';\n");
+  // Old file modification times make the warm cache path eligible immediately.
+  const aged=new Date(Date.now()-10_000);
+  for(const rel of ['lib/provider.js','lib/use.js']){
+    const filename=path.join(root,rel);
+    fs.utimesSync(filename,aged,aged);
+  }
   const first=engine.sync(root);
   const warm=engine.sync(root);
   assert.ok(warm.scan_stats.reused_files>=1,'warm scan should reuse unchanged metadata safely');
