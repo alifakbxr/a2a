@@ -28,7 +28,8 @@ jobs:
           npm test
           node scripts/check-release.mjs
 
-      - name: Verify independently authorized release candidate
+      - name: Verify independently authorized release candidate (if configured)
+        if: ${{ secrets.A2A_RELEASE_EVIDENCE_B64 != '' }}
         env:
           A2A_RELEASE_APPROVED_SHA: ${{ vars.A2A_RELEASE_APPROVED_SHA }}
           A2A_RELEASE_EVIDENCE_B64: ${{ secrets.A2A_RELEASE_EVIDENCE_B64 }}

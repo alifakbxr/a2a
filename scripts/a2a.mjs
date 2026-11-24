@@ -157,14 +157,15 @@ try{
   else if(cmd==='stats'){
     const {execFileSync}=await import('node:child_process');
     try{
-      const clonesRaw=execFileSync('gh',['api','/repos/alifakbxr/a2a/traffic/clones'],{encoding:'utf8',timeout:6000});
-      const viewsRaw=execFileSync('gh',['api','/repos/alifakbxr/a2a/traffic/views'],{encoding:'utf8',timeout:6000});
-      const repoRaw=execFileSync('gh',['api','/repos/alifakbxr/a2a'],{encoding:'utf8',timeout:6000});
+      const repoName=process.env.PILAH_REPO||'alifakbxr/pilah';
+      const clonesRaw=execFileSync('gh',['api',`/repos/${repoName}/traffic/clones`],{encoding:'utf8',timeout:6000});
+      const viewsRaw=execFileSync('gh',['api',`/repos/${repoName}/traffic/views`],{encoding:'utf8',timeout:6000});
+      const repoRaw=execFileSync('gh',['api',`/repos/${repoName}`],{encoding:'utf8',timeout:6000});
       const clones=JSON.parse(clonesRaw);
       const views=JSON.parse(viewsRaw);
       const repo=JSON.parse(repoRaw);
       print({
-        repository:'alifakbxr/a2a',
+        repository:repoName,
         install_metrics:{
           total_clones_last_14d: clones.count||0,
           unique_installers_last_14d: clones.uniques||0,
