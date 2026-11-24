@@ -2,7 +2,7 @@ import { Database } from './sqlite-compat.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import {dataDir,sha256,safeArtifactPath,MAX_ARTIFACT_BYTES,realpathIfExists,readSafeBytesFile,getHomeDir,isSamePath} from './security.mjs';
+import {dataDir,sha256,safeArtifactPath,MAX_ARTIFACT_BYTES,realpathIfExists,readSafeBytesFile,getHomeDir,isSamePath,requireAuthorizedWorkspace} from './security.mjs';
 
 const DDL=fs.readFileSync(new URL('../schemas/database.sql',import.meta.url),'utf8');
 export class Store {
@@ -144,7 +144,7 @@ export class Store {
   // Local privacy control: only rows associated with an explicitly authorized
   // workspace. Unscoped historical notes and project artifacts on disk remain untouched.
   workspaceDataCounts(workspace){
-    const canonical=realpathIfExists(workspace);
+    const canonical=requireAuthorizedWorkspace(workspace);
     const row=this.get('SELECT id FROM workspaces WHERE canonical_path=?',canonical);
     const tables=['revisions','files','nodes','edges','evidence','runs','incidents','hypotheses',
       'rca_experiments','telemetry','side_questions','artifact_versions','model_recovery_state',
