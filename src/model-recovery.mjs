@@ -47,7 +47,9 @@ export function saveRecoveryCheckpoint(store,wsId,{conversationId,revision,taskS
   store.run('INSERT INTO recovery_checkpoints(workspace_id,conversation_id,revision_id,task_summary,completed_json,next_steps_json,decisions_json,pending_tests_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(workspace_id,conversation_id) DO UPDATE SET revision_id=excluded.revision_id,task_summary=excluded.task_summary,completed_json=excluded.completed_json,next_steps_json=excluded.next_steps_json,decisions_json=excluded.decisions_json,pending_tests_json=excluded.pending_tests_json,updated_at=excluded.updated_at',
     wsId,conversationId,revision||null,taskSummary.trim(),JSON.stringify(completed),JSON.stringify(nextSteps),JSON.stringify(decisions),JSON.stringify(pendingTests),now,now);
   store.run('DELETE FROM recovery_checkpoints WHERE workspace_id=? AND conversation_id NOT IN (SELECT conversation_id FROM recovery_checkpoints WHERE workspace_id=? ORDER BY updated_at DESC LIMIT 30)',wsId,wsId);
-  return {status:'saved',conversation_id:conversationId,revision:revision||null,verified:false,content_origin:'explicit_notes',updated_at:now};
+  return {status:'saved',task_outcome:pendingTests.length||nextSteps.length?'partial':'unknown',
+    conversation_id:conversationId,revision:revision||null,verified:false,
+    content_origin:'explicit_notes',updated_at:now};
 }
 export function recordModelStop(store,wsId,{conversationId,modelName,error,terminationReason}){
   if(!validConversationId(conversationId)||terminationReason!=='error')return {recorded:false};
