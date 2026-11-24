@@ -1,6 +1,6 @@
 # PILAH — release process
 
-**Current status: NO-GO (24 November 2026).** Source `main` includes PILAH `2.1.0`; externally signed F01–F18 and installed Antigravity host acceptance are **not verified**. No source merge, tag or green CI authorizes publishing on its own. Repository is still `alifakbxr/a2a`; `@aliip/pilah` has not been verified as published.
+**Current status: NO-GO (24 November 2026).** Source `main` includes PILAH `2.1.0`; externally signed F01–F18 and installed Antigravity host acceptance are **not verified**. No source merge, tag or green CI authorizes publishing on its own. Repository is still `the existing repository`; `@aliip/pilah` has not been verified as published.
 
 ## Source quality gate
 
@@ -8,7 +8,7 @@
 node --version
 npm run check
 node scripts/check-release.mjs
-node scripts/a2a.mjs doctor
+node scripts/pilah.mjs doctor
 npm pack --dry-run
 ```
 

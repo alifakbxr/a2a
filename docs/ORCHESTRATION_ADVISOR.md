@@ -1,6 +1,6 @@
-# A2A Native Teamwork Advisor — v2.0.1
+# PILAH Native Teamwork Advisor — v2.0.1
 
-`a2a_context(action="orchestration")` is an **optional, nonexecuting** advisor. It can only recommend native Antigravity capabilities that are explicitly reported as available in the active environment. It does not launch a worker, grant permissions, alter a model or install third-party agent software.
+`pilah_context(action="orchestration")` is an **optional, nonexecuting** advisor. It can only recommend native Antigravity capabilities that are explicitly reported as available in the active environment. It does not launch a worker, grant permissions, alter a model or install third-party agent software.
 
 ## Supported task declaration
 
@@ -31,6 +31,6 @@
 | Multiple milestones and long horizon **plus** independent file ownership and low dependencies | May recommend `/teamwork` if declared available |
 | Hard tightly coupled reasoning with confirmed supported paid mode | May recommend `/boost` for single-agent challenger reasoning, not a parallel worker launch |
 
-Even when recommended, `user_approval_required:true`, `automatic_worker_launch:false`. Prevent file ownership conflicts, validate worker MCP permissions independently, and require a named handoff test via `a2a_verify(operation="verify_handoff")`. Parallel execution can cost **more** time/tokens and does not inherently improve quality.
+Even when recommended, `user_approval_required:true`, `automatic_worker_launch:false`. Prevent file ownership conflicts, validate worker MCP permissions independently, and require a named handoff test via `pilah_verify(operation="verify_handoff")`. Parallel execution can cost **more** time/tokens and does not inherently improve quality.
 
-The code-level requirements were strengthened in behavioral issue [#34](https://github.com/alifakbxr/a2a/issues/34), merged through [PR #36](https://github.com/alifakbxr/a2a/pull/36). Live native capability availability and actual productivity benefits still need an independently controlled test. See [workflow](NATIVE_FIRST_WORKFLOW.md) and [A/B protocol](AB_EVALUATION.md).
+The code-level requirements were strengthened in behavioral issue #34, merged through PR #36. Live native capability availability and actual productivity benefits still need an independently controlled test. See [workflow](NATIVE_FIRST_WORKFLOW.md) and [A/B protocol](AB_EVALUATION.md).

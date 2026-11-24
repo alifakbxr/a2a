@@ -1,12 +1,12 @@
 # PILAH — build and validation status
 
-**As of 24 November 2026:** PILAH is on `main` with source manifest version `2.1.0`. The canonical repository remains [`alifakbxr/a2a`](https://github.com/alifakbxr/a2a) until a separate GitHub rename. `@aliip/pilah` is the package manifest name, **not confirmation of publication**.
+**As of 24 November 2026:** PILAH is on `main` with source manifest version `2.1.0`. The canonical repository remains `the existing repository` until a separate GitHub rename. `@aliip/pilah` is the package manifest name, **not confirmation of publication**.
 
 | Area | Observable evidence | Boundary |
 | --- | --- | --- |
-| PILAH rebrand | [PR #107](https://github.com/alifakbxr/a2a/pull/107), [9/9 matrix](https://github.com/alifakbxr/a2a/actions/runs/45210477925) | Source-level Node 22/24/26.13.1 CI across three OS |
-| Reduced CI and native routing | [PR #108](https://github.com/alifakbxr/a2a/pull/108) | 1 full-suite job/PR, 3 on main, 9 manually available |
-| Latest known main source CI | [Run #45212940464](https://github.com/alifakbxr/a2a/actions/runs/45212940464) | **3/3** Ubuntu/macOS/Windows Node 24 jobs passed at `3b168e3` |
+| PILAH rebrand | PR #107, 9/9 matrix | Source-level Node 22/24/26.13.1 CI across three OS |
+| Reduced CI and native routing | PR #108 | 1 full-suite job/PR, 3 on main, 9 manually available |
+| Latest known main source CI | Run #45212940464 | **3/3** Ubuntu/macOS/Windows Node 24 jobs passed at `3b168e3` |
 | Installed Antigravity | [Backlog](docs/MAIN_VALIDATION_BACKLOG.md) | No complete independent live-host acceptance for PILAH |
 | Context Guardian overhead | [Backlog](docs/MAIN_VALIDATION_BACKLOG.md) | Host per-invocation latency/CPU/token effect not measured |
 | Token savings | [A/B evaluation](docs/AB_EVALUATION.md) | Not established through matched independent trials |
@@ -15,8 +15,8 @@
 
 Green CI means the complete checked-in test suite and static release checks passed for the specified commit and runner—not actual browser, printing, database race, installed plugin, autonomous tool selection, or cost evidence. Keep missing acceptance marked **not tested**.
 
-## Earlier A2A provenance
+## Earlier PILAH provenance
 
-The original `v2.0.1` integration was promoted to `main` through [PR #105](https://github.com/alifakbxr/a2a/pull/105); PILAH branding followed in [PR #107](https://github.com/alifakbxr/a2a/pull/107). Issues #15, #71, #91 and #92 were closed **administratively as deferred/superseded**, not completed evidence. Historical [213/213 tests and 4/4 OS/runtime jobs](https://github.com/alifakbxr/a2a/actions/runs/44325007116) describe an older source snapshot, not the current version.
+The original `v2.0.1` integration was promoted to `main` through PR #105; PILAH branding followed in PR #107. Issues #15, #71, #91 and #92 were closed **administratively as deferred/superseded**, not completed evidence. Historical 213/213 tests and 4/4 OS/runtime jobs describe an older source snapshot, not the current version.
 
 Check [documentation](docs/README.md), [CI lanes](docs/CI_EFFICIENCY.md), and [outstanding validation](docs/MAIN_VALIDATION_BACKLOG.md). Do not infer release authorization from a merge.

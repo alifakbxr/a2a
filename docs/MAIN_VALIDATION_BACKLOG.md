@@ -1,12 +1,12 @@
 # PILAH — independent validation backlog
 
-**Updated 24 November 2026.** Source `main` uses PILAH `2.1.0`; GitHub repository remains [`alifakbxr/a2a`](https://github.com/alifakbxr/a2a). Legacy A2A issues #15, #71, #91, #92 are closed as **deferred/superseded**, not as successfully tested.
+**Updated 24 November 2026.** Source `main` uses PILAH `2.1.0`; GitHub repository remains `the existing repository`. Legacy PILAH issues #15, #71, #91, #92 are closed as **deferred/superseded**, not as successfully tested.
 
 ## What automated tests establish
 
-- PILAH rebrand passed the [9-job Node 22/24/26.13.1 × three-OS CI matrix](https://github.com/alifakbxr/a2a/actions/runs/45210477925) at the PR #107 source revision.
-- CI/router optimization passed [3/3 main Node 24 jobs](https://github.com/alifakbxr/a2a/actions/runs/45212940464) at commit `3b168e3`.
-- Original frozen STOCKROOM snapshots passed PHP **syntax** checks (Native 101/101, A2A 80/80), not live F01–F18. PHP extensions, an isolated DB and browser execution were unavailable.
+- PILAH rebrand passed the 9-job Node 22/24/26.13.1 × three-OS CI matrix at the PR #107 source revision.
+- CI/router optimization passed 3/3 main Node 24 jobs at commit `3b168e3`.
+- Original frozen STOCKROOM snapshots passed PHP **syntax** checks (Native 101/101, PILAH 80/80), not live F01–F18. PHP extensions, an isolated DB and browser execution were unavailable.
 
 ## Required independent work
 

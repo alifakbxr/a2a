@@ -39,7 +39,7 @@ Run:
 node benchmarks/ab-evaluate.mjs manifest.json > aggregated.json
 ```
 
-Supported variants: `native`, `a2a-on-demand`, `a2a-always-on`, plus corresponding subagent, swarm and teamwork variants. Swarm/Teamwork availability depends on the current Antigravity plan and should never be presumed for Free Tier.
+Supported variants: `native`, `pilah-on-demand`, `pilah-always-on`, plus corresponding subagent, swarm and teamwork variants. Swarm/Teamwork availability depends on the current Antigravity plan and should never be presumed for Free Tier.
 
 Values are medians with min/max, but interpretation depends on independent evidence. A `passed` verdict must be assigned by an external evaluator, not the implementation agent itself. Unknown/skipped are not passes. The final `result.usage.total_tokens` is cumulative for streaming sessions; do not sum step records or add cache-read/thinking to it.
 
@@ -53,8 +53,8 @@ Values are medians with min/max, but interpretation depends on independent evide
 
 ## Distribution scope
 
-The evaluator at `benchmarks/ab-evaluate.mjs` is intentionally **source-checkout-only**. It is excluded from the installable npm tarball to avoid distributing optional research code in the runtime plugin. Clone or download the source repository at a pinned revision to run the command above; this does not require a new dependency. The packaged A2A MCP and CLI remain independent of the benchmark runner.
+The evaluator at `benchmarks/ab-evaluate.mjs` is intentionally **source-checkout-only**. It is excluded from the installable npm tarball to avoid distributing optional research code in the runtime plugin. Clone or download the source repository at a pinned revision to run the command above; this does not require a new dependency. The packaged PILAH MCP and CLI remain independent of the benchmark runner.
 
 ## Behavioral reliability comparison — current candidate
 
-The [v2.0.1 behavioral changes](https://github.com/alifakbxr/a2a/pull/36) include a truthful completion summary, explicit checkpoints, native error guidance and parallel-ownership gating. To evaluate their effect, hold the prompt, source, model, effort, tool permissions and acceptance registry fixed across **Native, prior A2A baseline and v2.0.1**. Run at least **five independent trials per variant**; randomize order and measure user-visible acceptance outcomes as well as official usage when exposed. Reused transcripts, simulated F01–F18 proofs or browser-tab reloads cannot substitute for independent execution. **No matched repeated benchmark proving an improvement has been completed as of 18 November 2026**; [issue #15](https://github.com/alifakbxr/a2a/issues/15) remains open.
+The v2.0.1 behavioral changes include a truthful completion summary, explicit checkpoints, native error guidance and parallel-ownership gating. To evaluate their effect, hold the prompt, source, model, effort, tool permissions and acceptance registry fixed across **Native, prior PILAH baseline and v2.0.1**. Run at least **five independent trials per variant**; randomize order and measure user-visible acceptance outcomes as well as official usage when exposed. Reused transcripts, simulated F01–F18 proofs or browser-tab reloads cannot substitute for independent execution. **No matched repeated benchmark proving an improvement has been completed as of 18 November 2026**; issue #15 remains open.

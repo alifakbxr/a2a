@@ -1,11 +1,11 @@
-# A2A Independent Release Assessment (#4)
+# PILAH Independent Release Assessment (#4)
 
-`a2a_verify(operation="assess")` checks named JUnit/TAP/JSON assertions **only**. It now states `release_ready:false` even when tests pass.
+`pilah_verify(operation="assess")` checks named JUnit/TAP/JSON assertions **only**. It now states `release_ready:false` even when tests pass.
 
-For critical release readiness, use `a2a_verify(operation="assess_release",artifact="reports/release.json")` in an authorized workspace or `node scripts/evaluate-acceptance.mjs release.json [trusted-public-keys.json]` offline.
+For critical release readiness, use `pilah_verify(operation="assess_release",artifact="reports/release.json")` in an authorized workspace or `node scripts/evaluate-acceptance.mjs release.json [trusted-public-keys.json]` offline.
 
 ## Trust configuration
-A2A reads **public** Ed25519 evaluator keys from `~/.config/a2a/trusted-evaluators.json` when using the MCP action. A user/independent CI administrator must provision and protect this file **outside the coding agent's project**. Example:
+PILAH reads **public** Ed25519 evaluator keys from `~/.config/pilah/trusted-evaluators.json` when using the MCP action. A user/independent CI administrator must provision and protect this file **outside the coding agent's project**. Example:
 
 ```json
 {"ci-reviewer":"-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----\n"}
@@ -19,23 +19,23 @@ The signature covers the canonical UTF-8 JSON serialization produced by `attesta
 
 Critical scenarios without an independently verified signature are downgraded to `not-tested`. Stale revision, mismatched evidence types and open critical defects block readiness. Successful evaluation means **eligible for independent review**, not production security certification. A valid signature proves possession of a trusted issuer key, not semantic correctness of the tests.
 
-No A2A tool launches a CI runner, changes filesystem permission, or approves a PR automatically.
+No PILAH tool launches a CI runner, changes filesystem permission, or approves a PR automatically.
 
 
 ## Mandatory frozen acceptance scope
 
 A signed test result is not proof that the agent submitted every required scenario. Release eligibility now fails closed unless an independent user-pinned registry matches all scenario IDs, requirement SHA-256 hashes, critical flags and required evidence types. The agent must not be able to edit the registry or signing keys.
 
-Place the registry at `~/.config/a2a/acceptance-registry.json` outside the generated application workspace:
+Place the registry at `~/.config/pilah/acceptance-registry.json` outside the generated application workspace:
 
 ```json
-{"schema":"a2a-acceptance-registry-v1","scenarios":[{"id":"offline-restart","requirement_sha256":"64-character-sha256-of-the-exact-requirement","critical":true,"required_evidence_types":["browser","integration"]}]}
+{"schema":"<registry-schema-id-from-source>","scenarios":[{"id":"offline-restart","requirement_sha256":"64-character-sha256-of-the-exact-requirement","critical":true,"required_evidence_types":["browser","integration"]}]}
 ```
 
-The registry is read by `a2a_verify(operation="assess_release")`. The CLI `scripts/evaluate-acceptance.mjs` also accepts an optional pinned-registry path after the trust-keys path.
+The registry is read by `pilah_verify(operation="assess_release")`. The CLI `scripts/evaluate-acceptance.mjs` also accepts an optional pinned-registry path after the trust-keys path.
 
 Without a matching registry, `release_ready` stays false even if all submitted assertions have valid signatures. A true result means eligible for independent review of signed evidence, not proof of test execution or production certification. File permissions and reviewer keys must be protected by the user's OS.
 
 ## Behavioral completion versus release gate (v2.0.1)
 
-[PR #36](https://github.com/alifakbxr/a2a/pull/36) added a separate **typed** plan/assessment contract: each criterion may declare `given`, `when`, `then` and `evidence_type`; browser and visual criteria require `viewport`, `ui_state` and `reference`. Planning is `not_tested`. Local `assess` can report passed **named machine assertions** but its `completion.fully_verified` stays false, and local test artifacts cannot independently establish UI/browser, hardware, security or release evidence. `assess_semantic` and `assess_browser` remain **unattested structural reviews**. Only the separately signed, pinned `assess_release` plus the [publish authorization policy](RELEASE_AUTHORIZATION.md) can contribute to release eligibility. F01–F18 external evidence is [still pending](https://github.com/alifakbxr/a2a/issues/15).
+PR #36 added a separate **typed** plan/assessment contract: each criterion may declare `given`, `when`, `then` and `evidence_type`; browser and visual criteria require `viewport`, `ui_state` and `reference`. Planning is `not_tested`. Local `assess` can report passed **named machine assertions** but its `completion.fully_verified` stays false, and local test artifacts cannot independently establish UI/browser, hardware, security or release evidence. `assess_semantic` and `assess_browser` remain **unattested structural reviews**. Only the separately signed, pinned `assess_release` plus the [publish authorization policy](RELEASE_AUTHORIZATION.md) can contribute to release eligibility. F01–F18 external evidence is still pending.
