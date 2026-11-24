@@ -23,7 +23,7 @@ export class Engine {
   close(){if(this.owned)this.store.close()}
   sync(workspace,{verifyIntegrity=false}={}){
     const root=requireAuthorizedWorkspace(workspace),wsId=this.store.register(root);
-    const cachedFiles=new Map(this.store.all('SELECT path,content_sha AS hash,language,bytes,mtime_ms FROM files WHERE workspace_id=?',wsId).map(r=>[r.path,r]));
+    const cachedFiles=new Map(this.store.all('SELECT path,content_sha AS hash,language,bytes,mtime_ms,ctime_ms FROM files WHERE workspace_id=?',wsId).map(r=>[r.path,r]));
     const index=discover(root,{cachedFiles:verifyIntegrity?null:cachedFiles}), git=gitHead(root);
     const snapshot=sha256((git||'no-git')+'|'+snapshotOf(index));const current=this.store.latest(wsId);
     const revision=this.store.insertRevision(wsId,snapshot,git,{os:os.platform(),arch:os.arch(),node:process.versions.node});
@@ -35,6 +35,23 @@ export class Engine {
       }
       const graph=createGraph(index);
       this.store.persistIndex(wsId,revision,index.files.map(({text,...rest})=>rest),graph.nodes,graph.edges);
+    }else{
+      // A content-identical edit updates ctime but not the source revision.
+      // Refresh only changed metadata; do not rebuild the graph or write
+      // unchanged cache rows on normal warm MCP calls.
+      const changedMetadata=index.files.filter(f=>{
+        const old=cachedFiles.get(f.path);
+        return old && f.hash===old.hash &&
+          (old.ctime_ms!==f.ctime_ms || old.mtime_ms!==f.mtime_ms);
+      });
+      if(changedMetadata.length){
+        this.store.transaction(()=>{
+          const refresh=this.store.db.prepare(
+            'UPDATE files SET mtime_ms=?,ctime_ms=? WHERE workspace_id=? AND path=? AND content_sha=?'
+          );
+          for(const f of changedMetadata)refresh.run(f.mtime_ms??null,f.ctime_ms??null,wsId,f.path,f.hash);
+        });
+      }
     }
     return {root,wsId,revision,index,git,snapshot,skipped:index.skipped,scan_stats:index.scan_stats,source_integrity_complete:index.integrityComplete!==false};
   }

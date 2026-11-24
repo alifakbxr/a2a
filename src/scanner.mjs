@@ -62,7 +62,7 @@ function fingerprintOversizedSource(full,size){
 
 export function discover(root,{limit=MAX_INDEX_FILES,cachedFiles=null}={}){
   const paths=[],skip=[],skippedHashes=[],stack=[''];let scanned=0,totalBytes=0,integrityComplete=true,readFiles=0,readBytes=0,reusedFiles=0,oversizedHashedBytes=0;const now=Date.now();
-  while(stack.length){const dir=stack.pop();let entries;try{entries=fs.readdirSync(path.join(root,dir),{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))}catch{continue}
+  while(stack.length){const dir=stack.pop();let entries;try{entries=fs.readdirSync(path.join(root,dir),{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))}catch{skip.push('unreadable_directory:'+dir);integrityComplete=false;continue}
     for(const ent of entries){const rel=(dir?dir+'/':'')+ent.name;
       if(shouldIgnore(rel)||ent.isSymbolicLink())continue;
       if(ent.isDirectory()){stack.push(rel);continue}
@@ -76,14 +76,14 @@ export function discover(root,{limit=MAX_INDEX_FILES,cachedFiles=null}={}){
         }
         if(totalBytes+st.size>32*1024*1024){skip.push('index_byte_budget_exceeded');integrityComplete=false;stack.length=0;break}
         const cached=cachedFiles?.get(rel);
-        if(cached && ent.name!=='package.json' && !/(^|\/)(?:reports?|test-results)\/[^/]+\.json$/i.test(rel) && cached.mtime_ms!=null && cached.mtime_ms===st.mtimeMs && cached.bytes===st.size && (now-st.mtimeMs)>1500){
+        if(cached && ent.name!=='package.json' && !/(^|\/)(?:reports?|test-results)\/[^/]+\.json$/i.test(rel) && cached.mtime_ms!=null && cached.mtime_ms===st.mtimeMs && cached.ctime_ms!=null && cached.ctime_ms===st.ctimeMs && cached.bytes===st.size && (now-st.mtimeMs)>1500){
           totalBytes+=st.size;reusedFiles++;
-          paths.push({path:rel,hash:cached.hash,language:cached.language||detectLanguage(rel),bytes:st.size,mtime_ms:st.mtimeMs,text:null});
+          paths.push({path:rel,hash:cached.hash,language:cached.language||detectLanguage(rel),bytes:st.size,mtime_ms:st.mtimeMs,ctime_ms:st.ctimeMs,text:null});
           continue;
         }
         const buf=fs.readFileSync(full);readFiles++;readBytes+=buf.length;totalBytes+=st.size;if(buf.includes(0)){skip.push('binary:'+rel);skippedHashes.push(rel+':'+sha256(buf));continue}
         if(isGeneratedA2AReport(rel,buf))continue;
-        paths.push({path:rel,hash:sha256(buf),language:detectLanguage(rel),bytes:st.size,mtime_ms:st.mtimeMs,text:buf.toString('utf8')});
+        paths.push({path:rel,hash:sha256(buf),language:detectLanguage(rel),bytes:st.size,mtime_ms:st.mtimeMs,ctime_ms:st.ctimeMs,text:buf.toString('utf8')});
       }catch{skip.push('unreadable:'+rel);integrityComplete=false}
     }
   }
