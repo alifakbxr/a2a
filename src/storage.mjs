@@ -43,6 +43,7 @@ export class Store {
     this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=4000; PRAGMA trusted_schema=OFF;');
     this.#ensureColumn('workspaces','current_revision_id','TEXT');
     this.#ensureColumn('files','mtime_ms','REAL');
+    this.#ensureColumn('files','ctime_ms','REAL');
     this.#ensureColumn('artifact_versions','workspace_id','TEXT');
     // Upgrade old v2.0.1 RCA tables BEFORE applying DDL indexes that depend
     // on newly added columns. Other user data and incidents are preserved.
@@ -103,16 +104,16 @@ export class Store {
   }
   persistIndex(wsId,rev,files,nodes,edges){
     this.transaction(()=>{
-      const existingFiles=new Map(this.all('SELECT path,content_sha,bytes,mtime_ms FROM files WHERE workspace_id=?',wsId).map(r=>[r.path,r]));
+      const existingFiles=new Map(this.all('SELECT path,content_sha,bytes,mtime_ms,ctime_ms FROM files WHERE workspace_id=?',wsId).map(r=>[r.path,r]));
       const incomingFiles=new Map(files.map(f=>[f.path,f]));
       const delFile=this.db.prepare('DELETE FROM files WHERE workspace_id=? AND path=?');
-      const upsertFile=this.db.prepare('INSERT INTO files(workspace_id,path,content_sha,language,bytes,revision_id,mtime_ms) VALUES(?,?,?,?,?,?,?) ON CONFLICT(workspace_id,path) DO UPDATE SET content_sha=excluded.content_sha,language=excluded.language,bytes=excluded.bytes,revision_id=excluded.revision_id,mtime_ms=excluded.mtime_ms');
+      const upsertFile=this.db.prepare('INSERT INTO files(workspace_id,path,content_sha,language,bytes,revision_id,mtime_ms,ctime_ms) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(workspace_id,path) DO UPDATE SET content_sha=excluded.content_sha,language=excluded.language,bytes=excluded.bytes,revision_id=excluded.revision_id,mtime_ms=excluded.mtime_ms,ctime_ms=excluded.ctime_ms');
       for(const p of existingFiles.keys()) if(!incomingFiles.has(p)) delFile.run(wsId,p);
       for(const x of files){
         const prev=existingFiles.get(x.path);
-        const mtime=x.mtime_ms??null;
-        if(!prev || prev.content_sha!==x.hash || prev.bytes!==x.bytes || prev.mtime_ms!==mtime){
-          upsertFile.run(wsId,x.path,x.hash,x.language,x.bytes,rev,mtime);
+        const mtime=x.mtime_ms??null,ctime=x.ctime_ms??null;
+        if(!prev || prev.content_sha!==x.hash || prev.bytes!==x.bytes || prev.mtime_ms!==mtime || prev.ctime_ms!==ctime){
+          upsertFile.run(wsId,x.path,x.hash,x.language,x.bytes,rev,mtime,ctime);
         }
       }
 

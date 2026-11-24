@@ -23,7 +23,7 @@ export class Engine {
   close(){if(this.owned)this.store.close()}
   sync(workspace,{verifyIntegrity=false}={}){
     const root=requireAuthorizedWorkspace(workspace),wsId=this.store.register(root);
-    const cachedFiles=new Map(this.store.all('SELECT path,content_sha AS hash,language,bytes,mtime_ms FROM files WHERE workspace_id=?',wsId).map(r=>[r.path,r]));
+    const cachedFiles=new Map(this.store.all('SELECT path,content_sha AS hash,language,bytes,mtime_ms,ctime_ms FROM files WHERE workspace_id=?',wsId).map(r=>[r.path,r]));
     const index=discover(root,{cachedFiles:verifyIntegrity?null:cachedFiles}), git=gitHead(root);
     const snapshot=sha256((git||'no-git')+'|'+snapshotOf(index));const current=this.store.latest(wsId);
     const revision=this.store.insertRevision(wsId,snapshot,git,{os:os.platform(),arch:os.arch(),node:process.versions.node});
