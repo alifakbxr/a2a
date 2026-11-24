@@ -21,6 +21,7 @@ Start with the [README](../README.md) for source setup and CLI usage, [build sta
 - [Release checklist and required live tests](RELEASE.md)
 - [Signed, fail-closed publication gate](RELEASE_AUTHORIZATION.md)
 - [What is not yet independently proven](MAIN_VALIDATION_BACKLOG.md)
+- [Antigravity H01–H06 installed-host acceptance runbook](HOST_VALIDATION.md)
 - [Evidence and release acceptance criteria](ACCEPTANCE_GATE.md)
 - [STOCKROOM F01–F18 independent test runbook](INDEPENDENT_ACCEPTANCE_RUNBOOK.md)
 - [Risk-aware test recommendations](RISK_GUIDANCE.md)
