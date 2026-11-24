@@ -34,7 +34,10 @@ node --version
 npm run check
 node scripts/check-release.mjs
 node scripts/pilah.mjs doctor
+node scripts/pilah.mjs host-check  # requires agy; may report blocked
 ```
+
+The optional `host-check` command only validates the CLI's plugin manifest and whether PILAH appears in plugin listings. It cannot certify tool selection, browser workflows or independent E2E behavior. Missing `agy` is reported as blocked, not passed.
 
 Install/register this **source checkout** using the native plugin manager supported by your Antigravity version. If the `agy` CLI is available, validate it with `agy plugin validate --strict .` and inspect `agy plugin list`. These are **steps for your machine**, not claims of a completed live installation test. The bundle includes `plugin.json`, `mcp_config.json`, `hooks.json`, `rules/AGENTS.md` and `skills/pilah/SKILL.md`.
 
