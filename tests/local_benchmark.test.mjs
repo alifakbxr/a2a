@@ -7,7 +7,7 @@ test('local indexing benchmark measures I/O without pretending to measure model 
   encoding:'utf8',env:{...process.env,BENCH_FILES:'12'},timeout:25000});
  assert.equal(result.status,0,result.stderr);
  const body=JSON.parse(result.stdout);
- assert.equal(body.files,12);
+ assert.equal(body.files,13,'12 generated modules plus package manifest');
  for(const metric of ['index_ms','warm_index_ms','impact_ms'])assert.ok(Number.isFinite(body[metric])&&body[metric]>=0,metric);
  for(const field of ['cold_scan','warm_scan']){
   assert.ok(body[field].read_files>=12);
