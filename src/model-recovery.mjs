@@ -98,6 +98,8 @@ export function recoveryStatus(store,wsId,{conversationId=null,currentRevision=n
     decisions:JSON.parse(row.decisions_json||'[]'),pending_tests:JSON.parse(row.pending_tests_json||'[]'),
     source_revision:row.revision_id,source_revision_matches:typeof currentRevision==='string'?row.revision_id===currentRevision:null,
     source_freshness:typeof currentRevision!=='string'?'unknown':row.revision_id===currentRevision?'current':'stale',
+    task_outcome:typeof currentRevision==='string'&&row.revision_id!==currentRevision?'stale':
+      (JSON.parse(row.pending_tests_json||'[]').length||JSON.parse(row.next_steps_json||'[]').length?'partial':'unknown'),
     updated_at:row.updated_at,verified:false,
     warning:'Explicit notes are not proof of completion. Recheck code, permissions and tests.'}:null;
   return {status:'assisted_only',automatic_switch:false,
