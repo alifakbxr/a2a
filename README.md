@@ -21,13 +21,15 @@ Only `pilah_context` is eager by default; the other tools remain lazy. **A clear
 
 ## Requirements and source setup
 
+In the command below, replace `REPOSITORY_URL` with the HTTPS clone URL from the repository's GitHub **Code** menu.
+
 - Node.js **22.13.0 or newer** with built-in `node:sqlite`; no third-party npm runtime dependencies.
 - Google Antigravity with support for the plugin/MCP features used here.
 - Permission to inspect the intended workspace; protected roots, sensitive files and revoked workspaces remain denied.
 
 ```sh
-git clone <repository-clone-url>
-cd <checkout-directory>
+git clone REPOSITORY_URL pilah
+cd pilah
 node --version
 npm run check
 node scripts/check-release.mjs
