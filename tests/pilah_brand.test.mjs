@@ -14,7 +14,7 @@ test('PILAH is the only default public skill and MCP identity',()=>{
  assert.equal(plugin.displayName,'PILAH');
  assert.equal(pkg.name,'@aliip/pilah');
  assert.equal(pkg.version,plugin.version);
- assert.equal(pkg.bin.pilah,'scripts/a2a.mjs');
+ assert.equal(pkg.bin.pilah,'scripts/pilah.mjs');
  assert.equal(pkg.bin.a2a,'scripts/a2a.mjs','historical CLI remains callable');
  assert.equal(Object.keys(mcp.mcpServers).join(','),'pilah');
  assert.deepEqual(Object.keys(mcp.mcpServers.pilah.tools),['pilah_context']);
@@ -46,7 +46,7 @@ test('PILAH package leaves existing data identities in place instead of overwrit
  const pkg=JSON.parse(read('package.json'));
  assert.equal(pkg.dependencies,undefined);
  const contract=read('docs/ENGINEERING_METHOD.md');
- assert.match(contract,/A2A_\*/);
+ assert.match(contract,/environment settings and local databases/);
  assert.match(contract,/unverified|unproven|pending/i);
  assert.match(read('README.md'),/PILAH/);
 });
