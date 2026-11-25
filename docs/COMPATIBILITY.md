@@ -28,7 +28,7 @@ PILAH is language-agnostic in its **file, evidence, and MCP contracts**. Static 
 
 Availability and model permissions depend on the actual Antigravity version and account; PILAH never assumes universal `/swarm` or `/teamwork` in IDE.
 
-## Runtime and evidence compatibility (PILAH 1.0.0)
+## Runtime and evidence compatibility (PILAH 1.0.3)
 
 Node.js **>=22.13.0** is required for built-in `node:sqlite`. CI now runs the **full test suite in one Ubuntu/Node 24 job per PR**, and **three Node 24 jobs (Ubuntu, macOS, Windows) on each main push**. The complete **9-job Node 22/24/26.13.1 × three-OS** compatibility matrix remains available via manual `workflow_dispatch`; run it before a release or when changing Node/OS-specific code. This reduces routine CI cost without deleting any test, and does **not** claim unrun combinations passed. Node 26.11+ exposes `sqlite.Database` and retains deprecated `DatabaseSync`; PILAH prefers the current class and falls back to `DatabaseSync` on Node 22. Tests include local MCP JSON-RPC/stdio, WAL/rollback, old verifykit.sqlite `VACUUM INTO` migration, permission/security and CLI doctor. Green Node CI does not prove installed Antigravity IDE compatibility on every host. The actual tool contract includes typed acceptance with UI viewport/state/reference, opt-in `model_recovery`/`tool_recovery`, and opt-in native orchestration with `file_ownership="independent"` for parallel recommendations. See [current MCP contract](CONTRACTS.md).
 
@@ -82,3 +82,13 @@ Changing hook configuration may require restarting the Antigravity session. Anti
 ### Opt-in Context Guardian runtime path
 
 An explicit `node scripts/context-guardian.mjs enable` records the current absolute Node executable (`process.execPath`) in its own `PreInvocation` command, avoiding reliance on an Antigravity desktop process inheriting an NVM shell PATH. The default-disabled Guardian creates no recurring hooks. Re-enable after changing Node versions, then restart the IDE; neither this change nor CI proves actual native-host execution. Existing user hooks are preserved and a malformed/non-object hooks manifest is never overwritten.
+
+### Antigravity IDE 2.8.0 compatibility boundary (source audit)
+
+IDE 2.8.0 changed backend activation, remote sign-in and multi-window recovery. The official plugin interface exposes `agy plugin list --json` with explicit plugin `enabled` state, version and component arrays. The PILAH `host-check` now uses that inventory, with a conservative parser for documented plain-text output on older CLI installations. A disabled plugin, invalid listing, missing MCP component, or unknown CLI state cannot report successful preflight. This check is deliberately **CLI-only**; the IDE-specific plugin and hook state still require an operator-run live validation.
+
+Current PILAH MCP transport is local stdio with an explicit `2025-03-26` protocol contract. The source-level test verifies that handshake and rejects unsupported versions; it does not prove newer clients choose a compatible protocol. The plugin keeps only one eager tool (`pilah_context`) as an explicitly measured adoption hypothesis, while the other three tools are lazy. Eager registration spends schema context on turns without PILAH usage; do not claim it saves tokens without a matched A/B experiment.
+
+Separate host runbooks exercise IDE backend restart, parent/subagent tool discovery, permission denial, single-file zero-call control, cross-file invocation, remote workspace identity and two-window switching. CLI inventory alone cannot approve release readiness.
+
+Official references: https://antigravity.google/docs/changelog?tab=ide ; https://antigravity.google/docs/plugins/ ; https://antigravity.google/docs/mcp/ ; https://antigravity.google/docs/hooks/
