@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import {getHomeDir} from './security.mjs';
 import path from 'node:path';
 import {parseOfficialAgyUsage} from './tokens.mjs';
+import {isPilahMcpCall} from './mcp-invocation.mjs';
 
 const VALID_ID=/^[a-zA-Z0-9._-]{4,128}$/;
 const safeCount=v=>Number.isSafeInteger(v)&&v>=0?v:0;
@@ -13,28 +14,6 @@ export function localBrainRoots(){
   return process.env.ANTIGRAVITY_APP_DATA_DIR
     ? [path.join(path.resolve(process.env.ANTIGRAVITY_APP_DATA_DIR),'brain')]
     : ['antigravity','antigravity-cli','antigravity-ide'].map(n=>path.join(getHomeDir(),'.gemini',n,'brain'));
-}
-const A2A_TOOL_NAMES=new Set(['pilah_context','pilah_impact','pilah_verify','pilah_evidence','a2a_context','a2a_impact','a2a_verify','a2a_evidence',
-  'verifykit_context','verifykit_impact','verifykit_verify','verifykit_evidence']);
-const A2A_SERVERS=new Set(['pilah','pilah_pilah','a2a','a2a_a2a','verifykit','verifykit_verifykit']);
-const normalized=M=>String(M??'').trim().replace(/^["']|["']$/g,'');
-function isA2ACall(tc){
- const name=normalized(tc?.name||tc?.toolName);
- const explicitServer=normalized(tc?.args?.ServerName??tc?.args?.server_name??tc?.serverName??tc?.server_name);
- if(A2A_TOOL_NAMES.has(name))return !explicitServer||A2A_SERVERS.has(explicitServer);
- for(const server of A2A_SERVERS){
-   for(const tool of A2A_TOOL_NAMES){
-     if(name===`mcp_${server}_${tool}`||name===`mcp__${server}__${tool}`||
-        name===`${server}/${tool}`)return true;
-   }
- }
- if(name==='call_mcp_tool'){
-   const server=normalized(tc?.args?.ServerName??tc?.args?.server_name);
-   const tool=normalized(tc?.args?.ToolName??tc?.args?.tool_name);
-   return A2A_SERVERS.has(server)&&A2A_TOOL_NAMES.has(tool);
- }
- // This counter measures actual A2A MCP use, not a CLI diagnostics call.
- return false;
 }
 function safeLog(file,root){
   try{
@@ -78,7 +57,7 @@ function parseLocalLog(file,id){
     if(x.type!=='PLANNER_RESPONSE'&&!(x.input_tokens!==undefined&&!x.type))return;
     const calls=Array.isArray(x.tool_calls)?x.tool_calls.slice(0,2000):[];
     const c={input:safeCount(x.input_tokens),cache:safeCount(x.cache_read_tokens),
-      output:safeCount(x.output_tokens),steps:1,tools:calls.length,a2a:calls.filter(isA2ACall).length};
+      output:safeCount(x.output_tokens),steps:1,tools:calls.length,a2a:calls.filter(isPilahMcpCall).length};
     last={input:c.input,cache:c.cache,output:c.output};
     if(Number.isSafeInteger(x.step_index)){
       if(byStep.size<50000||byStep.has(x.step_index))byStep.set(x.step_index,c);
