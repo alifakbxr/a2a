@@ -3,22 +3,23 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-const variants=new Set(['native','a2a-on-demand','a2a-always-on','native-subagent','a2a-subagent','native-swarm','a2a-swarm','native-teamwork','a2a-teamwork']);
+const variants=new Set(['native','pilah-on-demand','pilah-always-on','native-subagent','pilah-subagent','native-swarm','pilah-swarm','native-teamwork','pilah-teamwork']);
+const normalizedVariant=v=>typeof v==='string'?v.replace(/^a2a(?=-)/,'pilah'):v;
 const statuses=new Set(['SUCCESS','ERROR','CANCELED','INTERRUPTED','WAITING','INVALID','RUNNING','UNKNOWN']);
 const numeric=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=1e15?v:null;
 const check=(v,msg)=>{if(!v)throw new Error(msg)};
 export function safeBenchmarkExport(report){
  check(report&&typeof report==='object'&&!Array.isArray(report),'Expected parsed benchmark report');
- check(report.schema==='a2a-ab-evaluation-v1','Only the known benchmark schema is supported');
+ check(['pilah-ab-evaluation-v1','a2a-ab-evaluation-v1'].includes(report.schema),'Only known benchmark schemas are supported');
  check(Array.isArray(report.runs)&&report.runs.length<=300,'Invalid or oversized runs');
  const result=[];
  for(let i=0;i<report.runs.length;i++){
   const r=report.runs[i];
-  check(r&&variants.has(r.variant),'Unknown benchmark variant');
-  const run={run_index:i+1,variant:r.variant,status:statuses.has(r.status)?r.status:'UNKNOWN',reported_tokens:numeric(r.usage?.total_tokens),cache_read_tokens:numeric(r.usage?.cache_read_tokens),duration_seconds:numeric(r.duration_seconds),model_turns:numeric(r.num_turns),tool_calls:numeric(r.tool_calls),accepted_scenarios:numeric(r.acceptance_passed),total_scenarios:numeric(r.acceptance_total)};
+  check(r&&variants.has(normalizedVariant(r.variant)),'Unknown benchmark variant');
+  const run={run_index:i+1,variant:normalizedVariant(r.variant),status:statuses.has(r.status)?r.status:'UNKNOWN',reported_tokens:numeric(r.usage?.total_tokens),cache_read_tokens:numeric(r.usage?.cache_read_tokens),duration_seconds:numeric(r.duration_seconds),model_turns:numeric(r.num_turns),tool_calls:numeric(r.tool_calls),accepted_scenarios:numeric(r.acceptance_passed),total_scenarios:numeric(r.acceptance_total)};
   result.push(run);
  }
- const clean={schema:'a2a-sanitized-benchmark-v1',source_kind:'a2a-ab-evaluation-v1',runs:result,summary:{runs:result.length,variants:[...new Set(result.map(x=>x.variant))],measured_causal_savings:false},review:{safe_by_default_metadata_only:true,user_review_required:true,auto_uploaded:false,share_authorized:false},warnings:['Source transcript and workspace content intentionally omitted','No free-tier quota or cost claims; official usage records require provider validation','Review this file before sharing; source applications, prompts and raw agent traces must never be attached automatically']};
+ const clean={schema:'pilah-sanitized-benchmark-v1',source_kind:'pilah-ab-evaluation-v1',runs:result,summary:{runs:result.length,variants:[...new Set(result.map(x=>x.variant))],official_usage_observed_runs:result.filter(x=>x.reported_tokens!==null).length,measured_causal_savings:false},review:{safe_by_default_metadata_only:true,user_review_required:true,auto_uploaded:false,share_authorized:false},warnings:['Source transcript and workspace content intentionally omitted','No free-tier quota or cost claims; official usage records require provider validation','Review this file before sharing; source applications, prompts and raw agent traces must never be attached automatically']};
  return clean;
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
