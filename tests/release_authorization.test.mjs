@@ -151,12 +151,16 @@ test('genuine signed FAILED evidence relabeled PASS is not authorized',()=>{
  assert.throws(()=>assertPublishAuthorized(input),Error);
 });
 
-test('publish workflows verify release evidence when configured',()=>{
+test('publish workflows always require signed release evidence, without bypass',()=>{
  for(const file of ['.github/workflows/publish-npm.yml','.github/workflows/publish-github-package.yml']){
   const yaml=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
   const gates=yaml.match(/node scripts\/release-authorization\.mjs/g)||[];
   assert.ok(gates.length>=1,file+' must invoke authorization');
   assert.match(yaml,/node scripts\/release-authorization\.mjs/);
+  assert.doesNotMatch(yaml,/skipping external gate|if \[ -n "\$A2A_RELEASE_EVIDENCE_B64" \]/,
+    'Missing signed evidence must fail closed');
+  assert.match(yaml,/git fetch origin main --no-tags\s*\n\s*node scripts\/release-authorization\.mjs/,
+    'Authorization must not be conditional on secret presence');
   assert.doesNotMatch(yaml,/npm publish\s*\|\|/);
   assert.match(yaml,/npm view/);
  }
