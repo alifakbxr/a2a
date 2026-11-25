@@ -24,13 +24,13 @@ Run `agy plugin validate --strict .` and inspect `agy plugin list --json` on the
 
 ## Independent application and release gate
 
-- Execute the frozen [STOCKROOM F01–F18 scenarios](INDEPENDENT_ACCEPTANCE_RUNBOOK.md) in a real, isolated HTTP/database/browser environment, including negative and concurrency cases.
+- Execute the frozen [STOCKROOM F01–F18 scenarios](MAIN_VALIDATION_BACKLOG.md) in a real, isolated HTTP/database/browser environment, including negative and concurrency cases.
 - Run matched Native-vs-PILAH evaluations under controlled trials. Avoid false claims about quota percentages and token savings.
 - Review privacy, evidence source revisions, scope binding and named test provenance. False PASS or stale signatures must fail closed.
 - Satisfy the [independently signed package-release authorization](RELEASE_AUTHORIZATION.md), including immutable registry, evaluator keys, trusted F01–F18 results and human approval for the exact `main` commit.
 - Only after authorization should the separately guarded npm/GitHub Packages workflows publish. The source manifest alone is not proof of package availability.
 
-See [build status](../BUILD_STATUS.md) and [open evidence backlog](MAIN_VALIDATION_BACKLOG.md). Legacy `v2.0.1` promotion instructions are historical in [traceability](V2_0_1_TRACEABILITY.md), not active release instructions.
+See [build status](../BUILD_STATUS.md) and [open evidence backlog](MAIN_VALIDATION_BACKLOG.md). Legacy promotion instructions are historical, not active release instructions.
 
 ## Package identity and fail-closed publication
 

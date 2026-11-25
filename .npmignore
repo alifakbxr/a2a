@@ -1,6 +1,5 @@
 tests/
 benchmarks/
-docs/5-WHYS.md
 .tmp/
 *.sqlite*
 .DS_Store

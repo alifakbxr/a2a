@@ -77,7 +77,7 @@ A plan returns `not_tested` plus `completion.fully_verified:false`. For `assess`
 
 ### Explicit checkpoint and resume
 
-`pilah_evidence(operation="save_checkpoint")` uses `conversation_id`, `task_summary` (1–500 chars), up to eight bounded `completed`, `next_steps`, `decisions` and `pending_tests` notes (<=200 chars each). It rejects recognizable plaintext secret assignments and records the **source revision**, not a verified result. `model_recovery` returns source freshness, notes and a `verified:false` warning; changed source makes an older checkpoint stale. Nothing resumes or switches a model automatically. This is distinct from the read-only headless stream checkpoint CLI in [checkpoint recovery](CHECKPOINT_RECOVERY.md).
+`pilah_evidence(operation="save_checkpoint")` uses `conversation_id`, `task_summary` (1–500 chars), up to eight bounded `completed`, `next_steps`, `decisions` and `pending_tests` notes (<=200 chars each). It rejects recognizable plaintext secret assignments and records the **source revision**, not a verified result. `model_recovery` returns source freshness, notes and a `verified:false` warning; changed source makes an older checkpoint stale. Nothing resumes or switches a model automatically. Checkpoint state is recorded in local SQLite.
 
 ### Native teamwork
 
@@ -116,7 +116,7 @@ Privacy caveat: explicitly saved artifact versions and checkpoints **can contain
 - **JSON machine reports:** the parser supports existing serialized report formats with explicit completion and individual testcase states. See [verification source](../src/verification.mjs) for the exact accepted identifiers.
 - **Local reports:** hashed, source-revision-bound, scoped to named assertions. A filename, test name or self-asserted run is not process authentication.
 - **Semantic/browser structural reviews:** local **unattested** observations, not an independent witness.
-- **External release assessment:** pinned acceptance registry, evaluator Ed25519 signatures per required case, exact source revision, and separate signed reviewer approval tied to the exact `main` commit/version. See [acceptance](ACCEPTANCE_GATE.md) and [publish gate](RELEASE_AUTHORIZATION.md).
+- **External release assessment:** pinned acceptance registry, evaluator Ed25519 signatures per required case, exact source revision, and separate signed reviewer approval tied to the exact `main` commit/version. See [acceptance scope](MAIN_VALIDATION_BACKLOG.md) and [publish gate](RELEASE_AUTHORIZATION.md).
 
 ## Runtime and bounds
 
@@ -143,7 +143,7 @@ The **existing** `pilah_evidence` tool now supports `assess_hypothesis`; there i
 
 `assess_hypothesis` requires `hypothesis_id`, `experiment_outcome` (`supports`, `refutes`, `inconclusive`), `observation`, optional `evidence_ids`, and `persist_rca:true`. For supported/refuted outcomes, every linked evidence record must match the current source revision/workspace and intact artifact hash, a **passing exact named unit/integration assertion**, and the hypothesis criterion. This results only in `locally_supported`, `refuted`, or `inconclusive`; **never independently proven root cause**. Source edits mark outcomes stale, even in Compact.
 
-`hypotheses` can filter by `incident_id`, returning parent/depth, recorded outcome, current freshness and a mandatory causal-proof warning. `incidents` includes candidate cause and `root_cause_verified:false`. Optional recurrence hints contain only prior same-signature incident **IDs**, not a claim that the previous cause applies. Incident/hypothesis notes are retained locally; sanitizers reject common plaintext credential assignments as a heuristic. See [Adaptive 5 Whys](ADAPTIVE_RCA_WORKFLOW.md).
+`hypotheses` can filter by `incident_id`, returning parent/depth, recorded outcome, current freshness and a mandatory causal-proof warning. `incidents` includes candidate cause and `root_cause_verified:false`. Optional recurrence hints contain only prior same-signature incident **IDs**, not a claim that the previous cause applies. Incident/hypothesis notes are retained locally; sanitizers reject common plaintext credential assignments as a heuristic. See [security model](SECURITY.md).
 
 **Risk-guidance contract:** `proposeRiskTests` returns `suggested_test_ids` and `suggested_total`; its legacy `required_test_ids` is now empty because a heuristic cannot impose mandatory acceptance. Compact limits displayed suggestions to 3 while retaining all matched domain/omission counts. Only criteria explicitly added to the user's acceptance plan are mandatory.
 

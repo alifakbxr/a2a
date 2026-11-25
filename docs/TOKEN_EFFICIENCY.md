@@ -8,7 +8,7 @@ The report itself includes a size estimate for its printed response; **printing 
 
 For performance, `pilah_context(action="tokens")` defaults to the latest available conversation; specify `history_scope="all"` explicitly to include other conversations. Historical scanning is local and read-only; model prompts are parsed only for usage metadata, not stored anew.
 
-For explanation of coverage, privacy, limits and accuracy, see [CONVERSATION_USAGE.md](CONVERSATION_USAGE.md).
+Scanning is local and read-only; single transcripts are limited to 128 MiB, with scans capped at 3,000 conversation directories and 1 GiB total files to prevent unbounded memory usage.
 
 ## What PILAH can and cannot measure
 

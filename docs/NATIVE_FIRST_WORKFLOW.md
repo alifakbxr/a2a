@@ -24,4 +24,4 @@ A `pilah_verify(operation="plan")` result starts at `not_tested`. Only actual na
 
 Native `/teamwork`, worktrees and subagents may be suggested **only** if the actual Antigravity build/account supports them, workstreams have independently owned files and the user opts in. PILAH does not implement distributed worker coordination or separate per-agent model routing. Leave Context Guardian disabled unless explicitly enabled; its 80/140-step milestones are heuristics, not provider context-token thresholds.
 
-Use [skill](../skills/pilah/SKILL.md), [engineering method](ENGINEERING_METHOD.md), [contracts](CONTRACTS.md), [CI evaluation](CI_EFFICIENCY.md) and [independent acceptance backlog](MAIN_VALIDATION_BACKLOG.md). Historic `v2.0.1` root-cause reports remain in the [documentation index](README.md) for audit history only.
+Use [skill](../skills/pilah/SKILL.md), [engineering method](ENGINEERING_METHOD.md), [contracts](CONTRACTS.md), [CI evaluation](CI_EFFICIENCY.md) and [validation backlog](MAIN_VALIDATION_BACKLOG.md).

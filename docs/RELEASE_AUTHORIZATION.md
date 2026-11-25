@@ -25,7 +25,7 @@ Signed passing evidence must correspond to the exact tested code, declared scena
 ## Release procedure
 
 1. Run `npm run check`, `node scripts/check-release.mjs`, package hygiene checks and the manually dispatched complete **nine-job** cross-platform Node compatibility matrix.
-2. Perform live PILAH plugin validation on the installed host and independent [application acceptance](INDEPENDENT_ACCEPTANCE_RUNBOOK.md).
+2. Perform live PILAH plugin validation on the installed host and independent [application acceptance](MAIN_VALIDATION_BACKLOG.md).
 3. Review the [validation backlog](MAIN_VALIDATION_BACKLOG.md), privacy findings, complete frozen scenario results, model token measurements and all negative controls.
 4. Obtain externally pinned signatures and explicit maintainer approval for the **exact commit**.
 5. Only then trigger the signed publishing workflows. A package manifest does not prove a package exists in a registry.

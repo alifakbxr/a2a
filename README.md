@@ -146,7 +146,7 @@ Rencana uji berstatus `not_tested` sampai bukti pengujian riil dicatat via `pila
 - [Efisiensi CI & Alokasi Runner](docs/CI_EFFICIENCY.md)
 - [Proses Rilis & Gate Otomatisasi](docs/RELEASE.md)
 - [Validasi Host Antigravity](docs/HOST_VALIDATION.md)
-- [Runbook Pengujian Acceptance](docs/INDEPENDENT_ACCEPTANCE_RUNBOOK.md)
+- [Otorisasi Rilis](docs/RELEASE_AUTHORIZATION.md)
 - [Validation Backlog](docs/MAIN_VALIDATION_BACKLOG.md)
 
 ---
