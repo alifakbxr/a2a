@@ -160,7 +160,7 @@ export function getMcpAppHtml() {
     </div>
     <div class="status-pill">
       <span class="status-dot"></span>
-      <span>Native-First Active</span>
+      <span>Status not verified</span>
     </div>
   </header>
 
@@ -175,19 +175,19 @@ export function getMcpAppHtml() {
     <div class="grid">
       <div class="stat-box">
         <div class="stat-label">Operational Mode</div>
-        <div class="stat-value" id="mode-val">On-Demand</div>
+        <div class="stat-value" id="mode-val">Unknown (no live query)</div>
       </div>
       <div class="stat-box">
         <div class="stat-label">Compact Mode</div>
-        <div class="stat-value" id="compact-val">Enabled (70% cut)</div>
+        <div class="stat-value" id="compact-val">Unknown (no live query)</div>
       </div>
       <div class="stat-box">
         <div class="stat-label">Tools Registered</div>
-        <div class="stat-value">4 Tools (1 Eager)</div>
+        <div class="stat-value">Declared: 4 (1 Eager)</div>
       </div>
       <div class="stat-box">
-        <div class="stat-label">Security Boundaries</div>
-        <div class="stat-value" style="color:var(--success)">Enforced</div>
+        <div class="stat-label">Workspace Access</div>
+        <div class="stat-value" style="color:var(--text-muted)">Not tested by this view</div>
       </div>
     </div>
 
@@ -204,9 +204,9 @@ Verify  → pilah_verify(operation="plan") for Given/When/Then acceptance</code>
 
   <div id="graph" class="panel">
     <div class="card">
-      <div class="card-title">Static Dependency Graph</div>
+      <div class="card-title">Illustrative Dependency Flow</div>
       <p style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">
-        Visualizing symbol dependencies, directional imports (ESM/CJS, Composer PSR-4), and blast-radius tracking.
+        Illustration only: no live workspace graph, dependency metrics, or impact results have been loaded.
       </p>
       <div style="background:var(--bg);border:1px solid var(--surface-border);border-radius:4px;padding:24px;text-align:center;">
         <svg viewBox="0 0 400 120" style="max-width:360px;">
@@ -253,7 +253,7 @@ Verify  → pilah_verify(operation="plan") for Given/When/Then acceptance</code>
     <div class="card">
       <div class="card-title">Token Provenance & Context Health</div>
       <p style="color:var(--text-muted);font-size:12px;margin-bottom:8px;">
-        Local transcript diagnostics monitor cumulative token growth without making ungrounded pricing claims.
+        Use explicit local diagnostics when needed; this panel does not read current tokens, quotas, or billing data.
       </p>
       <pre><code>$ node scripts/pilah.mjs tokens --limit 5 --json
 $ node scripts/context-guardian.mjs status</code></pre>
@@ -270,15 +270,8 @@ $ node scripts/context-guardian.mjs status</code></pre>
       if (targetPanel) targetPanel.classList.add('active');
     }
 
-    // SEP-1865 JSON-RPC postMessage interface
-    window.addEventListener('message', (event) => {
-      try {
-        const data = event.data;
-        if (data && data.method === 'update' && data.params) {
-          if (data.params.mode) document.getElementById('mode-val').textContent = data.params.mode;
-        }
-      } catch (e) {}
-    });
+    // Static reference only: never trust arbitrary postMessage traffic as
+    // proof of plugin activation, security state or measured token savings.
   </script>
 </body>
 </html>`;
