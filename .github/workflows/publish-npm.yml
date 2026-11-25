@@ -1,11 +1,6 @@
 name: Publish to npmjs
 
 on:
-  release:
-    types: [published]
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 concurrency:
