@@ -1,6 +1,6 @@
 # PILAH documentation
 
-**Current project:** PILAH v1.0.0 source in this repository. The repository has **not** been renamed on GitHub and `@aliip/pilah` publication is not verified. Node.js >=22.13.0 is required.
+**Current project:** PILAH v1.0.3 source in the canonical repository `alifakbxr/pilah`; npmjs publication and independent release acceptance remain unverified. Node.js >=22.13.0 is required.
 
 Start with the [README](../README.md) for source setup and CLI usage, [build status](../BUILD_STATUS.md) for tested behavior, and [validation backlog](MAIN_VALIDATION_BACKLOG.md) for the outstanding host-run and F01–F18 checks. The four current public tools are `pilah_context`, `pilah_impact`, `pilah_verify`, `pilah_evidence`. Previously registered tool names remain callable for compatibility; public examples use PILAH.
 

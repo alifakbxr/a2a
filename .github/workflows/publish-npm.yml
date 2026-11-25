@@ -42,12 +42,9 @@ jobs:
           A2A_RELEASE_REGISTRY_B64: ${{ secrets.A2A_RELEASE_REGISTRY_B64 }}
         run: |
           set -euo pipefail
-          if [ -n "$A2A_RELEASE_EVIDENCE_B64" ]; then
-            git fetch origin main --no-tags
-            node scripts/release-authorization.mjs
-          else
-            echo "A2A_RELEASE_EVIDENCE_B64 not configured, skipping external gate"
-          fi
+          # Missing external evidence is NOT release approval.
+          git fetch origin main --no-tags
+          node scripts/release-authorization.mjs
 
       - name: Verify Package Contents Hygiene
         run: |
@@ -67,10 +64,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js for npm OIDC
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Use npm CLI supporting Trusted Publishing
+        run: npm install --global npm@11.21.0
 
       - name: Verify independently authorized release candidate
         env:
@@ -80,12 +81,9 @@ jobs:
           A2A_RELEASE_REGISTRY_B64: ${{ secrets.A2A_RELEASE_REGISTRY_B64 }}
         run: |
           set -euo pipefail
-          if [ -n "$A2A_RELEASE_EVIDENCE_B64" ]; then
-            git fetch origin main --no-tags
-            node scripts/release-authorization.mjs
-          else
-            echo "A2A_RELEASE_EVIDENCE_B64 not configured, skipping external gate"
-          fi
+          # Missing external evidence is NOT release approval.
+          git fetch origin main --no-tags
+          node scripts/release-authorization.mjs
 
       - name: Check Current Version vs npm Registry
         id: version_check
@@ -110,16 +108,9 @@ jobs:
             exit 1
           fi
 
-      - name: Publish to npmjs.com (Trusted Publisher OIDC or Token)
+      - name: Publish to npmjs.com (Trusted Publisher OIDC only)
         if: steps.version_check.outputs.already_published == 'false'
-        run: |
-          set -euo pipefail
-          if [ -n "$NPM_AUTH_TOKEN" ]; then
-            npm config set //registry.npmjs.org/:_authToken "$NPM_AUTH_TOKEN"
-          fi
-          npm publish --access public --provenance
-        env:
-          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --provenance
 
       - name: Verification & Publication Summary
         if: steps.version_check.outputs.already_published == 'false'

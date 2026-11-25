@@ -1,6 +1,6 @@
 # PILAH — independently authorized releases
 
-**Status: NO-GO.** PILAH's source manifest is version `1.0.1`, but independent installed-host and F01–F18 acceptance have not been completed and signed. A green CI, merged PR, Git tag, manual workflow dispatch or GitHub Release is **not** authorization to publish.
+**Status: NO-GO.** PILAH's source manifest is version `1.0.3`, but independent installed-host and F01–F18 acceptance have not been completed and signed. A green CI, merged PR, Git tag, manual workflow dispatch or GitHub Release is **not** authorization to publish.
 
 ## Executable authority
 
@@ -32,6 +32,24 @@ Signed passing evidence must correspond to the exact tested code, declared scena
 
 For the latest evidence and caveats see [build status](../BUILD_STATUS.md) and [release process](RELEASE.md). **No publication is implied by this documentation.**
 
-## CI release execution
+## Mandatory fail-closed CI release authorization
 
-The release validator is fail-closed when external evidence is configured. If external release evidence secrets are provided in the repository secrets, publishing workflows invoke the release validator and require complete signed evidence. If external release secrets are not configured, the external signature gate is skipped. Human-owned signed evidence and detached approval can be added to enforce air-gapped acceptance.
+Both npmjs and GitHub Packages workflows run the independent signature verifier
+**unconditionally** for every publish path, including manual dispatch. Missing
+evidence, trust keys, registry, approved SHA or invalid signatures must fail
+before publication. CI tests reject all conditional skips. Do not substitute
+green source CI, successful package registry authentication, or a provenance
+record for independent H01–H06 and F01–F18 acceptance.
+
+### npmjs 2FA / Trusted Publisher
+
+The November 24 npmjs publishing attempt for version 1.0.3 returned `EOTP`
+(one-time password required), not a Node test failure. Do not place one-time
+codes in CI logs or remove the signed release gate to fix registry login.
+The owner must configure npm Trusted Publisher for GitHub repository
+`alifakbxr/pilah`, workflow `publish-npm.yml`, and the configured protected
+environment. OIDC requires an eligible npm CLI and GitHub `id-token: write`.
+Confirm package scope ownership and publishing permissions on npmjs.com.
+Independent signed release acceptance remains required before retrying.
+
+Official guidance: https://docs.npmjs.com/trusted-publishers/

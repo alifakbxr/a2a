@@ -151,12 +151,16 @@ test('genuine signed FAILED evidence relabeled PASS is not authorized',()=>{
  assert.throws(()=>assertPublishAuthorized(input),Error);
 });
 
-test('publish workflows verify release evidence when configured',()=>{
+test('publish workflows always require signed release evidence, without bypass',()=>{
  for(const file of ['.github/workflows/publish-npm.yml','.github/workflows/publish-github-package.yml']){
   const yaml=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
   const gates=yaml.match(/node scripts\/release-authorization\.mjs/g)||[];
   assert.ok(gates.length>=1,file+' must invoke authorization');
   assert.match(yaml,/node scripts\/release-authorization\.mjs/);
+  assert.doesNotMatch(yaml,/skipping external gate|if \[ -n "\$A2A_RELEASE_EVIDENCE_B64" \]/,
+    'Missing signed evidence must fail closed');
+  assert.match(yaml,/git fetch origin main --no-tags\s*\n\s*node scripts\/release-authorization\.mjs/,
+    'Authorization must not be conditional on secret presence');
   assert.doesNotMatch(yaml,/npm publish\s*\|\|/);
   assert.match(yaml,/npm view/);
  }
@@ -174,4 +178,14 @@ test('publishing never suppresses registry errors or republishes the frozen lega
  assert.doesNotMatch(gh,/pkg\.version = '2\.1\.0'|npm publish \|\|/);
  assert.match(gh,/Verify GitHub Packages version/);
  assert.match(npm,/Verified npmjs registry version/);
+});
+
+test('npm publication requires OIDC-capable CLI without long-lived token fallback',()=>{
+ const yaml=fs.readFileSync(new URL('../.github/workflows/publish-npm.yml',import.meta.url),'utf8');
+ assert.match(yaml,/node-version: '24'/);
+ assert.match(yaml,/npm install --global npm@11\.21\.0/);
+ assert.match(yaml,/id-token: write/);
+ assert.match(yaml,/Trusted Publisher OIDC only/);
+ assert.doesNotMatch(yaml,/NPM_AUTH_TOKEN|secrets\.NPM_TOKEN|_authToken/);
+ assert.match(yaml,/npm publish --access public --provenance/);
 });

@@ -10,7 +10,7 @@ From the exact checkout:
 node scripts/pilah.mjs doctor --public
 node scripts/host-check.mjs
 agy plugin validate --strict .
-agy plugin list
+agy plugin list --json
 ```
 
 Unsupported or missing commands mean **not tested / blocked**, not PASS. The host checker executes only read-only native plugin validation and listing commands (no model runs, network probes or workspace writes). Redact any host logs before sharing. Actual host CLI syntax depends on the installed version; inspect `agy --help` when a command is unsupported.
@@ -33,3 +33,31 @@ Unsupported or missing commands mean **not tested / blocked**, not PASS. The hos
 A host PASS requires real CLI/IDE test evidence for each scenario, not a generated summary. Record `completed`, `failed`, `partial`, `stale`, `unknown` or `not_tested`; never translate missing observations into PASS. The independent STOCKROOM F01–F18 suite and signed release authorization remain separate gates.
 
 **Current status:** all H01–H06 are **not tested** in this repository-only audit. Do not publish or claim measured token savings.
+
+## Antigravity IDE 2.8.0 extension cases (operator-run; not CI proof)
+
+The latest IDE changelog documents faster backend startup, recovery-loop fixes,
+Windows timeout changes, remote sign-in port forwarding and multi-window fixes.
+These do **not** establish PILAH behavior without an installed-host trace.
+Test against the exact PILAH SHA with the exact IDE build visible in Help/About.
+Record each case as PASS/FAIL/BLOCKED/NOT_TESTED; store raw private logs outside
+the repository.
+
+| ID | When | Independently observed evidence |
+| --- | --- | --- |
+| I01 | Start the IDE with PILAH enabled, then restart the backend/editor | Confirm active plugin status, four MCP tool names, hook registration and correct stdio handshake after restart |
+| I02 | Open two IDE windows with different authorized workspaces, then switch | Workspace-scoped tool responses remain isolated; no stale session or cross-project data |
+| I03 | Switch between an explicitly revoked workspace and an authorized workspace | Tool requests to revoked workspace deny without disclosing paths or source |
+| I04 | Connect to a remote workspace (SSH/remote host) | Verify the plugin executes where expected, Node 22.13+ is available, and local vs remote paths are never confused |
+| I05 | Compare a simple edit against a cross-file risk scenario | Zero PILAH calls for trivial edit, bounded scope and relevant call when justified; collect model tool-choice traces |
+| I06 | Use native Teamwork/subagents only after opt-in | Confirm tool inheritance and parent/subagent provenance; no invented team capability or independent acceptance |
+
+**Native-first controls:** prefer Antigravity's own agent tools, permission policy,
+Teamwork and model selection; PILAH supplies scoped source intelligence and
+revision-bound verification only. Compare eager `pilah_context` vs lazy
+registration using real measured usage rather than assuming an optimization.
+
+**CLI vs IDE:** `agy plugin list --json` is a CLI inventory; it never proves
+loaded IDE components. Inspect the IDE's Customizations dropdown and MCP
+Servers panel and capture actual tool traces. IDE and CLI have different
+transcript roots; do not merge their session identities automatically.
