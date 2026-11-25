@@ -1,6 +1,6 @@
 # PILAH — build and validation status
 
-**24 November 2026 — source release hardening candidate.** Canonical repository: [alifakbxr/pilah](https://github.com/alifakbxr/pilah). Source package and Antigravity manifest: **1.0.3**. The previous GitHub Packages identifier is frozen and no longer republished automatically. npmjs uses `@aliip/pilah`; GitHub Packages uses `@alifakbxr/pilah`. They are different registries and scopes.
+**25 November 2026 — source release hardening candidate.** Canonical repository: [alifakbxr/pilah](https://github.com/alifakbxr/pilah). Source package and Antigravity manifest: **1.0.3**. The previous GitHub Packages identifier is frozen and no longer republished automatically. npmjs uses `@aliip/pilah`; GitHub Packages uses `@alifakbxr/pilah`. They are different registries and scopes. MCP stdio protocol handshake updated to support Antigravity's `2024-11-05`, `2024-10-07`, and `2025-03-26`. Documentation streamlined down to 13 essential documents, translated to full English, with quick install options via npm and CLI added.
 
 | Check | Verified evidence | Still unknown |
 | --- | --- | --- |

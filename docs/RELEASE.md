@@ -1,6 +1,6 @@
 # PILAH — release process
 
-**Current status: NO-GO (24 November 2026).** Source `main` includes PILAH `1.0.3`; externally signed F01–F18 and installed Antigravity host acceptance are **not verified**. No source merge, tag or green CI authorizes publishing on its own. Canonical repository: `alifakbxr/pilah`. The source npmjs package is `@aliip/pilah`; registry publication of the exact version must be independently verified.
+**Current status: NO-GO (25 November 2026).** Source `main` includes PILAH `1.0.3`; externally signed F01–F18 and installed Antigravity host acceptance are **not verified**. No source merge, tag or green CI authorizes publishing on its own. Canonical repository: `alifakbxr/pilah`. The source npmjs package is `@aliip/pilah`; registry publication of the exact version must be independently verified.
 
 ## Source quality gate
 
