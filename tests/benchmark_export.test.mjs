@@ -27,3 +27,20 @@ test('combined multi-run output discards nested Windows/Unix paths, logs and PII
  for(const secret of ['C:\\\\Users','/home/private','Bearer XYZ','person@internal.test','session=123','sk-secret','private SQL','internal.example','env=ABC'])assert.ok(!exported.includes(secret),secret);
  assert.equal(safeBenchmarkExport(payload).runs.length,2);
 });
+
+test('current PILAH A/B reports export with canonical variant names and missing usage preserved',()=>{
+ const raw={schema:'pilah-ab-evaluation-v1',setup:{workspace:'/private/source'},runs:[
+   {variant:'pilah-on-demand',status:'SUCCESS',usage:{total_tokens:null,cache_read_tokens:null},duration_seconds:4,num_turns:2,tool_calls:1,acceptance_passed:0,acceptance_total:2,private_payload:'token-SECRET'},
+   {variant:'native',status:'ERROR',usage:{total_tokens:100,cache_read_tokens:25},duration_seconds:5,num_turns:3,tool_calls:2,acceptance_passed:0,acceptance_total:2}
+ ]};
+ const out=safeBenchmarkExport(raw),json=JSON.stringify(out);
+ assert.equal(out.schema,'pilah-sanitized-benchmark-v1');
+ assert.equal(out.runs[0].variant,'pilah-on-demand');
+ assert.equal(out.runs[0].reported_tokens,null);
+ assert.equal(out.summary.official_usage_observed_runs,1);
+ assert.equal(out.summary.measured_causal_savings,false);
+ assert.ok(!json.includes('/private/source'));
+ assert.ok(!json.includes('token-SECRET'));
+ const legacy=safeBenchmarkExport({schema:'a2a-ab-evaluation-v1',runs:[{variant:'a2a-on-demand',status:'SUCCESS'}]});
+ assert.equal(legacy.runs[0].variant,'pilah-on-demand');
+});
