@@ -10,8 +10,9 @@ import {getSessionTokenUsage} from './tokens.mjs';
 import {classifyMcpFailure} from './mcp-diagnostics.mjs';
 
 const server={name:'pilah',version:pkg.version}, engine=new Engine();
-// Stdio currently implements the 2025-03-26 handshake contract only.
-const MCP_PROTOCOL='2025-03-26';
+// Supported MCP protocol versions (supports standard MCP 2024-11-05, draft 2024-10-07, and 2025-03-26 contract)
+const SUPPORTED_PROTOCOLS=['2025-03-26','2024-11-05','2024-10-07'];
+const DEFAULT_PROTOCOL='2024-11-05';
 const io=readline.createInterface({input:process.stdin,crlfDelay:Infinity,terminal:false});
 const answer=(id,result,error)=>{
   const message={jsonrpc:'2.0',id,...(error?{error:{code:error.code||-32603,message:String(error.message||error).slice(0,300),...(error.data?{data:error.data}:{})}}:{result})};
@@ -83,9 +84,9 @@ function route(req){
   if(req?.jsonrpc!=='2.0'||typeof req.method!=='string')throw Object.assign(new Error('Invalid JSON-RPC request'),{code:-32600});
   switch(req.method){
     case 'initialize':{
-      const requested=req.params?.protocolVersion??MCP_PROTOCOL;
-      if(requested!==MCP_PROTOCOL)throw Object.assign(new Error('Unsupported MCP protocol version; supported: '+MCP_PROTOCOL),{code:-32602,data:{requested:typeof requested==='string'?requested.slice(0,40):null,supported:[MCP_PROTOCOL]}});
-      return {protocolVersion:MCP_PROTOCOL,capabilities:{tools:{listChanged:false},resources:{subscribe:false,listChanged:false}},serverInfo:server};
+      const requested=req.params?.protocolVersion??DEFAULT_PROTOCOL;
+      if(!SUPPORTED_PROTOCOLS.includes(requested))throw Object.assign(new Error('Unsupported MCP protocol version; supported: '+SUPPORTED_PROTOCOLS.join(', ')),{code:-32602,data:{requested:typeof requested==='string'?requested.slice(0,40):null,supported:SUPPORTED_PROTOCOLS}});
+      return {protocolVersion:requested,capabilities:{tools:{listChanged:false},resources:{subscribe:false,listChanged:false}},serverInfo:server};
     }
     case 'ping':return {};
     case 'tools/list':return {tools:getListedTools()};
