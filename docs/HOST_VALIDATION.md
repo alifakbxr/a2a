@@ -64,6 +64,6 @@ transcript roots; do not merge their session identities automatically.
 
 ### Protocol and benchmark capture requirements
 
-From a local test harness, verify MCP stdio initialization with `2025-03-26`, `2025-06-18`, or `2025-11-25`, followed by an actual `tools/list` and authorized/denied `tools/call`. Unsupported `2026-07-28` discovery negotiation is not currently implemented; do not report a general host compatibility PASS if the installed host requires that protocol.
+From a local test harness, verify MCP stdio initialization with `2024-11-05`, `2025-03-26`, `2025-06-18`, or `2025-11-25` (and historical draft `2024-10-07`), followed by an actual `tools/list` and authorized/denied `tools/call`. Unsupported `2026-07-28` discovery negotiation is not currently implemented; do not report a general host compatibility PASS if the installed host requires that protocol.
 
 Use `node benchmarks/ab-evaluate.mjs <manifest.json>` on evaluator-controlled, genuine host captures. The report preserves absent provider usage as `null`, records five-run minimum and order counterbalance, and intentionally cannot elevate self-supplied acceptance to independent proof. Only the independent evaluator may sign matching F01–F18 receipts and release approval. For sharing, run `node scripts/export-benchmark.mjs <report.json>` and inspect the output before posting.

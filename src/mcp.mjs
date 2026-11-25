@@ -10,10 +10,11 @@ import {getSessionTokenUsage} from './tokens.mjs';
 import {classifyMcpFailure} from './mcp-diagnostics.mjs';
 
 const server={name:'pilah',version:pkg.version}, engine=new Engine();
-// The read-only tools/resources/stdio subset has the same wire shape in these
-// three legacy versions. No tasks, elicitation, HTTP or 2026 discovery claimed.
-const MCP_PROTOCOL='2025-03-26';
-const MCP_PROTOCOLS=new Set(['2025-03-26','2025-06-18','2025-11-25']);
+// Preserve earlier IDE handshakes while supporting the shared stdio
+// tools/resources subset through 2025-11-25. Older draft 2024-10-07 stays
+// supported for existing installations; no tasks, HTTP or 2026 discovery.
+const MCP_PROTOCOL='2024-11-05';
+const MCP_PROTOCOLS=new Set(['2024-10-07','2024-11-05','2025-03-26','2025-06-18','2025-11-25']);
 const io=readline.createInterface({input:process.stdin,crlfDelay:Infinity,terminal:false});
 const answer=(id,result,error)=>{
   const message={jsonrpc:'2.0',id,...(error?{error:{code:error.code||-32603,message:String(error.message||error).slice(0,300),...(error.data?{data:error.data}:{})}}:{result})};

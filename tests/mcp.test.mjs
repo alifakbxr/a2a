@@ -30,7 +30,7 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
     assert.ok(init.result.capabilities.resources);
     const newer=await ask({jsonrpc:'2.0',id:20,method:'initialize',params:{protocolVersion:'2026-07-28'}});
     assert.equal(newer.error.code,-32602);
-    assert.deepEqual(newer.error.data.supported,['2025-03-26','2025-06-18','2025-11-25']);
+    assert.deepEqual(newer.error.data.supported,['2024-10-07','2024-11-05','2025-03-26','2025-06-18','2025-11-25']);
     assert.ok(!newer.result);
     const unsupported=await ask({jsonrpc:'2.0',id:21,method:'initialize',params:{protocolVersion:'2099-01-01'}});
     assert.equal(unsupported.error.code,-32602);
@@ -117,7 +117,7 @@ test('hook.mjs fails open on malformed stdin and handles PostToolUse',()=>{
 });
 
 test('MCP stdio supports 2025-06-18 and 2025-11-25 core capabilities without claiming modern tasks',async()=>{
- for(const protocolVersion of ['2025-06-18','2025-11-25']){
+ for(const protocolVersion of ['2024-10-07','2024-11-05','2025-06-18','2025-11-25']){
   const {ask,close}=spawnServer();
   try{
    const init=await ask({jsonrpc:'2.0',id:'init-'+protocolVersion,method:'initialize',
