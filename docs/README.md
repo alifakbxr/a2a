@@ -1,54 +1,58 @@
-# PILAH documentation
+# Dokumentasi PILAH
 
-**Current project:** PILAH v1.0.3 source in the canonical repository `alifakbxr/pilah`; npmjs publication and independent release acceptance remain unverified. Node.js >=22.13.0 is required.
+Indeks panduan teknis dan operasional untuk **PILAH** (*Project Intelligence, Logic, Analysis & Handoffs*) pada Google Antigravity.
 
-Start with the [README](../README.md) for source setup and CLI usage, [build status](../BUILD_STATUS.md) for tested behavior, and [validation backlog](MAIN_VALIDATION_BACKLOG.md) for the outstanding host-run and F01–F18 checks. The four current public tools are `pilah_context`, `pilah_impact`, `pilah_verify`, `pilah_evidence`. Previously registered tool names remain callable for compatibility; public examples use PILAH.
+Repositori resmi: [alifakbxr/pilah](https://github.com/alifakbxr/pilah).
 
-**Evidence boundary:** Passing unit/CI tests does not mean an installed Antigravity host, app/browser behavior, token-saving benchmark, or independently signed release has passed. No public package publication has been authorized.
+---
 
-## Start here
+## Panduan Utama
 
-- [Engineering method & Claude Code comparison](ENGINEERING_METHOD.md)
-- [MCP tools, arguments and evidence contracts](CONTRACTS.md)
-- [Components, data flow and boundaries](ARCHITECTURE.md)
-- [When to call PILAH; native-first workflow](NATIVE_FIRST_WORKFLOW.md)
-- [Supported stacks, Node and Antigravity environments](COMPATIBILITY.md)
-- [Workspace trust, privacy and threat model](SECURITY.md)
+- [Metode Rekayasa & Pola Native-First](ENGINEERING_METHOD.md)
+- [Arsitektur Sistem & Komponen](ARCHITECTURE.md)
+- [Kontrak Skema MCP & Alat](CONTRACTS.md)
+- [Kapan Menggunakan PILAH (Alur Kerja)](NATIVE_FIRST_WORKFLOW.md)
+- [Kompatibilitas Runtime & Lingkungan Host](COMPATIBILITY.md)
+- [Keamanan, Privasi & Model Ancaman](SECURITY.md)
 
-## Operations and evidence
+---
 
-- [Installed Antigravity scenarios and host acceptance runbook](HOST_VALIDATION.md)
+## Pengujian, CI & Rilis
 
-- [One-job PR CI, three-job main CI; honest token benchmarking](CI_EFFICIENCY.md)
-- [Release checklist and required live tests](RELEASE.md)
-- [Signed, fail-closed publication gate](RELEASE_AUTHORIZATION.md)
-- [What is not yet independently proven](MAIN_VALIDATION_BACKLOG.md)
-- [Evidence and release acceptance criteria](ACCEPTANCE_GATE.md)
-- [Production Acceptance F01–F18 independent test runbook](INDEPENDENT_ACCEPTANCE_RUNBOOK.md)
-- [Risk-aware test recommendations](RISK_GUIDANCE.md)
-- [Browser, semantic and local proof boundaries](SEMANTIC_EVIDENCE.md)
-- [Opt-in checkpoints and recovery](CHECKPOINT_RECOVERY.md)
-- [Optional native agent teamwork](ORCHESTRATION_ADVISOR.md)
-- [Local conversation token diagnostics](CONVERSATION_USAGE.md)
-- [What token counts can and cannot establish](TOKEN_PROVENANCE.md)
-- [Observed MCP intervention logging](INTERVENTION_LEDGER.md)
+- [Validasi Host Antigravity](HOST_VALIDATION.md)
+- [Alokasi Runner & Efisiensi CI](CI_EFFICIENCY.md)
+- [Proses Rilis & Penerbitan Paket](RELEASE.md)
+- [Otorisasi Rilis & Gate Verifikasi](RELEASE_AUTHORIZATION.md)
+- [Status Validasi & Backlog Bukti](MAIN_VALIDATION_BACKLOG.md)
+- [Kriteria & Gate Acceptance](ACCEPTANCE_GATE.md)
+- [Runbook Pengujian Skenario F01–F18](INDEPENDENT_ACCEPTANCE_RUNBOOK.md)
+
+---
+
+## Operasional & Diagnostik Sesi
+
+- [Panduan Pengujian Berbasis Risiko](RISK_GUIDANCE.md)
+- [Bukti Semantik & Bukti Browser](SEMANTIC_EVIDENCE.md)
+- [Penyimpanan Checkpoint & Recovery](CHECKPOINT_RECOVERY.md)
+- [Panduan Teamwork & Orkestrasi](ORCHESTRATION_ADVISOR.md)
+- [Diagnostik Penggunaan Token Percakapan](CONVERSATION_USAGE.md)
+- [Provenansi dan Batasan Token](TOKEN_PROVENANCE.md)
+- [Buku Catatan Intervensi MCP](INTERVENTION_LEDGER.md)
+
+---
 
 ## Historical implementation audits and research — reference only
 
-These dated records explain earlier decisions; they are **not current installation, CI or release instructions**. Archived notes retain their historical test dates; their displayed terminology is standardized and older results are not current acceptance.
+Arsip catatan riset, audit keandalan, dan evaluasi historis untuk referensi teknis:
 
-- [Initial Five Whys review](5-WHYS.md)
-- [Earlier Always-On incident analysis](ALWAYS_ON_5_WHYS.md)
-- [Adaptive RCA design history](ADAPTIVE_RCA_WORKFLOW.md)
-- [Agent decision findings](AGENT_DECISION_REVIEW.md)
-- [v2.0.1 behavioral Five Whys](BEHAVIORAL_5_WHYS_V2_0_1.md)
-- [Engineering standards research](OPEN_SOURCE_ENGINEERING_STANDARDS.md)
-- [Pre-vNext migration and audit](PRE_VNEXT_INTEGRATION.md)
-- [v2.0.1 security audit](SECURITY_RELIABILITY_AUDIT_V2_0_1.md)
-- [Historical research references](SOURCES.md)
-- [Earlier token-efficiency review](TOKEN_EFFICIENCY.md)
-- [v2.0.1 issue/PR provenance](V2_0_1_TRACEABILITY.md)
-
-## Sources of truth
-
-The executable `src/tools.mjs`, `plugin.json`, `mcp_config.json`, `hooks.json`, `schemas/mcp-tools.json` and `schemas/database.sql` supersede historical prose. Publication requires the signed gates in [release authorization](RELEASE_AUTHORIZATION.md). Never commit private conversation transcripts, archived project source or credentials.
+- [Audit Awal Five Whys](5-WHYS.md)
+- [Analisis Insiden Kebijakan Always-On](ALWAYS_ON_5_WHYS.md)
+- [Riwayat Desain Adaptive RCA](ADAPTIVE_RCA_WORKFLOW.md)
+- [Tinjauan Keputusan Agen](AGENT_DECISION_REVIEW.md)
+- [Five Whys Perilaku v2.0.1](BEHAVIORAL_5_WHYS_V2_0_1.md)
+- [Riset Standar Rekayasa Open Source](OPEN_SOURCE_ENGINEERING_STANDARDS.md)
+- [Integrasi dan Migrasi Pre-vNext](PRE_VNEXT_INTEGRATION.md)
+- [Audit Keamanan dan Keandalan v2.0.1](SECURITY_RELIABILITY_AUDIT_V2_0_1.md)
+- [Daftar Sumber Riset Historis](SOURCES.md)
+- [Evaluasi Efisiensi Token Sebelumnya](TOKEN_EFFICIENCY.md)
+- [Pelacakan Isu dan PR v2.0.1](V2_0_1_TRACEABILITY.md)
