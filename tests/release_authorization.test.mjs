@@ -179,3 +179,13 @@ test('publishing never suppresses registry errors or republishes the frozen lega
  assert.match(gh,/Verify GitHub Packages version/);
  assert.match(npm,/Verified npmjs registry version/);
 });
+
+test('npm publication requires OIDC-capable CLI without long-lived token fallback',()=>{
+ const yaml=fs.readFileSync(new URL('../.github/workflows/publish-npm.yml',import.meta.url),'utf8');
+ assert.match(yaml,/node-version: '24'/);
+ assert.match(yaml,/npm install --global npm@11\.21\.0/);
+ assert.match(yaml,/id-token: write/);
+ assert.match(yaml,/Trusted Publisher OIDC only/);
+ assert.doesNotMatch(yaml,/NPM_AUTH_TOKEN|secrets\.NPM_TOKEN|_authToken/);
+ assert.match(yaml,/npm publish --access public --provenance/);
+});
