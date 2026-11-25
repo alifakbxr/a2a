@@ -87,6 +87,7 @@ A plan returns `not_tested` plus `completion.fully_verified:false`. For `assess`
 
 | URI | Meaning |
 | --- | --- |
+| `ui://pilah/app.html` | Interactive visual MCP App dashboard (SEP-1865 HTML UI for graph, impact, and verification) |
 | `pilah://status` | Plugin version and mode flags with redacted counts and booleans only; MCP never returns home/data directories or workspace paths |
 | `pilah://tokens/session` | Local session diagnostics; internal counters are not provider-verified token billing |
 | `pilah://workspace/summary` | Active workspace static index and coverage |

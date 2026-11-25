@@ -38,6 +38,8 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
     const tools=await ask({jsonrpc:'2.0',id:2,method:'tools/list',params:{}});
     assert.equal(tools.result.tools.length,4);
     assert.ok(tools.result.tools.every(t=>t.name.startsWith('pilah_')));
+    const ctxTool=tools.result.tools.find(t=>t.name==='pilah_context');
+    assert.equal(ctxTool?._meta?.ui?.resourceUri,'ui://pilah/app.html');
 
     // Legacy verifykit_* tool calls remain backward-compatible even when not listed
     const deniedLegacy=await ask({jsonrpc:'2.0',id:3,method:'tools/call',params:{name:'verifykit_context',arguments:{workspace:'/tmp'}}});
@@ -60,7 +62,12 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
     assert.ok(skelJson.files[0].skeleton.includes('https://a.com//b'));
 
     const resList=await ask({jsonrpc:'2.0',id:5,method:'resources/list',params:{}});
-    assert.ok(resList.result.resources.length>=3);
+    assert.ok(resList.result.resources.length>=4);
+    assert.ok(resList.result.resources.some(r=>r.uri==='ui://pilah/app.html'));
+
+    const appRead=await ask({jsonrpc:'2.0',id:51,method:'resources/read',params:{uri:'ui://pilah/app.html'}});
+    assert.equal(appRead.result.contents[0].mimeType,'text/html;profile=mcp-app');
+    assert.ok(appRead.result.contents[0].text.includes('PILAH Dashboard'));
     const resRead=await ask({jsonrpc:'2.0',id:6,method:'resources/read',params:{uri:'pilah://status'}});
     const statusObj=JSON.parse(resRead.result.contents[0].text);
     assert.equal(statusObj.name,'pilah');

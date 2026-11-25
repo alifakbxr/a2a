@@ -8,6 +8,7 @@ import {getListedTools,validateArgs} from './tools.mjs';
 import {dataDir,getA2AMode,getCompactMode,getAutoTrustMode,loadAllowlist,loadAntigravityWorkspaces,requireAuthorizedWorkspace} from './security.mjs';
 import {getSessionTokenUsage} from './tokens.mjs';
 import {classifyMcpFailure} from './mcp-diagnostics.mjs';
+import {getMcpAppHtml} from './mcp-app.mjs';
 
 const server={name:'pilah',version:pkg.version}, engine=new Engine();
 // Preserve earlier IDE handshakes while supporting the shared stdio
@@ -22,6 +23,7 @@ const answer=(id,result,error)=>{
 };
 
 const RESOURCES = [
+  {uri:'ui://pilah/app.html',name:'PILAH Dashboard App',description:'Interactive visual UI for workspace graph, impact, and verification status.',mimeType:'text/html;profile=mcp-app'},
   {uri:'pilah://status',name:'PILAH Status',description:'Current PILAH modes and redacted workspace counts; no local paths.',mimeType:'application/json'},
   {uri:'pilah://tokens/session',name:'PILAH Session Diagnostics',description:'Local session event counts only; model token totals require official Antigravity CLI JSON output.',mimeType:'application/json'},
   {uri:'pilah://workspace/summary',name:'PILAH Workspace Summary',description:'Active workspace graph coverage and estimated source inventory; not model token usage.',mimeType:'application/json'},
@@ -44,6 +46,9 @@ function getActiveSession(){
   }catch{return null}
 }
 function readResource(uri){
+  if(uri==='ui://pilah/app.html'){
+    return {type:'html',html:getMcpAppHtml()};
+  }
   if(uri.replace(/^a2a:\/\//,'pilah://')==='pilah://status'){
     return {
       name:'pilah',
@@ -91,7 +96,25 @@ function route(req){
       return {protocolVersion:requested,capabilities:{tools:{listChanged:false},resources:{subscribe:false,listChanged:false}},serverInfo:server};
     }
     case 'ping':return {};
-    case 'tools/list':return {tools:getListedTools()};
+    case 'tools/list':{
+      const tools=getListedTools().map(t=>{
+        if(t.name==='pilah_context'){
+          return {
+            ...t,
+            _meta:{
+              ui:{resourceUri:'ui://pilah/app.html'},
+              'com.google.antigravity/ui':{
+                entrypoints:[
+                  {type:'aux_pane',title:'PILAH Dashboard'}
+                ]
+              }
+            }
+          };
+        }
+        return t;
+      });
+      return {tools};
+    }
     case 'tools/call':{
       const {name,arguments:args={}}=req.params||{};validateArgs(name,args);
       let result;
@@ -120,6 +143,9 @@ function route(req){
       const uri=req.params?.uri;
       if(typeof uri!=='string'||!uri)throw Object.assign(new Error('Missing resource uri'),{code:-32602});
       const payload=readResource(uri);
+      if(payload?.type==='html'){
+        return {contents:[{uri,mimeType:'text/html;profile=mcp-app',text:payload.html}]};
+      }
       const content=JSON.stringify(payload);
       if(Buffer.byteLength(content,'utf8')>64*1024)throw new Error('MCP resource response exceeds 64 KiB');
       return {contents:[{uri,mimeType:'application/json',text:content}]};

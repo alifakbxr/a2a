@@ -1,6 +1,6 @@
 ---
 name: pilah
-description: Native-first engineering assistance for scoped code changes, cross-file impact, root cause investigation and verifiable results. Use for risky or unclear coding tasks, not routine edits.
+description: Native-first engineering assistance for scoped code changes, cross-file impact, and verification. Use when analyzing cross-file dependencies, assessing blast radius, or formulating Given/When/Then test plans. Not for routine single-file edits.
 ---
 
 # PILAH — Project Intelligence, Logic, Analysis & Handoffs
