@@ -117,9 +117,9 @@ test('hook.mjs fails open on malformed stdin and handles PostToolUse',()=>{
 });
 
 test('MCP stdio supports 2025-06-18 and 2025-11-25 core capabilities without claiming modern tasks',async()=>{
- const {ask,close}=spawnServer();
- try{
-  for(const protocolVersion of ['2025-06-18','2025-11-25']){
+ for(const protocolVersion of ['2025-06-18','2025-11-25']){
+  const {ask,close}=spawnServer();
+  try{
    const init=await ask({jsonrpc:'2.0',id:'init-'+protocolVersion,method:'initialize',
       params:{protocolVersion,capabilities:{},clientInfo:{name:'fixture',version:'1'}}});
    assert.equal(init.result.protocolVersion,protocolVersion);
@@ -127,6 +127,6 @@ test('MCP stdio supports 2025-06-18 and 2025-11-25 core capabilities without cla
    assert.equal(init.result.capabilities.tasks,undefined);
    const listed=await ask({jsonrpc:'2.0',id:'list-'+protocolVersion,method:'tools/list'});
    assert.equal(listed.result.tools.length,4);
-  }
- }finally{await close()}
+  }finally{await close()}
+ }
 });
