@@ -61,3 +61,9 @@ registration using real measured usage rather than assuming an optimization.
 loaded IDE components. Inspect the IDE's Customizations dropdown and MCP
 Servers panel and capture actual tool traces. IDE and CLI have different
 transcript roots; do not merge their session identities automatically.
+
+### Protocol and benchmark capture requirements
+
+From a local test harness, verify MCP stdio initialization with `2025-03-26`, `2025-06-18`, or `2025-11-25`, followed by an actual `tools/list` and authorized/denied `tools/call`. Unsupported `2026-07-28` discovery negotiation is not currently implemented; do not report a general host compatibility PASS if the installed host requires that protocol.
+
+Use `node benchmarks/ab-evaluate.mjs <manifest.json>` on evaluator-controlled, genuine host captures. The report preserves absent provider usage as `null`, records five-run minimum and order counterbalance, and intentionally cannot elevate self-supplied acceptance to independent proof. Only the independent evaluator may sign matching F01–F18 receipts and release approval. For sharing, run `node scripts/export-benchmark.mjs <report.json>` and inspect the output before posting.
