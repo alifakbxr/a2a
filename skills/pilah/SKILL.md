@@ -9,7 +9,7 @@ Antigravity executes and chooses native tools. PILAH is optional, read-first cod
 
 ## 0 calls → 1 scoped call → more only with new evidence
 
-1. **0 calls:** trivial UI text, isolated edits, already-understood bugs. Inspect and edit with native tools; don't invoke PILAH just because the skill was mentioned.
+1. **0 calls:** trivial UI text, isolated edits, already-understood bugs. Inspect existing project code and edit with native tools; don't invoke PILAH just because the skill was mentioned.
 2. **Scope:** before risky code, identify callers, affected tests, config, permission boundaries and available platform primitives. Prefer the smallest complete change.
 3. **1 call on cross-file uncertainty:** use eager `pilah_context` only if available and helpful (query a specific symbol, `workspace="<trusted project>"`, `limit=5`). Antigravity registers eager tools as `mcp_<server>_pilah_context`, commonly `mcp_pilah_pilah_pilah_context`; discover the actual server from /mcp, never assume names. For advanced impact, discover lazy `pilah_impact` schema at the MCP path listed by Antigravity, then use `call_mcp_tool` with its exact `ServerName`, `ToolName` and `Arguments`. Do not substitute a shell command or an invented direct tool call for proof of MCP use. If unavailable, proceed natively and disclose it.
 4. **Debug:** reproduce the failure; form a falsifiable hypothesis. Apply 5 Whys only to repeated, risky or unclear defects, not trivial work.
