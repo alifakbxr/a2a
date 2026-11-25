@@ -10,6 +10,35 @@ PILAH helps agents understand project symbols, inspect change impact, and organi
 
 ---
 
+## Quick Install & Quick Start ⚡
+
+### 🚀 Quick Install (1 Baris)
+
+**Melalui Antigravity CLI:**
+```bash
+agy plugin install github:alifakbxr/pilah
+```
+
+**Atau dari Customizations UI:**
+Buka **Settings** (`Ctrl+,`) → **Customizations** → **Add Plugin** → Masukkan `github:alifakbxr/pilah`.
+
+### ⏱️ Quick Start (30 Detik)
+
+1. **Izinkan workspace proyek Anda:**
+   ```bash
+   node scripts/pilah.mjs allow /path/to/project
+   ```
+
+2. **Cek kesiapan lingkungan:**
+   ```bash
+   node scripts/pilah.mjs doctor
+   ```
+
+3. **Gunakan langsung:**
+   Agent di Antigravity kini otomatis mengenali tool `pilah_context` (eager) dan tool analisis lainnya saat Anda mengerjakan tugas yang melibatkan dependensi antar-file.
+
+---
+
 ## Cara Instalasi / Installation Guide
 
 ### 1. Untuk Non-Developer (Pengguna Umum Google Antigravity)
