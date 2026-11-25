@@ -1,12 +1,12 @@
 # PILAH — build and validation status
 
-**24 November 2026 — source release hardening candidate.** Canonical repository: [alifakbxr/pilah](https://github.com/alifakbxr/pilah). Source package and Antigravity manifest: **1.0.1**. The previous GitHub Packages identifier is frozen and no longer republished automatically. npmjs uses `@aliip/pilah`; GitHub Packages uses `@alifakbxr/pilah`. They are different registries and scopes.
+**24 November 2026 — source release hardening candidate.** Canonical repository: [alifakbxr/pilah](https://github.com/alifakbxr/pilah). Source package and Antigravity manifest: **1.0.3**. The previous GitHub Packages identifier is frozen and no longer republished automatically. npmjs uses `@aliip/pilah`; GitHub Packages uses `@alifakbxr/pilah`. They are different registries and scopes.
 
 | Check | Verified evidence | Still unknown |
 | --- | --- | --- |
-| Node source CI | **3/3** OS jobs passed on [pre-hardening main](https://github.com/alifakbxr/pilah/actions/runs/45334431086) | Latest hardening commit requires its own CI |
-| Historical npm publication | [npmjs workflow](https://github.com/alifakbxr/pilah/actions/runs/45333440097) failed to publish 1.0.1 | Whether registry contains exact version; check `npm view @aliip/pilah@1.0.1 version` |
-| Historical GitHub Packages publication | [Workflow](https://github.com/alifakbxr/pilah/actions/runs/45336737118) succeeded, but old workflow swallowed publish failures | Current registry package/version must be confirmed |
+| Node source CI | **3/3** OS jobs passed on [main at cffffb8](https://github.com/alifakbxr/pilah/actions/runs/45374933008) | New security/host hardening commit still requires its own CI |
+| npmjs 1.0.3 | [npmjs workflow](https://github.com/alifakbxr/pilah/actions/runs/45375423126) failed with registry `EOTP` (one-time password required) | Confirm npm Trusted Publisher and scope authorization, then signed release acceptance |
+| GitHub Packages 1.0.3 | [Workflow](https://github.com/alifakbxr/pilah/actions/runs/45374986597) reported success while release evidence was conditionally skipped | Independently verify the published version; do not treat it as an authorized release |
 | New workflow policy | Release authorization is mandatory and absent evidence must fail; registry lookup distinguishes 404 from operational errors; no swallowed publish failure | Actual CI and authorized publication must be tested independently |
 | Antigravity H01–H06 | Source preflight/runbook exists | Actual installed-host execution and tool-choice traces |
 | Independent F01–F18 | Frozen acceptance plan exists | Real isolated browser/PHP/DB test results with independent signed proof |
