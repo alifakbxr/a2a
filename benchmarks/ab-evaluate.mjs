@@ -77,11 +77,12 @@ export function evaluateManifest(manifest,readCapture,{minRepetitions=5}={}){
   const variantNames=Object.keys(grouped);
   // Counterbalance is observable from capture order only for a two-variant
   // matched-pair experiment; this does not certify independent execution.
-  const paired=variantNames.length===2&&
-    runs.length===2*minRepetitions &&
-    Array.from({length:minRepetitions},(_,i)=>i+1).every(rep=>variantNames.every(v=>runs.some(r=>r.repeat===rep&&r.variant===v)));
+  const repeats=[...new Set(runs.map(r=>r.repeat))].sort((a,b)=>a-b);
+  const paired=variantNames.length===2 && repeats.length>=minRepetitions &&
+    runs.length===2*repeats.length &&
+    repeats.every(rep=>variantNames.every(v=>runs.some(r=>r.repeat===rep&&r.variant===v)));
   const firstCounts=Object.fromEntries(variantNames.map(v=>[v,0]));
-  if(paired)for(let repeat=1;repeat<=minRepetitions;repeat++){
+  if(paired)for(const repeat of repeats){
     const first=runs.find(r=>r.repeat===repeat);
     firstCounts[first.variant]++;
   }
