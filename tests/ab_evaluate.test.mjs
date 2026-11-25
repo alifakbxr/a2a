@@ -51,3 +51,39 @@ test('A/B capture reports cache fields only when the provider reports them',()=>
  assert.equal(absent.usage.cache_miss_tokens,null);
  assert.throws(()=>parseCapture(JSON.stringify({...final,usage:{...final.usage,cache_miss_tokens:-1}})),/Invalid official usage/);
 });
+
+test('missing official model usage is unknown, not zero or an invented baseline',()=>{
+ const r=parseCapture(JSON.stringify({status:'INTERRUPTED',duration_seconds:4,num_turns:1}));
+ assert.equal(r.usage.total_tokens,null);
+ assert.equal(r.official_usage_status,'unavailable');
+ const manifest={setup,scenarios:['stock'],runs:[
+   {variant:'native',repeat:1,capture:'native',acceptance:{stock:'not-tested'}},
+   {variant:'pilah-on-demand',repeat:1,capture:'pilah',acceptance:{stock:'not-tested'}}
+ ]};
+ const out=evaluateManifest(manifest,name=>name==='native'
+   ?JSON.stringify({status:'INTERRUPTED',duration_seconds:5,num_turns:1})
+   :JSON.stringify({...final,num_turns:2}),{minRepetitions:1});
+ assert.equal(out.comparability.ready,false);
+ assert.equal(out.comparability.official_usage_complete,false);
+ assert.equal(out.variants.native.official_tokens.median,null);
+ assert.equal(out.variants.native.official_usage_samples,0);
+ assert.equal(out.variants['pilah-on-demand'].official_tokens.median,100);
+ assert.throws(()=>parseCapture(JSON.stringify({status:'SUCCESS',usage:{total_tokens:'x'}})),/Invalid official usage/);
+});
+
+test('repeated experiments expose actual order balance without certifying causal savings',()=>{
+ const runs=[];const captures={};
+ for(let repeat=1;repeat<=5;repeat++){
+   for(const v of (repeat%2?['native','pilah-on-demand']:['pilah-on-demand','native'])){
+     const capture=v+'-'+repeat;
+     runs.push({variant:v,repeat,capture,acceptance:{stock:'not-tested'}});
+     captures[capture]=JSON.stringify({...final,num_turns:repeat+(v==='native'?0:10)});
+   }
+ }
+ const out=evaluateManifest({setup,scenarios:['stock'],runs},name=>captures[name]);
+ assert.equal(out.comparability.capture_repetitions_ready,true);
+ assert.equal(out.comparability.paired_repetitions,true);
+ assert.equal(out.comparability.order_counterbalanced,true);
+ assert.equal(out.comparability.official_usage_complete,true);
+ assert.equal(out.comparability.ready,false);
+});
