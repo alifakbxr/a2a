@@ -10,8 +10,10 @@ import {getSessionTokenUsage} from './tokens.mjs';
 import {classifyMcpFailure} from './mcp-diagnostics.mjs';
 
 const server={name:'pilah',version:pkg.version}, engine=new Engine();
-// Stdio currently implements the 2025-03-26 handshake contract only.
+// The read-only tools/resources/stdio subset has the same wire shape in these
+// three legacy versions. No tasks, elicitation, HTTP or 2026 discovery claimed.
 const MCP_PROTOCOL='2025-03-26';
+const MCP_PROTOCOLS=new Set(['2025-03-26','2025-06-18','2025-11-25']);
 const io=readline.createInterface({input:process.stdin,crlfDelay:Infinity,terminal:false});
 const answer=(id,result,error)=>{
   const message={jsonrpc:'2.0',id,...(error?{error:{code:error.code||-32603,message:String(error.message||error).slice(0,300),...(error.data?{data:error.data}:{})}}:{result})};
@@ -84,8 +86,8 @@ function route(req){
   switch(req.method){
     case 'initialize':{
       const requested=req.params?.protocolVersion??MCP_PROTOCOL;
-      if(requested!==MCP_PROTOCOL)throw Object.assign(new Error('Unsupported MCP protocol version; supported: '+MCP_PROTOCOL),{code:-32602,data:{requested:typeof requested==='string'?requested.slice(0,40):null,supported:[MCP_PROTOCOL]}});
-      return {protocolVersion:MCP_PROTOCOL,capabilities:{tools:{listChanged:false},resources:{subscribe:false,listChanged:false}},serverInfo:server};
+      if(!MCP_PROTOCOLS.has(requested))throw Object.assign(new Error('Unsupported MCP protocol version'),{code:-32602,data:{requested:typeof requested==='string'?requested.slice(0,40):null,supported:[...MCP_PROTOCOLS]}});
+      return {protocolVersion:requested,capabilities:{tools:{listChanged:false},resources:{subscribe:false,listChanged:false}},serverInfo:server};
     }
     case 'ping':return {};
     case 'tools/list':return {tools:getListedTools()};
