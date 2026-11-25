@@ -22,11 +22,16 @@ export function parseCapture(source){
   }
   if(result?.event==='result')result=result.result;
   if(result?.event==='init'||result?.event==='step_update')throw new Error('Incomplete stream: no terminal result');
-  check(object(result)&&object(result.usage),'Missing final result or official usage');
-  const u=result.usage;
-  for(const k of ['input_tokens','output_tokens','total_tokens'])check(nat(u[k]),'Invalid official usage.'+k);
-  for(const k of ['cache_read_tokens','cache_write_tokens','cache_creation_tokens','cache_miss_tokens','thinking_tokens'])if(u[k]!==undefined)check(nat(u[k]),'Invalid official usage.'+k);
-  check(u.total_tokens===u.input_tokens+u.output_tokens,'Inconsistent official usage total');
+  check(object(result),'Missing final result');
+  // Some Antigravity builds and interrupted runs omit official usage. Missing
+  // is unknown, never 0, never an inferred saving, and never an error.
+  const u=result.usage,hasOfficialUsage=object(u);
+  if(!hasOfficialUsage && u!==null && u!==undefined)throw Error('Invalid official usage envelope');
+  if(hasOfficialUsage){
+    for(const k of ['input_tokens','output_tokens','total_tokens'])check(nat(u[k]),'Invalid official usage.'+k);
+    for(const k of ['cache_read_tokens','cache_write_tokens','cache_creation_tokens','cache_miss_tokens','thinking_tokens'])if(u[k]!==undefined)check(nat(u[k]),'Invalid official usage.'+k);
+    check(u.total_tokens===u.input_tokens+u.output_tokens,'Inconsistent official usage total');
+  }
   check(typeof result.status==='string','Missing terminal status');
   const done=new Set();let calls=0,errors=0;
   for(const event of events){
@@ -36,7 +41,7 @@ export function parseCapture(source){
     if(done.has(key))continue;done.add(key);calls++;
     if(s.tool_info?.error)errors++;
   }
-  return {status:result.status,usage:{input_tokens:u.input_tokens,output_tokens:u.output_tokens,total_tokens:u.total_tokens,cache_read_tokens:u.cache_read_tokens??null,cache_write_tokens:u.cache_write_tokens??null,cache_creation_tokens:u.cache_creation_tokens??null,cache_miss_tokens:u.cache_miss_tokens??null,thinking_tokens:u.thinking_tokens??null},duration_seconds:typeof result.duration_seconds==='number'&&Number.isFinite(result.duration_seconds)&&result.duration_seconds>=0?result.duration_seconds:null,num_turns:nat(result.num_turns)?result.num_turns:null,tool_calls:events.length?calls:null,tool_errors:events.length?errors:null};
+  return {status:result.status,official_usage_status:hasOfficialUsage?'reported':'unavailable',usage:{input_tokens:u?.input_tokens??null,output_tokens:u?.output_tokens??null,total_tokens:u?.total_tokens??null,cache_read_tokens:u?.cache_read_tokens??null,cache_write_tokens:u?.cache_write_tokens??null,cache_creation_tokens:u?.cache_creation_tokens??null,cache_miss_tokens:u?.cache_miss_tokens??null,thinking_tokens:u?.thinking_tokens??null},duration_seconds:typeof result.duration_seconds==='number'&&Number.isFinite(result.duration_seconds)&&result.duration_seconds>=0?result.duration_seconds:null,num_turns:nat(result.num_turns)?result.num_turns:null,tool_calls:events.length?calls:null,tool_errors:events.length?errors:null};
 }
 function median(values){const s=values.filter(x=>typeof x==='number'&&Number.isFinite(x)).sort((a,b)=>a-b);if(!s.length)return null;let m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2}
 function summary(records,key){const v=records.map(x=>x[key]).filter(x=>typeof x==='number'&&Number.isFinite(x));return {median:median(v),min:v.length?Math.min(...v):null,max:v.length?Math.max(...v):null}}
@@ -59,16 +64,29 @@ export function evaluateManifest(manifest,readCapture,{minRepetitions=5}={}){
     check(!capturesSeen.has(captureSha),'Duplicated capture bytes across supposed independent runs');
     capturesSeen.add(captureSha);
     const p=parseCapture(raw);
-    runs.push({variant,repeat:item.repeat,status:p.status,capture_sha256:captureSha,usage:p.usage,duration_seconds:p.duration_seconds,num_turns:p.num_turns,tool_calls:p.tool_calls,tool_errors:p.tool_errors,acceptance_passed:manifest.scenarios.filter(s=>item.acceptance[s]==='passed').length,acceptance_total:manifest.scenarios.length});
+    runs.push({variant,repeat:item.repeat,status:p.status,official_usage_status:p.official_usage_status,capture_sha256:captureSha,usage:p.usage,duration_seconds:p.duration_seconds,num_turns:p.num_turns,tool_calls:p.tool_calls,tool_errors:p.tool_errors,acceptance_passed:manifest.scenarios.filter(s=>item.acceptance[s]==='passed').length,acceptance_total:manifest.scenarios.length});
   }
   const grouped={};for(const r of runs)(grouped[r.variant]??=[]).push(r);
   const variants={};
   for(const [name,items]of Object.entries(grouped)){
     const stats=items.map(r=>({tokens:r.usage.total_tokens,seconds:r.duration_seconds,turns:r.num_turns,tools:r.tool_calls,accepted:r.acceptance_passed}));
-    variants[name]={runs:items.length,successful_runs:items.filter(r=>r.status==='SUCCESS').length,ready_for_comparison:items.length>=minRepetitions,official_tokens:summary(stats,'tokens'),duration_seconds:summary(stats,'seconds'),model_turns:summary(stats,'turns'),tool_calls:summary(stats,'tools'),acceptance_passed:summary(stats,'accepted')};
+    variants[name]={runs:items.length,successful_runs:items.filter(r=>r.status==='SUCCESS').length,ready_for_comparison:items.length>=minRepetitions,official_usage_samples:stats.filter(x=>x.tokens!==null).length,official_tokens:summary(stats,'tokens'),duration_seconds:summary(stats,'seconds'),model_turns:summary(stats,'turns'),tool_calls:summary(stats,'tools'),acceptance_passed:summary(stats,'accepted')};
   }
   const repeated=Object.keys(grouped).length>=2&&Object.values(variants).every(x=>x.ready_for_comparison);
-  return {schema:'pilah-ab-evaluation-v1',setup:manifest.setup,scenarios:manifest.scenarios,variants,runs,comparability:{ready:false,capture_repetitions_ready:repeated,independent_acceptance_verified:false,minimum_repetitions:minRepetitions,quota_comparable:false,reason:repeated?'Repeated distinct captures are present, but independent evaluator and runtime equivalence have not been attested; no causal conclusion.':'Insufficient repetitions or variants; no causal A/B savings claim supported.'},caveats:['Only independently verified acceptance verdicts count','Free Tier percentages are not fixed token budgets','Cache-read/thinking must not be added to official total_tokens','No causal benefit or cost savings inferred']};
+  const officialUsageComplete=runs.every(x=>x.official_usage_status==='reported');
+  const variantNames=Object.keys(grouped);
+  // Counterbalance is observable from capture order only for a two-variant
+  // matched-pair experiment; this does not certify independent execution.
+  const paired=variantNames.length===2&&
+    runs.length===2*minRepetitions &&
+    Array.from({length:minRepetitions},(_,i)=>i+1).every(rep=>variantNames.every(v=>runs.some(r=>r.repeat===rep&&r.variant===v)));
+  const firstCounts=Object.fromEntries(variantNames.map(v=>[v,0]));
+  if(paired)for(let repeat=1;repeat<=minRepetitions;repeat++){
+    const first=runs.find(r=>r.repeat===repeat);
+    firstCounts[first.variant]++;
+  }
+  const orderCounterbalanced=paired&&Math.abs(firstCounts[variantNames[0]]-firstCounts[variantNames[1]])<=1;
+  return {schema:'pilah-ab-evaluation-v1',setup:manifest.setup,scenarios:manifest.scenarios,variants,runs,comparability:{ready:false,capture_repetitions_ready:repeated,paired_repetitions:paired,order_counterbalanced:orderCounterbalanced,official_usage_complete:officialUsageComplete,independent_acceptance_verified:false,minimum_repetitions:minRepetitions,quota_comparable:false,reason:!officialUsageComplete?'One or more captures lack provider-reported token usage; tokens remain unknown and no savings claim is supported.':repeated?'Repeated distinct captures are present, but independent evaluator and runtime equivalence have not been attested; no causal conclusion.':'Insufficient repetitions or variants; no causal A/B savings claim supported.'},caveats:['Only independently verified acceptance verdicts count','Free Tier percentages are not fixed token budgets','Cache-read/thinking must not be added to official total_tokens','No causal benefit or cost savings inferred']};
 }
 function safeCapture(root,name){
   const file=path.resolve(root,name),rel=path.relative(root,file);
