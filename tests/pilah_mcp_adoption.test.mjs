@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import {isPilahMcpCall} from '../src/mcp-invocation.mjs';
 import {analyzeAgentTrace,classifyTool} from '../scripts/compare-agent-traces.mjs';
 import {ALWAYS_ON_POLICY} from '../scripts/hook.mjs';
+import {getMcpAppHtml} from '../src/mcp-app.mjs';
 
 const known=[
  {name:'pilah_context'},
@@ -69,4 +70,15 @@ test('skill and opt-in hook document real host MCP namespace without forcing use
  assert.match(skill,/0 calls/);
  assert.match(ALWAYS_ON_POLICY,/mcp_<server>_pilah_context/);
  assert.match(ALWAYS_ON_POLICY,/No chains without new evidence/);
+});
+
+test('MCP App reference panel never fabricates measured savings, live status or verified permissions',()=>{
+ const html=getMcpAppHtml();
+ assert.ok(html.includes('Status not verified'));
+ assert.ok(html.includes('Unknown (no live query)'));
+ assert.ok(html.includes('Not tested by this view'));
+ assert.ok(html.includes('Illustration only'));
+ assert.ok(!html.includes('Enabled (70% cut)'));
+ assert.ok(!html.includes('Native-First Active'));
+ assert.ok(!html.includes('window.addEventListener(\'message\''));
 });
