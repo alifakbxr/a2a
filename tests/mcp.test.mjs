@@ -30,7 +30,7 @@ test('MCP handshake, default 4-tool listing, legacy alias routing, resources, an
     assert.ok(init.result.capabilities.resources);
     const newer=await ask({jsonrpc:'2.0',id:20,method:'initialize',params:{protocolVersion:'2026-07-28'}});
     assert.equal(newer.error.code,-32602);
-    assert.deepEqual(newer.error.data.supported,['2025-03-26']);
+    assert.deepEqual(newer.error.data.supported,['2025-03-26','2025-06-18','2025-11-25']);
     assert.ok(!newer.result);
     const unsupported=await ask({jsonrpc:'2.0',id:21,method:'initialize',params:{protocolVersion:'2099-01-01'}});
     assert.equal(unsupported.error.code,-32602);
@@ -114,4 +114,19 @@ test('hook.mjs fails open on malformed stdin and handles PostToolUse',()=>{
     // No trusted workspace -> never create a global native-run record.
     assert.equal(fs.existsSync(path.join(temp,'pdata','last-test-run.json')),false);
   }finally{fs.rmSync(temp,{recursive:true,force:true})}
+});
+
+test('MCP stdio supports 2025-06-18 and 2025-11-25 core capabilities without claiming modern tasks',async()=>{
+ const {ask,close}=spawnServer();
+ try{
+  for(const protocolVersion of ['2025-06-18','2025-11-25']){
+   const init=await ask({jsonrpc:'2.0',id:'init-'+protocolVersion,method:'initialize',
+      params:{protocolVersion,capabilities:{},clientInfo:{name:'fixture',version:'1'}}});
+   assert.equal(init.result.protocolVersion,protocolVersion);
+   assert.ok(init.result.capabilities.tools);
+   assert.equal(init.result.capabilities.tasks,undefined);
+   const listed=await ask({jsonrpc:'2.0',id:'list-'+protocolVersion,method:'tools/list'});
+   assert.equal(listed.result.tools.length,4);
+  }
+ }finally{await close()}
 });
