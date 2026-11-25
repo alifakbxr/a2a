@@ -111,3 +111,7 @@ Routine CI now uses **1 full-suite PR job** on Ubuntu/Node 24, **3 jobs on main*
 ## Privacy-safe diagnostic export
 
 Run `node scripts/pilah.mjs export-redacted` to print a bounded JSON summary with only table row counts and aggregate, allowlisted tool telemetry. It never exports workspace paths, queries, source code, raw transcript, or artifact contents. Exporting does not claim provider token savings or independently verified agent outcomes. Share the JSON only after reviewing it.
+
+## Independent benchmark reports
+
+`node benchmarks/ab-evaluate.mjs <evaluator-owned-manifest.json>` checks repetition, variant ordering, official token usage when available and asserted scenario coverage. Missing provider usage is **null** and cannot establish savings. `node scripts/export-benchmark.mjs <report.json>` redacts the resulting summary to a bounded, shareable report (review before uploading). The offline evaluator never substitutes for actual Antigravity tool traces, independently accepted tasks or signed release evidence.

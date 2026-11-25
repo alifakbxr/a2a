@@ -1,3 +1,5 @@
+> **Historical runbook, not a current release certificate.** The main branch is now PILAH 1.0.3 (25 November 2026). Prior `v2.0.1` branch, test counts, and merge instructions below are preserved for historical traceability only. The live acceptance and authorization requirements are in [HOST_VALIDATION.md](HOST_VALIDATION.md), [MAIN_VALIDATION_BACKLOG.md](MAIN_VALIDATION_BACKLOG.md), and [RELEASE_AUTHORIZATION.md](RELEASE_AUTHORIZATION.md). F01–F18 remain `not_tested` until independently observed. Do not repeat the old `v2.0.1 → main` merge procedure.
+
 # Independent validation runbook — PILAH v2.0.1
 
 This is an **execution checklist**, not a report claiming these tests were run.
