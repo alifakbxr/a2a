@@ -1,6 +1,6 @@
 # PILAH — independent validation backlog
 
-**Updated 25 November 2026.** Source `main` uses PILAH `1.0.3`; canonical GitHub repository is `alifakbxr/pilah`. Real IDE and external acceptance are tracked in issues #127 and #128; npm registry publishing remains blocked in issue #133. Historical issue closure is not proof that any external test was executed.
+**Updated 25 November 2026.** Source `main` uses PILAH `1.0.3`; canonical GitHub repository is `alifakbxr/pilah`. Real IDE and external acceptance are tracked in issues #127 and #128; npm registry publishing remains blocked in issue #133. Historical issue closure is not proof that any external test was executed. Earlier historical issue labels were **deferred/superseded**, not independently verified; active acceptance obligations are tracked separately in #127 and #128.
 
 ## What automated tests establish
 
