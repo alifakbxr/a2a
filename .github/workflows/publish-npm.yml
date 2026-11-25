@@ -42,12 +42,9 @@ jobs:
           A2A_RELEASE_REGISTRY_B64: ${{ secrets.A2A_RELEASE_REGISTRY_B64 }}
         run: |
           set -euo pipefail
-          if [ -n "$A2A_RELEASE_EVIDENCE_B64" ]; then
-            git fetch origin main --no-tags
-            node scripts/release-authorization.mjs
-          else
-            echo "A2A_RELEASE_EVIDENCE_B64 not configured, skipping external gate"
-          fi
+          # Missing external evidence is NOT release approval.
+          git fetch origin main --no-tags
+          node scripts/release-authorization.mjs
 
       - name: Verify Package Contents Hygiene
         run: |
@@ -80,12 +77,9 @@ jobs:
           A2A_RELEASE_REGISTRY_B64: ${{ secrets.A2A_RELEASE_REGISTRY_B64 }}
         run: |
           set -euo pipefail
-          if [ -n "$A2A_RELEASE_EVIDENCE_B64" ]; then
-            git fetch origin main --no-tags
-            node scripts/release-authorization.mjs
-          else
-            echo "A2A_RELEASE_EVIDENCE_B64 not configured, skipping external gate"
-          fi
+          # Missing external evidence is NOT release approval.
+          git fetch origin main --no-tags
+          node scripts/release-authorization.mjs
 
       - name: Check Current Version vs npm Registry
         id: version_check
