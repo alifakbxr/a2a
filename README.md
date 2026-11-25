@@ -14,24 +14,33 @@ PILAH helps agents understand project symbols, inspect change impact, and organi
 
 ### 🚀 1-Line Quick Install
 
+**Via npm (Global CLI):**
+```bash
+npm install -g @aliip/pilah
+```
+
 **Via Antigravity CLI:**
 ```bash
+agy plugin install @aliip/pilah
+# or directly from GitHub
 agy plugin install github:alifakbxr/pilah
 ```
 
-**Or via Customizations UI:**
-Open **Settings** (`Ctrl+,`) → **Customizations** → **Add Plugin** → Enter `github:alifakbxr/pilah`.
+**Via Antigravity UI:**
+Open **Settings** (`Ctrl+,`) → **Customizations** → **Add Plugin** → Enter `@aliip/pilah`.
 
 ### ⏱️ 30-Second Quick Start
 
 1. **Authorize your project workspace:**
    ```bash
    node scripts/pilah.mjs allow /path/to/project
+   # or with global npm: pilah allow /path/to/project
    ```
 
 2. **Check environment readiness:**
    ```bash
    node scripts/pilah.mjs doctor
+   # or with global npm: pilah doctor
    ```
 
 3. **Use directly:**
@@ -41,7 +50,27 @@ Open **Settings** (`Ctrl+,`) → **Customizations** → **Add Plugin** → Enter
 
 ## Installation Guide
 
-### 1. For Non-Developers (Standard Antigravity Users)
+### 1. Install via npm (Global CLI & Agents)
+
+Install globally via npm to make the `pilah` CLI tool available everywhere on your system:
+
+```bash
+npm install -g @aliip/pilah
+```
+
+Verify the installation:
+```bash
+pilah doctor
+```
+
+You can also run one-off commands without permanent installation using `npx`:
+```bash
+npx @aliip/pilah doctor
+```
+
+---
+
+### 2. For Non-Developers (Standard Antigravity UI)
 
 Install directly through the Antigravity user interface without building from source:
 
@@ -56,7 +85,7 @@ Install directly through the Antigravity user interface without building from so
 
 ---
 
-### 2. For Developers & Contributors (Manual Setup & CLI)
+### 3. For Developers & Contributors (Manual Setup & CLI)
 
 For contributors developing features, running tests, or inspecting source code:
 
