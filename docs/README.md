@@ -1,33 +1,33 @@
-# Dokumentasi PILAH
+# PILAH Documentation
 
-Indeks teknis untuk **PILAH** (*Project Intelligence, Logic, Analysis & Handoffs*) pada Google Antigravity.
+Technical documentation index for **PILAH** (*Project Intelligence, Logic, Analysis & Handoffs*) on Google Antigravity.
 
-Repositori resmi: [alifakbxr/pilah](https://github.com/alifakbxr/pilah).
-
----
-
-## 1. Panduan Arsitektur & Rekayasa
-
-- [Arsitektur Sistem & Komponen](ARCHITECTURE.md): Komponen internal, alur data scanner, dan batas integrasi IDE.
-- [Metode Rekayasa & Prinsip Native-First](ENGINEERING_METHOD.md): Perbandingan dengan pola Claude Code, iterasi cepat, dan filosofi zero-call.
-- [Kontrak Skema MCP](CONTRACTS.md): Definisi lengkap parameter, validasi tipe, dan output untuk 4 tool MCP.
-- [Alur Kerja Native-First](NATIVE_FIRST_WORKFLOW.md): Kapan menggunakan kemampuan bawaan Antigravity versus memanggil PILAH.
-- [Kompatibilitas Sistem](COMPATIBILITY.md): Dukungan versi Node.js, sistem operasi (Linux, macOS, Windows), dan lingkungan Antigravity.
-- [Keamanan & Privasi Workspace](SECURITY.md): Model izin workspace, isolasi SQLite, dan proteksi file sensitif.
+Official repository: [alifakbxr/pilah](https://github.com/alifakbxr/pilah).
 
 ---
 
-## 2. Pengujian, Efisiensi & Rilis
+## 1. Architecture & Engineering Guides
 
-- [Validasi Host Antigravity](HOST_VALIDATION.md): Prosedur preflight lokal untuk memeriksa registrasi plugin pada CLI `agy`.
-- [Efisiensi CI & Alokasi Runner](CI_EFFICIENCY.md): Konfigurasi runner GitHub Actions untuk pengujian cepat dan hemat resource.
-- [Proses Rilis & Verifikasi Registry](RELEASE.md): Checklist sebelum rilis dan verifikasi publikasi paket.
-- [Otorisasi Rilis](RELEASE_AUTHORIZATION.md): Kontrak verifikasi rilis independen dan integritas commit.
-- [Validation Backlog](MAIN_VALIDATION_BACKLOG.md): Status pengujian fungsional dan hal-hal yang ditunda (*deferred/superseded*).
-- [Efisiensi Token](TOKEN_EFFICIENCY.md): Pedoman optimasi prompt, diagnostik log, dan pencegahan token berlebih.
+- [System Architecture & Components](ARCHITECTURE.md): Internal components, scanner data flow, and IDE integration boundaries.
+- [Engineering Method & Native-First Principles](ENGINEERING_METHOD.md): Comparison with Claude Code patterns, fast iteration, and zero-call philosophy.
+- [MCP Schema Contracts](CONTRACTS.md): Full parameter definitions, type validations, and outputs for all 4 MCP tools.
+- [Native-First Workflow](NATIVE_FIRST_WORKFLOW.md): Decision matrix on when to use native Antigravity capabilities vs PILAH.
+- [System Compatibility](COMPATIBILITY.md): Node.js versions, operating systems (Linux, macOS, Windows), and Antigravity environments.
+- [Workspace Security & Privacy](SECURITY.md): Workspace authorization model, local SQLite isolation, and sensitive file protection.
+
+---
+
+## 2. Testing, Efficiency & Releases
+
+- [Host Validation](HOST_VALIDATION.md): Local preflight procedures for verifying plugin registration on `agy` CLI.
+- [CI Efficiency & Runner Budget](CI_EFFICIENCY.md): GitHub Actions runner configuration for fast and resource-efficient testing.
+- [Release Process & Registry Verification](RELEASE.md): Pre-release checklist and package publication verification.
+- [Release Authorization](RELEASE_AUTHORIZATION.md): Independent release verification contract and commit integrity.
+- [Validation Backlog](MAIN_VALIDATION_BACKLOG.md): Status of functional testing and deferred/superseded items.
+- [Token Efficiency](TOKEN_EFFICIENCY.md): Prompt optimization guidelines, transcript diagnostics, and token-saving boundaries.
 
 ---
 
 ## Historical implementation audits and research — reference only
 
-Arsip riset dan rekam jejak audit teknis disimpan dalam commit git riwayat repositori untuk melacak evolusi desain PILAH.
+Technical audit history and research records are preserved in the git commit history to track PILAH's design evolution.

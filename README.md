@@ -12,82 +12,82 @@ PILAH helps agents understand project symbols, inspect change impact, and organi
 
 ## Quick Install & Quick Start ⚡
 
-### 🚀 Quick Install (1 Baris)
+### 🚀 1-Line Quick Install
 
-**Melalui Antigravity CLI:**
+**Via Antigravity CLI:**
 ```bash
 agy plugin install github:alifakbxr/pilah
 ```
 
-**Atau dari Customizations UI:**
-Buka **Settings** (`Ctrl+,`) → **Customizations** → **Add Plugin** → Masukkan `github:alifakbxr/pilah`.
+**Or via Customizations UI:**
+Open **Settings** (`Ctrl+,`) → **Customizations** → **Add Plugin** → Enter `github:alifakbxr/pilah`.
 
-### ⏱️ Quick Start (30 Detik)
+### ⏱️ 30-Second Quick Start
 
-1. **Izinkan workspace proyek Anda:**
+1. **Authorize your project workspace:**
    ```bash
    node scripts/pilah.mjs allow /path/to/project
    ```
 
-2. **Cek kesiapan lingkungan:**
+2. **Check environment readiness:**
    ```bash
    node scripts/pilah.mjs doctor
    ```
 
-3. **Gunakan langsung:**
-   Agent di Antigravity kini otomatis mengenali tool `pilah_context` (eager) dan tool analisis lainnya saat Anda mengerjakan tugas yang melibatkan dependensi antar-file.
+3. **Use directly:**
+   Your Antigravity agent will now automatically discover the eager `pilah_context` tool and related analysis tools when assisting with multi-file dependencies.
 
 ---
 
-## Cara Instalasi / Installation Guide
+## Installation Guide
 
-### 1. Untuk Non-Developer (Pengguna Umum Google Antigravity)
+### 1. For Non-Developers (Standard Antigravity Users)
 
-Instalasi langsung melalui antarmuka Antigravity tanpa perlu build manual:
+Install directly through the Antigravity user interface without building from source:
 
-1. **Buka Google Antigravity**.
-2. Masuk ke menu **Settings** (`Ctrl + ,` atau ikon gerigi) lalu pilih tab **Customizations** atau **Plugins**.
-3. Klik tombol **Add Plugin** / **Install from Marketplace**.
-4. Masukkan nama paket `@aliip/pilah` atau tautan repositori GitHub:
+1. **Open Google Antigravity**.
+2. Go to **Settings** (`Ctrl + ,` or the gear icon) and select the **Customizations** or **Plugins** tab.
+3. Click **Add Plugin** / **Install from Marketplace**.
+4. Enter the package `@aliip/pilah` or the GitHub repository URL:
    ```text
    https://github.com/alifakbxr/pilah
    ```
-5. Klik **Install**. Plugin PILAH dan server MCP `pilah` akan otomatis aktif di workspace Anda.
+5. Click **Install**. The PILAH plugin and MCP server `pilah` will activate automatically in your workspace.
 
 ---
 
-### 2. Untuk Developer / Kontributor (Manual Setup & CLI)
+### 2. For Developers & Contributors (Manual Setup & CLI)
 
-Bagi pengembang yang ingin menjalankan dari source, mengembangkan fitur, atau menjalankan tes:
+For contributors developing features, running tests, or inspecting source code:
 
-#### Prasyarat
-- **Node.js** `>=22.13.0` (menggunakan SQLite bawaan `node:sqlite`, tanpa dependensi external runtime).
-- **Google Antigravity** atau CLI `agy`.
+#### Prerequisites
+- **Node.js** `>=22.13.0` (uses built-in `node:sqlite`, zero external runtime dependencies).
+- **Google Antigravity** or the `agy` CLI.
 
-#### Langkah Instalasi
-1. Clone repositori:
+#### Installation Steps
+1. Clone the repository:
    ```bash
    git clone https://github.com/alifakbxr/pilah.git
    cd pilah
    ```
-2. Jalankan pemeriksaan diagnostik dan pengujian:
+2. Run diagnostic checks and tests:
    ```bash
    node scripts/pilah.mjs doctor
    node scripts/check-release.mjs
    npm test
    ```
-3. Hubungkan ke Antigravity:
-   - Jika menggunakan CLI `agy`:
+3. Connect to Antigravity:
+   - Using the `agy` CLI:
      ```bash
      agy plugin install .
      agy plugin validate --strict .
      ```
-   - Atau daftarkan ke direktori plugin konfigurasi lokal:
+   - Or install into the local configuration directory:
      ```bash
      mkdir -p ~/.gemini/config/plugins/pilah
      cp -r . ~/.gemini/config/plugins/pilah/
      ```
-4. Jalankan validasi host:
+4. Run host validation:
    ```bash
    node scripts/pilah.mjs host-check
    ```
@@ -96,52 +96,52 @@ Bagi pengembang yang ingin menjalankan dari source, mengembangkan fitur, atau me
 
 ## MCP Tools
 
-PILAH menyediakan 4 tool MCP lokal via stdio:
+PILAH provides 4 local stdio MCP tools:
 
-| Tool | Fungsi Utama | Batasan |
+| Tool | Primary Purpose | Scope Boundary |
 | --- | --- | --- |
-| `pilah_context` | Kueri simbol, relasi file, dan dependensi terarah | Hanya menganalisis file relevan (tidak dump satu repo) |
-| `pilah_impact` | Analisis dampak perubahan kode dan saran tes | Menghitung relasi statis, bukan eksekusi dinamis |
-| `pilah_verify` | Perencanaan verifikasi terstruktur Given/When/Then | Membuat rencana uji, tidak menjalankan tes otomatis |
-| `pilah_evidence` | Pelacakan bukti uji, checkpoint insiden, dan recovery | Tidak memalsukan atau mengubah hak akses |
+| `pilah_context` | Query symbols, file relationships, and directional dependencies | Inspects relevant files only (never dumps entire repository) |
+| `pilah_impact` | Static change-impact analysis and candidate test suggestions | Computes static references, not dynamic execution |
+| `pilah_verify` | Structured Given/When/Then verification test planning | Produces test plans, does not execute tests automatically |
+| `pilah_evidence` | Evidence recording, incident checkpoints, and recovery notes | Does not falsify reports or elevate permissions |
 
-Detail input-output selengkapnya tercantum di [MCP Contracts](docs/CONTRACTS.md).
+For full input/output specifications, see [MCP Contracts](docs/CONTRACTS.md).
 
 ---
 
 ## CLI Commands
 
-CLI PILAH tersedia via `scripts/pilah.mjs`:
+The PILAH CLI is available via `scripts/pilah.mjs`:
 
 ```bash
-# Bantuan dan Diagnostik
+# Help and Diagnostics
 node scripts/pilah.mjs help
 node scripts/pilah.mjs doctor
 
-# Mode Operasional
+# Operational Modes
 node scripts/pilah.mjs mode on-demand
 node scripts/pilah.mjs mode always-on
 node scripts/pilah.mjs toggle
 node scripts/pilah.mjs compact on
 node scripts/pilah.mjs autotrust active-only
 
-# Manajemen Hak Akses Workspace
+# Workspace Authorization
 node scripts/pilah.mjs allow /path/to/project
 node scripts/pilah.mjs revoke /path/to/project
 
-# Analisis Kode & Dampak
+# Code & Impact Analysis
 node scripts/pilah.mjs inspect /path/to/project
 node scripts/pilah.mjs impact /path/to/project src/index.js
 
-# Diagnostik Token & Sesi
+# Token & Session Diagnostics
 node scripts/pilah.mjs tokens --limit 5 --json
 ```
 
 ---
 
-## Contoh Verifikasi Rencana Uji
+## Verification Test Plan Example
 
-Kirim parameter berikut ke tool `pilah_verify` dengan operasi `plan`:
+Pass the following payload to `pilah_verify` with operation `plan`:
 
 ```json
 {
@@ -160,26 +160,26 @@ Kirim parameter berikut ke tool `pilah_verify` dengan operasi `plan`:
 }
 ```
 
-Rencana uji berstatus `not_tested` sampai bukti pengujian riil dicatat via `pilah_evidence`. Pengujian aktual tetap dijalankan menggunakan test runner proyek Anda (seperti Vitest, Jest, PHPUnit, atau Pytest).
+A generated plan remains `not_tested` until real machine evidence is recorded via `pilah_evidence`. Actual tests are executed using your project's native test runner (e.g., Vitest, Jest, PHPUnit, or Pytest).
 
 ---
 
-## Dokumentasi Lengkap
+## Complete Documentation
 
-- [Indeks Dokumentasi](docs/README.md)
-- [Arsitektur & Komponen](docs/ARCHITECTURE.md)
-- [Metode Rekayasa & Prinsip Native-First](docs/ENGINEERING_METHOD.md)
-- [Kontrak MCP & Skema Tool](docs/CONTRACTS.md)
-- [Keamanan & Privasi Workspace](docs/SECURITY.md)
-- [Kompatibilitas Runtime & Sistem](docs/COMPATIBILITY.md)
-- [Efisiensi CI & Alokasi Runner](docs/CI_EFFICIENCY.md)
-- [Proses Rilis & Gate Otomatisasi](docs/RELEASE.md)
-- [Validasi Host Antigravity](docs/HOST_VALIDATION.md)
-- [Otorisasi Rilis](docs/RELEASE_AUTHORIZATION.md)
+- [Documentation Index](docs/README.md)
+- [System Architecture](docs/ARCHITECTURE.md)
+- [Engineering Method & Principles](docs/ENGINEERING_METHOD.md)
+- [MCP Contracts & Tool Schemas](docs/CONTRACTS.md)
+- [Workspace Security & Privacy](docs/SECURITY.md)
+- [Runtime & System Compatibility](docs/COMPATIBILITY.md)
+- [CI Efficiency & Runner Allocation](docs/CI_EFFICIENCY.md)
+- [Release Process & Automation Gate](docs/RELEASE.md)
+- [Host Validation](docs/HOST_VALIDATION.md)
+- [Release Authorization](docs/RELEASE_AUTHORIZATION.md)
 - [Validation Backlog](docs/MAIN_VALIDATION_BACKLOG.md)
 
 ---
 
-## Lisensi
+## License
 
-[MIT License](LICENSE) © 2026 Alif Akbar dan kontributor.
+[MIT License](LICENSE) © 2026 Alif Akbar and contributors.
