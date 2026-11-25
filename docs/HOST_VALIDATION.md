@@ -67,3 +67,37 @@ transcript roots; do not merge their session identities automatically.
 From a local test harness, verify MCP stdio initialization with `2024-11-05`, `2025-03-26`, `2025-06-18`, or `2025-11-25` (and historical draft `2024-10-07`), followed by an actual `tools/list` and authorized/denied `tools/call`. Unsupported `2026-07-28` discovery negotiation is not currently implemented; do not report a general host compatibility PASS if the installed host requires that protocol.
 
 Use `node benchmarks/ab-evaluate.mjs <manifest.json>` on evaluator-controlled, genuine host captures. The report preserves absent provider usage as `null`, records five-run minimum and order counterbalance, and intentionally cannot elevate self-supplied acceptance to independent proof. Only the independent evaluator may sign matching F01–F18 receipts and release approval. For sharing, run `node scripts/export-benchmark.mjs <report.json>` and inspect the output before posting.
+
+## Kanban benchmark: observed adoption gap (25 November 2026)
+
+In an operator-supplied Antigravity IDE trace, the analyzed `/pilah` session
+contained **128 planner responses**, **125 native tool calls**, **15 provider
+capacity-error records** and **zero detected PILAH MCP invocations**. The
+agent read `skills/pilah/SKILL.md`. This shows **skill consumption**, not a
+successful MCP handshake or the availability of any tool in that host
+session. Private archive content and any embedded credentials must not be
+committed, attached to public issues, or copied into reports.
+
+To discriminate *unavailable tool* from *available but not selected*:
+
+1. Install the exact reviewed PILAH commit and inspect the **IDE** /mcp and
+   /skills inventory, not only `agy plugin list --json` in CLI.
+2. Locate the effective namespaced eager context declaration (typically
+   `mcp_pilah_pilah_pilah_context`). The legacy schema name
+   `pilah_context` is not necessarily a callable native function name.
+   For lazy tools use the exact cached server path and
+   `call_mcp_tool(ServerName,ToolName,Arguments)`.
+3. Execute H02 on an authorized multi-file fixture with no explicit tool
+   selection instruction. Record whether the agent chooses one relevant
+   scoped call, an appropriate native alternative, or an unavailable tool.
+4. Inspect sanitized tool-call metadata using
+   `node scripts/compare-agent-traces.mjs native.jsonl pilah.jsonl`.
+   It reports `pilah_mcp_calls` and `other_mcp_calls`; **zero calls does
+   not establish availability or a defect**.
+5. After actual eligibility and security cases, run counterbalanced,
+   repeated Native/PILAH trials. Quota screenshots are not billable tokens;
+   differences in weekly-limit percentage are descriptive only.
+
+Do not alter prompt/permissions to force a passing intervention count.
+Keep issue #127 open until real installed-host H01–H06 and matched outcomes
+are independently recorded.

@@ -61,3 +61,15 @@ A six-scenario [candidate evaluation fixture](../tests/fixtures/pilah-eval-scena
 ## Boundaries
 
 No new third-party dependencies or long-running services; minimum complete change, not minimum line count. Never suppress tests, redact failures, fabricate independent passes, bypass approvals/workspace trust, or change settings solely to look better in a benchmark.
+
+### Interpret genuine MCP adoption before token comparisons
+
+Use the metadata-only `scripts/compare-agent-traces.mjs` on evaluator-owned
+local transcript files to distinguish `pilah_mcp_calls` from all other
+MCP calls. Direct eager names may be namespaced by the host (for example,
+`mcp_pilah_pilah_pilah_context`); lazy invocations use
+`call_mcp_tool` with explicit server and tool identifiers. Reading the
+PILAH skill, running the CLI `doctor` or mentioning a tool in a prompt
+does **not** count as invoking PILAH. No calls observed does not prove the
+tool was unavailable. Preserve private transcripts locally; the analyzer
+outputs only bounded metadata, never arguments, secrets or source content.

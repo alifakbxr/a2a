@@ -36,3 +36,14 @@ Run the source-level test suite and manual 9-job Node 22/24/26 compatibility mat
 The current offline evaluator accepts missing official token usage **only as `null`**, never as zero or a source-byte estimate. It reports whether pairs are repeated, counterbalanced, and covered by provider usage; even perfectly balanced locally supplied captures remain `comparability.ready=false` without independent acceptance and host equivalence. Use `node scripts/export-benchmark.mjs <aggregated-report.json>` for a privacy-safe PILAH-format export; raw captures must stay with the evaluator.
 
 The stdio MCP server negotiates the shared tools/resources subset for `2024-10-07` (historical draft), `2024-11-05`, `2025-03-26`, `2025-06-18`, and `2025-11-25`. The newer `2026-07-28` `server/discover` protocol is NOT implemented or advertised. Live IDE negotiation, H01–H06, and F01–F18 are still required; these source changes do not satisfy external release approval.
+
+## Tool-selection forensic update (25 November 2026)
+
+A user-provided Kanban transcript has 128 planner responses, 125 native
+calls and **zero observed PILAH MCP invocations**. The skill was read; no
+independent evidence proves the MCP server was available in that session.
+The source now uses a shared PILAH eager/lazy/legacy tool-call matcher for
+historical usage and trace reporting; `pilah_mcp_availability` remains
+`not_observable_from_call_log`. This is tooling readiness, not completion
+of installed host acceptance. Do not close issue #127 or infer model token
+savings from weekly quota screenshots.

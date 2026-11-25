@@ -355,7 +355,7 @@ function recordCommandRun(payload, baseDir) {
   });
 }
 
-export const ALWAYS_ON_POLICY = 'PILAH Always-On (opt-in): Native first; zero calls for clear tasks. Before coding, reuse existing code or platform primitives. If cross-file uncertainty remains, use eager PILAH context once (pilah_context, workspace=<trusted project>, limit=5). Other tools lazy: discover their schema. No chains without new evidence. Local PASS is not E2E.';
+export const ALWAYS_ON_POLICY = 'PILAH Always-On (opt-in): Native first; zero calls for clear tasks. On cross-file uncertainty use eager PILAH context (actual mcp_<server>_pilah_context; workspace=<trusted project>, limit=5) if listed in /mcp. Others lazy: discover their schema and call_mcp_tool with actual server. No chains without new evidence. Local PASS is not E2E.';
 
 export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   if (!payload || typeof payload !== 'object') return {};

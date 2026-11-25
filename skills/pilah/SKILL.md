@@ -1,24 +1,22 @@
 ---
 name: pilah
-description: Native-first engineering assistance for scoped code changes, cross-file impact, and verification. Use when analyzing cross-file dependencies, assessing blast radius, or formulating Given/When/Then test plans. Not for routine single-file edits.
+description: Native-first code intelligence for cross-file dependencies, change impact, and evidence-scoped verification. Not for routine single-file edits.
 ---
 
 # PILAH — Project Intelligence, Logic, Analysis & Handoffs
 
-Antigravity is the executor. PILAH is a small, read-first assistant, not a substitute agent or automatic test runner.
+Antigravity executes and chooses native tools. PILAH is optional, read-first code intelligence, not a second agent.
 
-## 0 calls → 1 precise call → more only if new evidence
+## 0 calls → 1 scoped call → more only with new evidence
 
-1. **0 calls:** clear tasks, isolated changes, known bug, trivial UI text. Use the existing project code and native tools.
-2. **Before coding:** define the complete scope (callers, tests, config, security boundaries). Ask in order: is it necessary? already implemented? available through the platform/standard library? existing dependency? otherwise the smallest readable change.
-3. **1 call when uncertainty matters:** eager `pilah_context(workspace="<trusted project>",action="query",query="<specific symbol>",limit=5)`; for an identified risky change, discover lazy `pilah_impact` schema and use a scoped file list. Never run both reflexively.
-4. **Debugging:** reproduce the symptom, identify a falsifiable root-cause hypothesis, make the smallest correcting change. Use adaptive 5 Whys only for repeated, high-risk or unclear failures. No mandatory five-question ceremony for simple bugs.
-5. **Evidence:** if correctness is nontrivial, use native tests, realistic negative cases and exact named reports. `pilah_verify(operation="plan")` can outline acceptance; assessment requires real evidence. Second call only after new evidence. Persist acceptance scope only via `persist_plan:true`; full Markdown auto-snapshots are **off** by default. Source changes invalidate stale evidence. Local tests are not independent proof of visual, browser, security or hardware acceptance.
-6. **Simplify after tests:** remove redundant code or glue; preserve validation, permissions, behavior, error handling and accessibility. Prefer readable code over cryptic one-liners.
-7. **Handoff:** explicitly state changed, tests run, failures, outstanding tests, and risks. Use `pilah_evidence` only for real recovery/RCA needs; persistent storage requires opt-in.
+1. **0 calls:** trivial UI text, isolated edits, already-understood bugs. Inspect existing project code and edit with native tools; don't invoke PILAH just because the skill was mentioned.
+2. **Scope:** before risky code, identify callers, affected tests, config, permission boundaries and available platform primitives. Prefer the smallest complete change.
+3. **1 call on cross-file uncertainty:** use eager `pilah_context` only if available and helpful (query a specific symbol, `workspace="<trusted project>"`, `limit=5`). Antigravity registers eager tools as `mcp_<server>_pilah_context`, commonly `mcp_pilah_pilah_pilah_context`; discover the actual server from /mcp, never assume names. For advanced impact, discover lazy `pilah_impact` schema at the MCP path listed by Antigravity, then use `call_mcp_tool` with its exact `ServerName`, `ToolName` and `Arguments`. Do not substitute a shell command or an invented direct tool call for proof of MCP use. If unavailable, proceed natively and disclose it.
+4. **Debug:** reproduce the failure; form a falsifiable hypothesis. Apply 5 Whys only to repeated, risky or unclear defects, not trivial work.
+5. **Verification:** use native tests and real negative cases. `pilah_verify(operation="plan")` can propose Given/When/Then; an unexecuted plan stays `not_tested`. Only persist acceptance with `persist_plan:true`; Markdown auto-snapshots are **off** by default. Local PASS is not independent browser, security or production proof.
+6. **Finish:** simplify after testing without weakening permissions or error handling. Second call only after new evidence reveals a different unresolved question.
+7. **Handoff:** report code changes, tests actually run, failures and remaining risks. `pilah_evidence` is opt-in for meaningful recovery, not routine record keeping.
 
-Native teamwork/subagents only when independent workstreams benefit and the user opts in. Never spawn teams or change model modes automatically. No extra plugins, background transcript scans, forced compaction, or unverified token-saving claims.
+Use native Teamwork/subagents only with explicit permission and independent file ownership. No extra plugins, background scans, automatic model routing, forced compaction or unverified token savings. Check actual tool traces when assessing PILAH adoption: reading this skill is **not** an MCP invocation.
 
-For repetitive native operations, prefer a short, reviewable script with bounded, redacted output over repeated reads/calls. Check effects and permissions first; never bypass approval or sandboxing. Model routing, background sidecars and automatic prompt mutation are not PILAH features.
-
-**Compatibility:** Older tool calls and existing configuration/data paths remain supported in code. Default public tool discovery exposes only the four PILAH operations.
+**Compatibility:** legacy tool aliases and data remain supported. Public discovery exposes four PILAH operations.

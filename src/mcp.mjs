@@ -23,7 +23,7 @@ const answer=(id,result,error)=>{
 };
 
 const RESOURCES = [
-  {uri:'ui://pilah/app.html',name:'PILAH Dashboard App',description:'Interactive visual UI for workspace graph, impact, and verification status.',mimeType:'text/html;profile=mcp-app'},
+  {uri:'ui://pilah/app.html',name:'PILAH Dashboard App',description:'Read-only UI reference; not live workspace graph, plugin health, permissions, or model token usage.',mimeType:'text/html;profile=mcp-app'},
   {uri:'pilah://status',name:'PILAH Status',description:'Current PILAH modes and redacted workspace counts; no local paths.',mimeType:'application/json'},
   {uri:'pilah://tokens/session',name:'PILAH Session Diagnostics',description:'Local session event counts only; model token totals require official Antigravity CLI JSON output.',mimeType:'application/json'},
   {uri:'pilah://workspace/summary',name:'PILAH Workspace Summary',description:'Active workspace graph coverage and estimated source inventory; not model token usage.',mimeType:'application/json'},
