@@ -176,3 +176,40 @@ Do not publish raw JSONL, tool arguments/results or sensitive workspace
 paths. These metadata reasons guide the next host-specific parser check,
 but none proves actual application/task acceptance, model token savings, or
 that the model should have selected PILAH in any given session.
+
+
+### V2 finding: all observed PILAH invocations lack a recognized call ID
+
+The local v2 report from 243 historical transcripts records 16 PILAH
+invocations (10 context, 6 impact), with
+\`pilah_unmatched_reasons.missing_call_id = 16\`,
+\`no_matching_result_id = 0\`, and
+\`missing_explicit_status = 0\`.
+This isolates **the auditor's inability to correlate results by ID**. It
+does not establish that any MCP call failed or succeeded. A transcript
+export may omit invocation IDs altogether or store them under a
+host-specific field.
+
+To inspect only the structure of the five sessions with PILAH calls, run
+the *separate, read-only, source-only* structural probe locally:
+
+~~~sh
+node scripts/inspect-mcp-result-shapes.mjs \
+ "$HOME/Downloads/antigravity-logs" \
+ --out "$HOME/Downloads/pilah_mcp_result_shapes.json"
+~~~
+
+It emits fixed allowlisted metadata **field names and occurrence counts**
+for PILAH call records and candidate tool-result events. Prompts, tool
+arguments, result content, arbitrary user-defined field names, IDs and
+absolute filesystem paths are never exported. Candidate result events
+belong to an entire session and **are not attributed to PILAH by
+proximity**. Inspect the output locally before sharing and preserve
+original transcripts privately.
+
+Interpretation: if an explicit correlation field is confirmed, extend
+the auditor with a narrowly supported matcher and test against genuine
+sanitized event fixtures; otherwise leave outcomes \`unmatched\`.
+Do not pair by adjacency/order or assume a generic error event means a
+PILAH error. This structural discovery is not H01–H06 acceptance,
+proof of installed host availability, or token savings.
