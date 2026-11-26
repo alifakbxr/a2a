@@ -1,0 +1,43 @@
+name: Bug report
+description: Report a reproducible PILAH defect
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues first. For vulnerabilities, use the security policy instead. Remove credentials, personal paths, private source code and sensitive transcript content.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Provide a minimal reproducible example, using a disposable workspace if possible.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: PILAH version or commit, OS, Node version, Antigravity version and surface, installation method, workspace authorization and operating mode if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted diagnostic evidence
+      description: Include relevant doctor --public output, tool invocation evidence or test results. Do not paste full transcripts or credentials.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmation
+      options:
+        - label: I searched for existing reports.
+          required: true
+        - label: I removed sensitive data and this is not a vulnerability report.
+          required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerabilities
+    url: https://github.com/alifakbxr/pilah/blob/main/SECURITY.md
+    about: Read the responsible disclosure instructions before submitting sensitive details.
+  - name: Documentation and support
+    url: https://github.com/alifakbxr/pilah/blob/main/SUPPORT.md
+    about: Troubleshoot installation, runtime and MCP integration before opening an issue.

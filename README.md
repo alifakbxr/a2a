@@ -209,6 +209,13 @@ A generated plan remains `not_tested` until real machine evidence is recorded vi
 
 ---
 
+## Community
+
+- [Contributing](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security Policy](SECURITY.md)
+- [Support](SUPPORT.md)
+
 ## License
 
 [MIT License](LICENSE) © 2026 Alif Akbar and contributors.
