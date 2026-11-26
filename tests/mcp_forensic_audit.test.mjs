@@ -54,7 +54,7 @@ test('real transcript JSONL logs dedupe planner steps, correlate explicit IDs, a
  const r=await auditBrainLogs(root);
  assert.equal(r.transcripts,2);
  assert.equal(r.planner_responses,3);
- assert.deepEqual(r.tool_calls,{native:1,other_mcp:2,pilah:2});
+ assert.deepEqual(r.tool_calls,{native:2,other_mcp:2,pilah:2});
  // Planner step 1 replay replaced old native read; only step 2 native.
  assert.equal(r.sessions_with_pilah_calls,1);
  assert.equal(r.sessions_with_other_mcp_calls,2);
