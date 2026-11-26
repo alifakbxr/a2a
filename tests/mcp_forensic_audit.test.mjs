@@ -60,6 +60,7 @@ test('real transcript JSONL logs dedupe planner steps, correlate explicit IDs, a
  assert.equal(r.sessions_with_other_mcp_calls,2);
  assert.deepEqual(r.pilah_operations,{context:1,impact:0,verify:1,evidence:0,unknown:0});
  assert.deepEqual(r.pilah_results_with_explicit_link,{succeeded:1,failed:1,unmatched:0});
+ assert.deepEqual(r.pilah_unmatched_reasons,{missing_call_id:0,no_matching_result_id:0,missing_explicit_status:0});
  assert.equal(r.capacity_hint_records,1);
  assert.equal(r.official_token_usage,null);
  assert.deepEqual(r.local_token_counters,{input_tokens:100,output_tokens:25,cache_read_tokens:900});
@@ -82,6 +83,7 @@ test('missing tool-call IDs are UNMATCHED, not recorded as failed or succeeded',
  ]);
  const r=await auditBrainLogs(root);
  assert.deepEqual(r.pilah_results_with_explicit_link,{succeeded:0,failed:0,unmatched:1});
+ assert.deepEqual(r.pilah_unmatched_reasons,{missing_call_id:1,no_matching_result_id:0,missing_explicit_status:0});
  assert.equal(r.tool_result_error_records,1);
  assert.equal(r.capacity_hint_records,0);
 });
@@ -114,4 +116,25 @@ test('CLI only writes privacy-safe JSON; refuses overwriting an existing report'
  const second=spawnSync(process.execPath,['scripts/audit-mcp-adoption.mjs',root,'--out',out],{encoding:'utf8'});
  assert.equal(second.status,1);
  assert.ok(!second.stderr.includes(out));
+});
+
+test('unmatched breakdown isolates missing IDs, missing result records, missing explicit statuses',async t=>{
+ const {root,add}=fixture(t);
+ add('outcome-inventory-006',[
+  {type:'PLANNER_RESPONSE',step_index:1,tool_calls:[
+   {name:'pilah_context'},
+   {name:'pilah_context',id:'NO_MATCH'},
+   {name:'pilah_impact',id:'NO_STATUS'},
+   {name:'pilah_context',id:7}
+  ]},
+  {type:'GENERIC',tool_call_id:'NO_STATUS',status:'UNKNOWN',content:'private output'},
+  {type:'GENERIC',tool_call_id:7,status:'SUCCESS',content:'private output'}
+ ]);
+ const r=await auditBrainLogs(root);
+ assert.deepEqual(r.tool_calls,{native:0,other_mcp:0,pilah:4});
+ assert.deepEqual(r.pilah_results_with_explicit_link,{succeeded:1,failed:0,unmatched:3});
+ assert.deepEqual(r.pilah_unmatched_reasons,{missing_call_id:1,no_matching_result_id:1,missing_explicit_status:1});
+ assert.deepEqual(r.pilah_sessions[0].pilah_unmatched_reasons,r.pilah_unmatched_reasons);
+ for(const secret of ['NO_MATCH','NO_STATUS','private output','outcome-inventory-006'])
+  assert.ok(!JSON.stringify(r).includes(secret));
 });
