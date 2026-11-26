@@ -42,7 +42,7 @@ test('shape probe detects actual PILAH calls and counts only allowlisted field n
  assert.equal(r.pilah_calls,3);
  assert.equal(r.sessions[0].pilah_operations.context,2);
  assert.equal(r.sessions[0].pilah_operations.impact,1);
- assert.equal(r.sessions[0].observed_call_fields.name,2);
+ assert.equal(r.sessions[0].observed_call_fields.name,3);
  assert.equal(r.sessions[0].observed_call_fields.toolCallId,1);
  assert.equal(r.sessions[0].observed_call_id_shapes['root.toolCallId'],1);
  assert.equal(r.sessions[0].observed_call_id_shapes['root.id'],1);
