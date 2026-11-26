@@ -143,3 +143,36 @@ actual tasks before attributing low usage to a discovery or tool-selection
 defect. The report **cannot** infer plugin version/availability by session,
 official token usage, execution time, causal token savings, or acceptance
 H01–H06.
+
+
+### Diagnosing unmatched MCP results (26 November 2026)
+
+The follow-up private audit report for the 243-session corpus contains 16
+PILAH invocations (10 context, 6 impact) and **16 unmatched results**.
+No result is yet verifiably successful or failed. These counts do not prove
+an MCP runtime failure. The full transcript archive was not inspected by
+the reviewing agent.
+
+The next report includes \`pilah_unmatched_reasons\` at total and session
+levels:
+
+- \`missing_call_id\`: the observed PILAH tool call has no usable correlation
+  ID; result success **cannot** be inferred from neighboring events.
+- \`no_matching_result_id\`: the tool call carries an ID but the transcript
+  contains no result event carrying that ID.
+- \`missing_explicit_status\`: the ID appears in a result event, but the
+  event has no explicit supported success/failure state.
+
+For a local rerun, install the newest source commit and write to a **new**
+private report file (the auditor refuses to overwrite existing reports):
+
+~~~sh
+node scripts/audit-mcp-adoption.mjs \
+ "$HOME/Downloads/antigravity-logs" \
+ --out "$HOME/Downloads/pilah_private_forensic_report_v2.json"
+~~~
+
+Do not publish raw JSONL, tool arguments/results or sensitive workspace
+paths. These metadata reasons guide the next host-specific parser check,
+but none proves actual application/task acceptance, model token savings, or
+that the model should have selected PILAH in any given session.
