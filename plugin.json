@@ -12,12 +12,19 @@
   "repository": "https://github.com/alifakbxr/pilah",
   "keywords": [
     "pilah",
-    "engineering",
-    "native-first",
-    "minimal-code",
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "antigravity",
+    "ai-agent",
+    "static-analysis",
+    "code-graph",
+    "impact-analysis",
+    "blast-radius",
     "verification",
-    "context",
-    "token-awareness"
+    "acceptance-testing",
+    "native-first",
+    "developer-tools"
   ],
   "suggestedPrompts": [
     "/pilah - Native-first code intelligence and minimal-change workflow",

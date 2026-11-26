@@ -2,6 +2,22 @@
   "name": "@aliip/pilah",
   "version": "1.0.3",
   "description": "PILAH (Project Intelligence, Logic, Analysis & Handoffs): native-first engineering context, minimal-change guidance and evidence-scoped verification for Google Antigravity.",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "antigravity",
+    "google-antigravity",
+    "ai-agent",
+    "static-analysis",
+    "code-graph",
+    "impact-analysis",
+    "blast-radius",
+    "acceptance-testing",
+    "verification",
+    "developer-tools",
+    "cli"
+  ],
   "type": "module",
   "main": "src/engine.mjs",
   "bin": {
