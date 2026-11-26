@@ -13,7 +13,8 @@ const MAX_LINE_CHARS=16*1024*1024, MAX_STEPS=100000;
 const OPS=['context','impact','verify','evidence'];
 const safeInt=v=>Number.isSafeInteger(v)&&v>=0?v:0;
 const object=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
-const id=x=>typeof x==='string'&&/^[a-zA-Z0-9_.:-]{4,128}$/.test(x)?x:null;
+const id=x=>typeof x==='string'&&/^[a-zA-Z0-9_.:-]{1,128}$/.test(x)?x:
+ Number.isSafeInteger(x)&&x>=0?String(x):null;
 const anonymize=x=>crypto.createHash('sha256').update(x).digest('hex').slice(0,12);
 
 export function classifyInvocation(call){
@@ -83,7 +84,7 @@ const zeroTokens=()=>({input_tokens:0,output_tokens:0,cache_read_tokens:0});
 
 export async function auditTranscript(file,sessionHash){
  const steps=new Map(),loose=[];
- const results=new Map(),opCounts={context:0,impact:0,verify:0,evidence:0,unknown:0};
+ const results=new Map(),seenResultIds=new Set(),opCounts={context:0,impact:0,verify:0,evidence:0,unknown:0};
  let malformed=0,skipped_large_lines=0,errorRecords=0,capacityHints=0,toolErrorRecords=0,lines=0,partial=false;
  const input=fs.createReadStream(file,{encoding:'utf8'});
  const rl=readline.createInterface({input,crlfDelay:Infinity});
@@ -101,6 +102,7 @@ export async function auditTranscript(file,sessionHash){
   if(e.type!=='PLANNER_RESPONSE'){
    const rid=resultId(e);
    if(rid){
+    seenResultIds.add(rid);
     const state=explicitResultStatus(e);
     if(state)results.set(rid,state);
    }
@@ -127,6 +129,7 @@ export async function auditTranscript(file,sessionHash){
  }
  const counts=zeroCalls(),tokens=zeroTokens();
  const status={succeeded:0,failed:0,unmatched:0};
+ const unmatchedReasons={missing_call_id:0,no_matching_result_id:0,missing_explicit_status:0};
  for(const entry of [...steps.values(),...loose]){
   for(const k of Object.keys(tokens))tokens[k]+=entry.tokens[k];
   for(const c of entry.calls){
@@ -134,11 +137,18 @@ export async function auditTranscript(file,sessionHash){
    if(c.type!=='pilah')continue;
    opCounts[c.op??'unknown']++;
    const observed=c.call_id?results.get(c.call_id):null;
-   if(observed)status[observed]++;else status.unmatched++;
+   if(observed)status[observed]++;
+   else{
+    status.unmatched++;
+    if(!c.call_id)unmatchedReasons.missing_call_id++;
+    else if(!seenResultIds.has(c.call_id))unmatchedReasons.no_matching_result_id++;
+    else unmatchedReasons.missing_explicit_status++;
+   }
   }
  }
  return {session_hash:sessionHash,planner_responses:steps.size+loose.length,
   tool_calls:counts,pilah_operations:opCounts,pilah_results_with_explicit_link:status,
+  pilah_unmatched_reasons:unmatchedReasons,
   tool_result_matching:'call_id_only',mcp_availability:'unverified',
   local_token_counters:tokens,error_records:errorRecords,tool_result_error_records:toolErrorRecords,
   capacity_hint_records:capacityHints,malformed_lines:malformed,
@@ -148,6 +158,7 @@ export async function auditBrainLogs(root,{nonPilahSample=10}={}){
  const {files,limits}=collectFiles(root);
  const totals=zeroCalls(),tokenTotals=zeroTokens(),pilahOps={context:0,impact:0,verify:0,evidence:0,unknown:0};
  const resultTotals={succeeded:0,failed:0,unmatched:0};
+ const unmatchedTotals={missing_call_id:0,no_matching_result_id:0,missing_explicit_status:0};
  const pilah=[],noPilah=[];
  let steps=0,errorRecords=0,toolErrors=0,capacityHints=0,malformed=0,partial=0,otherMcpSessions=0;
  for(const file of files){
@@ -160,6 +171,7 @@ export async function auditBrainLogs(root,{nonPilahSample=10}={}){
   for(const k of Object.keys(tokenTotals))tokenTotals[k]+=item.local_token_counters[k];
   for(const k of Object.keys(pilahOps))pilahOps[k]+=item.pilah_operations[k];
   for(const k of Object.keys(resultTotals))resultTotals[k]+=item.pilah_results_with_explicit_link[k];
+  for(const k of Object.keys(unmatchedTotals))unmatchedTotals[k]+=item.pilah_unmatched_reasons[k];
   errorRecords+=item.error_records;toolErrors+=item.tool_result_error_records;
   capacityHints+=item.capacity_hint_records;malformed+=item.malformed_lines;
   if(item.partial)partial++;
@@ -172,6 +184,7 @@ export async function auditBrainLogs(root,{nonPilahSample=10}={}){
    native_calls:item.tool_calls.native,
    pilah_operations:item.pilah_operations,
    pilah_results_with_explicit_link:item.pilah_results_with_explicit_link,
+   pilah_unmatched_reasons:item.pilah_unmatched_reasons,
    tool_result_error_records:item.tool_result_error_records,
    capacity_hint_records:item.capacity_hint_records,
    partial:item.partial
@@ -187,6 +200,7 @@ export async function auditBrainLogs(root,{nonPilahSample=10}={}){
   transcripts:files.length,planner_responses:steps,tool_calls:totals,
   sessions_with_pilah_calls:pilah.length,sessions_with_other_mcp_calls:otherMcpSessions,
   pilah_operations:pilahOps,pilah_results_with_explicit_link:resultTotals,
+  pilah_unmatched_reasons:unmatchedTotals,
   matched_outcome_semantics:'Explicit status on event with exact matching call ID; not independently verified correctness.',
   tool_result_error_records:toolErrors,error_records:errorRecords,capacity_hint_records:capacityHints,
   malformed_lines:malformed,partial_transcripts:partial,skipped:limits,
@@ -194,7 +208,7 @@ export async function auditBrainLogs(root,{nonPilahSample=10}={}){
   pilah_sessions:pilah,
   non_pilah_screening_candidates:noPilah.slice(0,Math.max(0,Math.min(50,nonPilahSample))),
   host_mcp_inventory:'not_inferred',eligible_sessions:'unknown',
-  note:'Tool result shapes vary by host. Unmatched includes missing IDs and is NOT failure; absence of capacity hints is NOT proof of no provider errors.'
+  note:'Unmatched breakdown isolates absent call IDs, absent matching response IDs and missing explicit status. Tool result shapes vary by host; unmatched is NOT failure. Absence of capacity hints is NOT proof of no provider errors.'
  };
 }
 const invoked=process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url);
