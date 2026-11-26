@@ -156,7 +156,7 @@ export function getMcpAppHtml() {
   <header>
     <div class="brand">
       <span>PILAH</span>
-      <span class="badge">v1.0.3</span>
+      <span class="badge">v1.0.4</span>
     </div>
     <div class="status-pill">
       <span class="status-dot"></span>
