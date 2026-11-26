@@ -101,3 +101,45 @@ To discriminate *unavailable tool* from *available but not selected*:
 Do not alter prompt/permissions to force a passing intervention count.
 Keep issue #127 open until real installed-host H01–H06 and matched outcomes
 are independently recorded.
+
+## Private full-transcript MCP forensic auditor (26 November 2026)
+
+The privately supplied 243-session *metadata summary* reports 54,394 planner
+responses, 56,713 native calls, 7,793 other MCP calls and **16 PILAH-named
+invocations across five sessions**. These observations establish that PILAH
+calls were attempted in some sessions, but **not** that they succeeded, were
+available in all sessions, or were beneficial for a particular task.
+
+After extracting the Antigravity archive locally (do not upload full private
+logs to a public issue), run this **source-checkout-only** script:
+
+~~~sh
+node scripts/audit-mcp-adoption.mjs \
+  "$HOME/Downloads/antigravity-logs" \
+  --out "$HOME/Downloads/pilah_private_forensic_report.json"
+~~~
+
+The report contains only counts, operation names from an allowlist,
+hashed session identifiers, and bounded non-PILAH screening candidates.
+It does **not** include prompts, source paths, tool args/results, credentials,
+model reasoning or local session identifiers. Inspect the JSON before sharing.
+The output file is created with restrictive permissions and is never silently
+overwritten.
+
+**Evidence levels:** "attempted invocation" comes from an actual JSONL
+\`PLANNER_RESPONSE.tool_calls\` entry. "Explicitly linked result" means
+an exact tool-call ID matches a result event with an explicit success/error
+state; a positive tool result is **not** proof the agent fulfilled the task.
+When result IDs or statuses are absent, classify the outcome as **unmatched**,
+not failure or success. This format is intentionally strict and can undercount
+host-specific result shapes until independently validated. Native-first usage
+does not require the agent to call PILAH on every eligible or simple task.
+
+The report separately lists up to ten **screening candidates** with many
+native tool calls but no observed PILAH calls. These are not automatically
+complex or PILAH-eligible. Compare the five invoking sessions and suitable
+non-invoking sessions using independently observed /mcp host inventory and
+actual tasks before attributing low usage to a discovery or tool-selection
+defect. The report **cannot** infer plugin version/availability by session,
+official token usage, execution time, causal token savings, or acceptance
+H01–H06.
