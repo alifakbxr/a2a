@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {checkHost,inspectPluginList} from '../scripts/host-check.mjs';
+
+const packageVersion=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version;
 
 const stub=({version=0,validation=0,list=0,plugins=[{name:'pilah',enabled:true,mcpServers:['pilah'],path:'/sensitive/private/path'}],jsonSupported=true,plain=null}={})=>{
  const calls=[];
@@ -48,7 +51,7 @@ test('missing CLI, failed strict validation and unreliable listing cannot PASS',
 test('legacy name compatibility uses explicit enablement, not arbitrary text',()=>{
  assert.deepEqual(inspectPluginList('- a2a (enabled, 2.1.0)',{format:'text'}),
    {installed:'listed',plugin_name:'a2a',inventory:'text'});
- assert.equal(inspectPluginList('- pilah (disabled, 1.1.0)',{format:'text'}).installed,'disabled');
+ assert.equal(inspectPluginList(`- pilah (disabled, ${packageVersion})`,{format:'text'}).installed,'disabled');
  assert.equal(inspectPluginList('Other plugin mentions pilah is enabled',{format:'text'}).installed,'not_listed');
  assert.equal(inspectPluginList(JSON.stringify([{name:'a2a',enabled:true,mcpServers:['a2a']}])).installed,'listed');
  assert.equal(inspectPluginList('garbled').installed,'unknown');
