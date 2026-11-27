@@ -11,7 +11,7 @@ Four public, JSON-RPC 2.0 **stdio** tools. Every tool requires an authorized abs
 | MCP tool | `action` / `operation` | Meaning |
 | --- | --- | --- |
 | `pilah_context` | `inspect`, `query`, `freshness`, `tokens`, `skeleton`, `orchestration` | Code inventory, static graph, tokens, declared native teamwork advisor |
-| `pilah_impact` | `changed`, `depth` (1–4), `summary`, `affected_offset`, `related_tests_offset`, `expected_revision` | Revision-pinned 25 affected / 10 related-tests per response; static uncertainty remains |
+| `pilah_impact` | `changed`, `depth` (1–4), `summary`, `cursor` | Revision- and scope-pinned 25 affected / 10 tests per page; static uncertainty remains |
 | `pilah_verify` | `plan`, `assess`, `verify_handoff`, `assess_release`, `assess_semantic`, `assess_browser` | Test planning, scoped local machine results, independent signed release assessment |
 | `pilah_evidence` | `list`, `runs`, `incidents`, `record_incident`, `add_hypothesis`, `assess_hypothesis`, `hypotheses`, `delete_incident`, `side_questions`, `record_side_question`, `artifact_versions`, `artifact_diff`, `snapshot_artifact`, `save_checkpoint`, `model_recovery`, `tool_recovery` | Revision-bound evidence, incident hypotheses, explicit checkpoints, bounded recovery guidance |
 
@@ -179,8 +179,8 @@ Evidence list/freshness rehashes are bounded to 4 MiB per report. The release ma
 
 ### Revision-bound impact pagination
 
-By default, `pilah_impact` returns the first 25 affected items and the first 10 related test candidates. The counts `affected_total` and `related_tests_total` refer to all discovered static candidates (subject to graph traversal limits). The `pagination.affected.next_offset` and `pagination.related_tests.next_offset` fields tell the caller whether more entries remain; null means no next page.
+By default, `pilah_impact` returns the first 25 affected items and the first 10 related test candidates. The counts `affected_total` and `related_tests_total` refer to all discovered static candidates (subject to graph traversal limits). The `pagination.affected.next_cursor` and `pagination.related_tests.next_cursor` fields tell the caller whether more entries remain; null means no next page.
 
-Use a follow-up `pilah_impact` with the **same workspace, changed paths, and depth**, `summary:false`, and the desired `affected_offset` or `related_tests_offset`. Any nonzero offset requires `expected_revision` from the previous page; the call refuses to return stale/mixed-source pages when files change. Bounds: 0–350 offsets; fixed 25/10 page sizes; no unbounded all-at-once retrieval. A `summary:true` request remains a separate one-shot triage response and cannot be paginated.
+Use a follow-up `pilah_impact` with the **same workspace, changed paths, and depth**, `summary:false`, and the desired `cursor` copied from the corresponding `pagination.*.next_cursor`. The opaque cursor includes a source revision, a query-scope fingerprint and a bounded page offset. It contains no project path or source text. Mismatched scope, stale revisions or malformed cursors are rejected. Fixed 25/10 page sizes and a 350-item offset cap prevent unbounded responses. A `summary:true` request remains a separate one-shot triage response and cannot use a cursor.
 
 Paging retrieves more **static results**, not more runtime proof. `coverage.analysis_complete:false` and relevant uncertainty must remain visible; the returned graph may still have index or traversal limitations. Avoid extra MCP calls when the default page is already sufficient.
