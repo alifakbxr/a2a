@@ -213,3 +213,36 @@ sanitized event fixtures; otherwise leave outcomes \`unmatched\`.
 Do not pair by adjacency/order or assume a generic error event means a
 PILAH error. This structural discovery is not H01–H06 acceptance,
 proof of installed host availability, or token savings.
+
+
+## Installed-host H02 follow-up: unprompted selection and page completeness
+
+An operator-provided Antigravity trace from 26 November 2026 establishes a
+**successful explicitly requested** \`a2a_pilah/pilah_impact\` call against an
+authorized ordinary workspace: \`src/storage.mjs\` had 42 affected static
+candidates, of which 25 were returned, and 33 related tests, of which 10 were
+returned. \`result_truncated:true\` was an intentional output cap;
+\`analysis_complete:false\` is the correct permanent static-only disclaimer.
+The host model separately returned HTTP 503 capacity errors.
+
+New bounded continuation fields allow fetching remaining static candidates
+without increasing each MCP response: \`affected_offset\` (25 entries/page)
+and \`related_tests_offset\` (10 entries/page). Set the exact prior
+\`revision\` as \`expected_revision\` when either offset is nonzero. Stop when
+the corresponding \`pagination.*.next_offset\` is null; abort and restart from
+page zero if the source revision changed. Existing H02 source correctness
+requirements remain: compare a known dependency/consumer fixture and confirm
+an unrelated sibling is excluded.
+
+**Unprompted agent-selection check (not performed by repository CI):**
+In a freshly opened, authorized ordinary project, give the agent a task that
+requires understanding a changed shared provider with at least two consumers,
+without naming PILAH, MCP, or any specific tool. Capture the actual tool
+selection, result and changed/affected lists. A native-only answer may still be
+correct under native-first policy; it is not automatically a plugin failure.
+Also repeat H01 as a trivial single-file task requiring zero PILAH calls.
+Do not turn a one-off prompted host trace into an automatic-adoption claim.
+For efficiency, run at least five counterbalanced independent pairs under
+frozen source/model/effort/permissions and provider-reported usage. No
+repository unit test, weekly quota screenshot, or simulated transcript
+substitutes for that evidence.
