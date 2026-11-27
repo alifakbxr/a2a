@@ -13,7 +13,7 @@ node scripts/audit-headless-captures.mjs \
   > "$HOME/Downloads/pilah-benchmark-headless-audit.json"
 ~~~
 
-Only files named native-01.jsonl, pilah-01.jsonl, native-02.jsonl, pilah-02.jsonl, etc., and pilah-smoke.jsonl are inspected. Matching .stderr files in the same directory are consulted for permission/provider error classifications. Missing stderr is not treated as proof no error occurred. Do not upload raw JSONL or stderr: they may contain source, prompts or credentials. Inspect the metadata report before sharing.
+Only files named native-01.jsonl, pilah-01.jsonl, native-02.jsonl, pilah-02.jsonl, etc., and pilah-smoke.jsonl are inspected. Matching .stderr files in the same directory are consulted for permission/provider error classifications. A missing stderr capture invalidates mechanical-completeness classification, because permission denial may appear only on stderr (as in the early operator runs). Do not upload raw JSONL or stderr: they may contain source, prompts or credentials. Inspect the metadata report before sharing.
 
 The auditor is deliberately bounded (at most 100 captures, 32 MiB each, 1 MiB stderr); symlinked/nonregular/oversize inputs are refused. It prints only known run identifiers, token/duration counts, allowlisted tool names, known PILAH MCP operation names and error *categories*. It **never prints raw provider errors**, tool parameters, workspace paths, source content, final responses or prompts.
 
