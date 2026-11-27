@@ -4,7 +4,7 @@ import {ALL_TOOLS} from './tools.mjs';
 export function classifyMcpFailure(toolName,error){
  const msg=String(error?.message||error||'').slice(0,2000);
  const spec=ALL_TOOLS.find(x=>x.name===toolName);
- if(/Unknown argument:|Missing (?!resource uri)|Invalid (type|value|integer|array|object|item):|Arguments must be|Value too long:/i.test(msg)){
+ if(/Unknown argument:|Missing (?!resource uri)|Invalid (type|value|integer|array|object|item):|Arguments must be|Value too long:|Invalid impact cursor|Impact page scope mismatch|Impact summary cannot use cursor/i.test(msg)){
   return {status:'error',code:'invalid_tool_arguments',message:'The tool request does not match the allowed input contract.',
    accepted_parameters:spec?Object.keys(spec.inputSchema.properties):[],
    required_parameters:spec?.inputSchema.required??[],
@@ -28,7 +28,7 @@ export function classifyMcpFailure(toolName,error){
  if(/ENOENT|no such file|does not exist|not found|cannot find (?:the )?(?:file|path)|unknown workspace|invalid workspace/i.test(msg)){
   return {status:'error',code:'workspace_not_found',message:'Requested workspace does not exist or is not accessible.',next_step:'Provide an existing authorized project path; no permissions are automatically changed.'};
  }
- if(/Source integrity incomplete|Source revision differs|source.*stale|Acceptance plan.*different source_revision|Report.*stale/i.test(msg)){
+ if(/Source integrity incomplete|Source revision differs|source.*stale|Acceptance plan.*different source_revision|Report.*stale|Impact page source revision mismatch/i.test(msg)){
   return {status:'error',code:'source_freshness_unconfirmed',
     message:'PILAH cannot verify that source and test evidence refer to the same revision.',
     next_step:'Re-index the authorized workspace, rerun the affected native tests, and provide a new revision-bound report. Do not reuse prior PASS.'};

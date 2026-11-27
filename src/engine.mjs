@@ -218,11 +218,35 @@ export class Engine {
     }
     throw new Error('Unknown context action');
   }
-  impact({workspace,changed=[],depth=3,summary=false}={}){
+  impact({workspace,changed=[],depth=3,summary=false,cursor}={}){
     validateChangedPaths(changed);
+    // One opaque continuation token rather than three extra MCP parameters.
+    // It pins source revision and query scope; no paths or code are embedded.
+    const parsed=cursor===undefined?null:typeof cursor==='string'
+      ? /^([at]):([a-f0-9]{32,64}):([a-f0-9]{8}):([0-9]{1,3})$/.exec(cursor)
+      : null;
+    if(cursor!==undefined&&!parsed)throw new Error('Invalid impact cursor');
+    const pageOffset=parsed?Number(parsed[4]):0;
+    const pageSize=parsed?.[1]==='a'?25:10;
+    if(parsed&&(pageOffset<pageSize||pageOffset>350||pageOffset%pageSize!==0))
+      throw new Error('Invalid impact cursor');
+    if(summary&&parsed)throw new Error('Impact summary cannot use cursor');
     const compact=getCompactMode();
     const s=this.sync(workspace,{verifyIntegrity:true});
-    const res=analyzeImpact(this.store,s.wsId,s.root,{changed,depth});
+    if(parsed&&parsed[2]!==s.revision)throw new Error('Impact page source revision mismatch');
+    const res=analyzeImpact(this.store,s.wsId,s.root,{
+      changed,depth,
+      affected_offset:parsed?.[1]==='a'?pageOffset:0,
+      related_tests_offset:parsed?.[1]==='t'?pageOffset:0,
+    });
+    const scope=sha256(JSON.stringify({
+      changed:res.changed,depth:Math.min(4,Math.max(1,Number(depth)||3))
+    })).slice(0,8);
+    if(parsed&&parsed[3]!==scope)throw new Error('Impact page scope mismatch');
+    // Continuations remain bounded at 25 affected or 10 tests per call.
+    const nextCursor=(type,offset)=>offset===null?null:`${type}:${s.revision}:${scope}:${offset}`;
+    res.pagination.affected.next_cursor=nextCursor('a',res.pagination.affected.next_offset);
+    res.pagination.related_tests.next_cursor=nextCursor('t',res.pagination.related_tests.next_offset);
     // Always-On uses this one-call triage response for risky or multi-module work.
     // Preserve risk, uncertainty, source freshness, and total counts. Never imply
     // this bounded preview is complete coverage.
@@ -271,7 +295,7 @@ export class Engine {
           capability_confirmed:false,
           user_approval_required:true,
           automatic_worker_launch:false,
-          affected_count:res.affected.length,
+          affected_count:res.affected_total,
           risk:res.risk,
         }
       }:{}),

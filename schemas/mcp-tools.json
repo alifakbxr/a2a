@@ -3,7 +3,7 @@
   "tools": [
     {
       "name": "pilah_context",
-      "description": "Scoped project symbols and file relations; static only.",
+      "description": "Static project symbols and dependencies.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -157,6 +157,10 @@
           },
           "summary": {
             "type": "boolean"
+          },
+          "cursor": {
+            "type": "string",
+            "maxLength": 96
           }
         }
       }
@@ -309,7 +313,7 @@
     },
     {
       "name": "pilah_evidence",
-      "description": "Local incidents, RCA, history and artifacts.",
+      "description": "Local RCA and artifacts.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,

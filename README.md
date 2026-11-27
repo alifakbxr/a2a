@@ -6,7 +6,7 @@ PILAH helps agents understand project symbols, inspect change impact, and organi
 
 [Documentation Index](docs/README.md) · [Architecture](docs/ARCHITECTURE.md) · [MIT License](LICENSE)
 
-> **Status (v1.0.3):** Active development on branch `main` at [alifakbxr/pilah](https://github.com/alifakbxr/pilah). Source CI passed across 3/3 platforms (Ubuntu, macOS, Windows on Node 24). Formal external acceptance across scenarios F01–F18 remains unverified and independent. See [Build Status](BUILD_STATUS.md) and [Validation Backlog](docs/MAIN_VALIDATION_BACKLOG.md).
+> **Status (v1.0.4):** Active development on branch `main` at [alifakbxr/pilah](https://github.com/alifakbxr/pilah). Source CI passed across 3/3 platforms (Ubuntu, macOS, Windows on Node 24). Formal external acceptance across scenarios F01–F18 remains unverified and independent. See [Build Status](BUILD_STATUS.md) and [Validation Backlog](docs/MAIN_VALIDATION_BACKLOG.md).
 
 ---
 
@@ -133,6 +133,8 @@ PILAH provides 4 local stdio MCP tools:
 | `pilah_impact` | Static change-impact analysis and candidate test suggestions | Computes static references, not dynamic execution |
 | `pilah_verify` | Structured Given/When/Then verification test planning | Produces test plans, does not execute tests automatically |
 | `pilah_evidence` | Evidence recording, incident checkpoints, and recovery notes | Does not falsify reports or elevate permissions |
+
+When `pilah_impact` returns `result_truncated: true`, its `pagination` fields enable revision-pinned follow-up pages (25 affected files and 10 related tests per call). See [tool contracts](docs/CONTRACTS.md). This does not establish complete runtime coverage or measured token savings.
 
 For full input/output specifications, see [MCP Contracts](docs/CONTRACTS.md).
 
