@@ -28,7 +28,6 @@ Install the registry package through the Antigravity CLI:
 
 ```sh
 agy plugin install @aliip/pilah
-agy plugin validate --strict .
 agy plugin list --json
 ```
 
