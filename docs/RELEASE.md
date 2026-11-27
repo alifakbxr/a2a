@@ -1,8 +1,10 @@
 # PILAH — release process
 
-**Current status: NO-GO (25 November 2026).** Source `main` includes PILAH `1.0.3`; externally signed F01–F18 and installed Antigravity host acceptance are **not verified**. No source merge, tag or green CI authorizes publishing on its own. Canonical repository: `alifakbxr/pilah`. The source npmjs package is `@aliip/pilah`; registry publication of the exact version must be independently verified.
+**Current source: 1.1.0 (stable source baseline). Registry publication: NO-GO** until the independently signed release requirements below are met. This is a source-version change, **not** a published package, an authorized tag or proof of live Antigravity adoption.
 
-## Source quality gate
+## 1. Source quality checks
+
+Run on the exact candidate commit:
 
 ```sh
 node --version
@@ -12,42 +14,50 @@ node scripts/pilah.mjs doctor
 npm pack --dry-run
 ```
 
-These inspect source syntax, full Node tests, MCP/schema/manifest contract, runtime environment and package content. They do **not** prove real project workflows, Antigravity integration or external acceptance.
+Verify the npm package, `package-lock.json`, plugin manifest, MCP initialize version and dashboard all agree on `1.1.0`. Confirm the package tarball excludes tests, benchmarks, sensitive files and local databases.
 
-**CI configuration:** PRs run 1 full-suite Ubuntu/Node 24 job, `main` pushes run 3 OS full-suite Node 24 jobs. Before release, manually dispatch the complete **9-job** Ubuntu/macOS/Windows × Node 22/24/26.13.1 matrix. See [CI budget](CI_EFFICIENCY.md).
+Routine CI is **1** Ubuntu/Node 24 job per PR and **3** Ubuntu/macOS/Windows Node 24 jobs on a `main` push. The separately dispatched **9-job** compatibility matrix (3 OS × Node 22/24/26.13.1) is required before external release authorization. [CI guide](CI_EFFICIENCY.md).
 
-## Installed Antigravity gate
+## 2. Installed-host acceptance
 
-Run `node scripts/pilah.mjs host-check` on the machine with the actual Antigravity CLI. It must report a local preflight result and explicitly preserves `live_agent_adoption: not_tested`; that result is **not** a substitute for in-IDE behavioral acceptance.
+On a machine running the actual Antigravity installation:
 
-Run `agy plugin validate --strict .` and inspect `agy plugin list --json` on the exact source. Test the four new `pilah_*` MCP tools with authorized and denied workspaces in actual Antigravity. Check plugin restart, NVM Node PATH, lazy tool discovery, user workspace trust, worktrees and meaningful native project tests. A source-level MCP subprocess test is not a live plugin test.
-
-## Independent application and release gate
-
-- Execute the frozen [STOCKROOM F01–F18 scenarios](MAIN_VALIDATION_BACKLOG.md) in a real, isolated HTTP/database/browser environment, including negative and concurrency cases.
-- Run matched Native-vs-PILAH evaluations under controlled trials. Avoid false claims about quota percentages and token savings.
-- Review privacy, evidence source revisions, scope binding and named test provenance. False PASS or stale signatures must fail closed.
-- Satisfy the [independently signed package-release authorization](RELEASE_AUTHORIZATION.md), including immutable registry, evaluator keys, trusted F01–F18 results and human approval for the exact `main` commit.
-- Only after authorization should the separately guarded npm/GitHub Packages workflows publish. The source manifest alone is not proof of package availability.
-
-See [build status](../BUILD_STATUS.md) and [open evidence backlog](MAIN_VALIDATION_BACKLOG.md). Legacy promotion instructions are historical, not active release instructions.
-
-## Package identity and fail-closed publication
-
-The primary public npmjs package is `@aliip/pilah@1.0.3`. The GitHub Packages counterpart is `@alifakbxr/pilah@1.0.3`. The old package artifact remains a frozen legacy compatibility release, not a new release target. CLI aliases in source remain supported. Do not republish an immutable legacy version.
-
-Both workflows **always** execute `scripts/release-authorization.mjs`; no evidence or mismatched approval must fail before network publication. A registry version check may skip only when the exact version is confirmed present. A verified E404 is treated as not-yet-published; authentication, access, and network failures must fail, not be labeled "already exists". After successful publication, verify the exact registry version.
-
-Check GitHub Actions logs for actual package upload (a successful job alone is not evidence), then independently query:
 ```sh
-npm view @aliip/pilah@1.0.3 version --registry=https://registry.npmjs.org/
-# GitHub Packages requires authorized registry credentials:
-npm view @alifakbxr/pilah@1.0.3 version --registry=https://npm.pkg.github.com
+agy plugin validate --strict .
+agy plugin list --json
+node scripts/pilah.mjs host-check
 ```
-Do not tag or trigger release workflows without the independent signed acceptance material specified in [release authorization](RELEASE_AUTHORIZATION.md).
 
-## IDE 2.8.0 host and multi-surface verification
+Run the [H01–H06 host scenarios](HOST_VALIDATION.md): tool registration/selection, permission denial, zero-call control, parent/subagent behavior, IDE restart and workspace isolation. A CLI preflight alone is not proof of an IDE session.
 
-A successful CLI `host-check` only proves strict source validation and an explicitly enabled CLI plugin inventory. It does **not** prove that any Antigravity IDE window loads bundled MCP tools/hooks, or that an agent chooses them. Validate the actual IDE's Customizations menu and MCP Servers panel, restart/reconnect behavior, two-window workspace isolation, read-only denied workspace handling and remote SSH context before release. See [host validation](HOST_VALIDATION.md). Do not assume Antigravity CLI, App and standalone IDE share the same transcript or plugin state.
+## 3. Independent functional evidence
 
-The npmjs 1.0.3 publish attempt failed with `EOTP`. Maintain the mandatory signed gate, confirm npm Trusted Publisher and scope permissions, then retry only after independently signed authorization. A GitHub Packages job success without signed evidence is **not** an approved release.
+- Independently run the evaluator-owned F01–F18 scenarios with real HTTP/database/browser tests, including negative and concurrency controls.
+- Perform matched Native/PILAH trials using identical source snapshot, model, effort, permission policy and externally accepted task rubric. Report attempts and accepted-task usage separately.
+- Review private artifacts, workspace authorization and evidence provenance; missing or stale evidence fails closed.
+- Obtain detached, independently signed approval bound to the exact release commit and registry digest. See [release authorization](RELEASE_AUTHORIZATION.md).
+
+**Do not bypass** the authorization validator, publish manually, mark incomplete tests PASS or label source CI as a release certificate.
+
+## 4. Publication and verification
+
+The publishing workflows are deliberately `workflow_dispatch` only and run `scripts/release-authorization.mjs` before network publication. The approved package identities are:
+
+| Registry | Target package |
+| --- | --- |
+| npmjs | `@aliip/pilah@1.1.0` |
+| GitHub Packages | `@alifakbxr/pilah@1.1.0` |
+
+These are **targets, not verified registry listings**. Once all signed gates have passed, a maintainer may run the guarded workflows. Only confirmed registry 404 is treated as absent; authentication, rate-limit and network failures must fail closed.
+
+Verify actual package availability after a successful upload:
+
+```sh
+npm view @aliip/pilah@1.1.0 version --registry=https://registry.npmjs.org/
+# Requires authorized GitHub Packages credentials:
+npm view @alifakbxr/pilah@1.1.0 version --registry=https://npm.pkg.github.com
+```
+
+Do not create a Git tag or GitHub Release implying authorized publication until that process is complete. The historical 1.0.3 npmjs `EOTP` failure is recorded in the [changelog](../CHANGELOG.md); it does not prove or disprove publication of 1.1.0.
+
+[Current build status](../BUILD_STATUS.md) · [Validation backlog](MAIN_VALIDATION_BACKLOG.md) · [Changelog](../CHANGELOG.md).

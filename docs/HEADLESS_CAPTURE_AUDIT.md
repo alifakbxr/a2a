@@ -38,11 +38,11 @@ Do **not** add cache_read_tokens to total_tokens. No accumulated quota percentag
 - PILAH smoke: SUCCESS, 1 observed PILAH impact MCP call, 58,742 reported tokens, nonempty response. Smoke does not count as an A/B pair.
 - Fresh unprompted IDE B2 task showed 3 PILAH impact calls including two continuation cursor follow-ups; it is not a CLI A/B token run.
 
-**No valid matched savings measurement exists in this pilot.** The operator's actual private files have not been independently imported into the repository audit; running this script locally is the next step to validate precise step/error counts without sending raw content.
+**No valid matched savings measurement exists in this pilot.** Private raw files are intentionally not imported into repository tests. Run this script locally to validate precise step/error counts without sending raw content; independent task acceptance and permission parity must still be assessed separately.
 
 For independent benchmark requirements, see [Host Validation](HOST_VALIDATION.md), [Token Efficiency](TOKEN_EFFICIENCY.md) and [Validation Backlog](MAIN_VALIDATION_BACKLOG.md).
 
-## Relationship to the legacy A/B evaluator
+## Relationship to the A/B evaluator
 
 `benchmarks/ab-evaluate.mjs` now reports three distinct token denominators per variant: `attempt_official_tokens` (all captures with provider usage, including failures), `mechanically_complete_official_tokens` (SUCCESS with a nonblank response, explicit empty `denied_actions` array, a captured `.stderr` file with no detected error, and no unresolved tool/error-message steps), and `independently_accepted_task_tokens` (mechanically complete plus an **external evaluator-supplied acceptance callback**). The compatibility field `official_tokens` now aliases the independently accepted median, so it is `null` rather than using token counts from blocked or unverified tasks. `official_usage_samples` counts attempts; the accepted denominator is `independently_accepted_samples`.
 

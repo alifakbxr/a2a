@@ -28,7 +28,7 @@ PILAH is language-agnostic in its **file, evidence, and MCP contracts**. Static 
 
 Availability and model permissions depend on the actual Antigravity version and account; PILAH never assumes universal `/swarm` or `/teamwork` in IDE.
 
-## Runtime and evidence compatibility (PILAH 1.0.3)
+## Runtime and evidence compatibility (PILAH 1.1.0)
 
 Node.js **>=22.13.0** is required for built-in `node:sqlite`. CI now runs the **full test suite in one Ubuntu/Node 24 job per PR**, and **three Node 24 jobs (Ubuntu, macOS, Windows) on each main push**. The complete **9-job Node 22/24/26.13.1 × three-OS** compatibility matrix remains available via manual `workflow_dispatch`; run it before a release or when changing Node/OS-specific code. This reduces routine CI cost without deleting any test, and does **not** claim unrun combinations passed. Node 26.11+ exposes `sqlite.Database` and retains deprecated `DatabaseSync`; PILAH prefers the current class and falls back to `DatabaseSync` on Node 22. Tests include local MCP JSON-RPC/stdio, WAL/rollback, old verifykit.sqlite `VACUUM INTO` migration, permission/security and CLI doctor. Green Node CI does not prove installed Antigravity IDE compatibility on every host. The actual tool contract includes typed acceptance with UI viewport/state/reference, opt-in `model_recovery`/`tool_recovery`, and opt-in native orchestration with `file_ownership="independent"` for parallel recommendations. See [current MCP contract](CONTRACTS.md).
 

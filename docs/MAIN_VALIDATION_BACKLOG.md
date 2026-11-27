@@ -1,53 +1,46 @@
 # PILAH — independent validation backlog
 
-**Updated 27 November 2026.** Source `main` uses PILAH `1.0.4`; canonical GitHub repository is `alifakbxr/pilah`. Historical scope includes closed issues #127 and #128, but closure does not independently satisfy live IDE or external acceptance. The last observed npm publication failed and current registry publication remains unverified; source version must not be interpreted as a published package. Historical issue closure is not proof that any external test was executed. Earlier historical issue labels were **deferred/superseded**, not independently verified; active acceptance obligations are tracked separately in #127 and #128.
+**Updated 27 November 2026 for source v1.1.0.** This page records evidence that **cannot** be substituted by a green CI build, issue closure, assistant interpretation, or a locally generated report. Historical issue closures were often **deferred/superseded**, not independent acceptance.
 
-## What automated tests establish
+## What source tests establish
 
-- PILAH rebrand passed the 9-job Node 22/24/26.13.1 × three-OS CI matrix at the PR #107 source revision.
-- CI/router optimization passed 3/3 main Node 24 jobs at commit `3b168e3`.
-- Original frozen STOCKROOM snapshots passed PHP **syntax** checks (Native 101/101, PILAH 80/80), not live F01–F18. PHP extensions, an isolated DB and browser execution were unavailable.
+- The local implementation compiles and is covered by automated Node tests, security regressions and MCP stdio contract checks.
+- Routine `main` CI exercises Ubuntu, macOS and Windows on Node 24 (3/3 jobs); a full 9-job cross-platform/Node matrix is separately dispatchable.
+- The read-only headless audit and A/B evaluator classify blocked or incomplete captures without claiming work was completed.
+- Historical stockroom PHP syntax checks are **not** HTTP/DB/browser acceptance.
 
-## Required independent work
+## Remaining independent checks
 
-1. **Installed PILAH adoption (#71):** use the [independent host runbook](HOST_VALIDATION.md) with H01–H06, then  first run `node scripts/pilah.mjs host-check` on an actual Antigravity machine (CLI-only preflight, not E2E). Then run `agy plugin validate --strict .`, inspect `agy plugin list --json`, check all four `pilah_*` tools in the actual IDE, permission-denial negatives, spontaneous qualified cross-file use, and a trivial no-call control. Inspect actual parent/subagent traces.
-2. **Guardian overhead (#91):** default-off, explicit enabling, preserved user hooks, absolute NVM Node binary, clean disable, and measured per-invocation host latency, CPU and token overhead. No automatic compaction.
-3. **Native vs PILAH (#92):** at least five counterbalanced trials per variant using the [candidate six-scenario suite](../tests/fixtures/pilah-eval-scenarios.json) frozen outside the agent-controlled repository with matching model, effort, source snapshot, permissions and independent task rubric. Record provider-reported usage if available, elapsed time, turns, tool failures, accepted tasks; report missing usage as unknown.
-4. **Acceptance F01–F18 (#15):** run isolated real PHP HTTP/DB/browser scenarios including tenant and role denials, refund/ledger reconciliation, true two-connection concurrency, offline recovery across browser process restarts, exactly-once retries, stale-build checks and frozen independent negative controls. See [scenario fixture](../tests/fixtures/acceptance-18.json).
-5. **Release authority:** frozen evaluator-owned registry, signed machine evidence, independent privacy review and detached approval bound to the exact commit. Verify with the [fail-closed authorization mechanism](RELEASE_AUTHORIZATION.md).
+| ID | Required verification | Current state |
+| --- | --- | --- |
+| H01–H06 | Install exact PILAH candidate in a real Antigravity IDE/CLI, validate tool discovery/selection, denied workspaces, zero-call control, parent/subagent traces and restart behavior | **Not independently verified** |
+| F01–F18 | Independently controlled real HTTP/DB/browser scenarios including negative permissions, ledger correctness, retries, concurrency and stale-build controls | **Not independently verified** |
+| A/B | At least five counterbalanced matched Native/PILAH trials per variant, same snapshot/model/effort/permissions, provider-reported token usage and independently accepted outcomes | **No comparable pair established** |
+| Security/privacy | Independently review stored artifacts, source provenance, workspace boundaries and exposed secrets | **Not independently approved** |
+| Package publication | Sign exact commit and evidence manifest with independent authority; verify approved registry artifacts after guarded workflows run | **NO-GO** |
 
-**Merged to main ≠ installed in a real IDE ≠ independently accepted ≠ published.** No CI PASS, native advice or self-reported transcript substitutes for unexecuted host/app scenarios.
+See [host validation](HOST_VALIDATION.md), [headless auditing](HEADLESS_CAPTURE_AUDIT.md), [release authorization](RELEASE_AUTHORIZATION.md) and [release process](RELEASE.md).
 
-## Current externally owned acceptance (NOT TESTED)
+## Benchmark evidence boundary
 
-- [ ] Antigravity H01–H06 on an installed host, record version, permissions, exact SHA, and genuine tool-selection traces
-- [ ] Five or more counterbalanced Native/PILAH trials per variant using independent, fixed acceptance and official token usage, with missing counters `null`
-- [ ] F01–F18 real HTTP/DB/browser negative and concurrency tests with evaluator-owned fixtures, signed evidence and independent privacy review
-- [ ] Verify registry uploads/install behavior and independently signed authorization for the exact release commit
+The 27 November headless pilot is a **historical failure-case record**, not a token-savings experiment:
 
-No local CI/assistant-generated observations satisfy these checkboxes. Failed, stale, partial or unobserved results remain unaccepted.
+- #01: terminal model errors with no usable output.
+- #02: both variants reported SUCCESS but command permissions were denied.
+- #03: Native returned a response (118,792 total reported tokens); PILAH returned an empty response with denied MCP action and error step (59,332 reported tokens).
+- #04: Native reached quota at 65,550 reported tokens; no matched PILAH capture.
+- An IDE smoke test did observe targeted PILAH MCP use, but this was outside the matched CLI benchmark.
 
-## Batch 5 host validation prerequisites
+The accepted-task evaluator intentionally reports `null` for an unverified completed-task median. Historical quota screenshots, internal token estimates and incomplete tool calls cannot be counted as efficiency gains.
 
-Run the source-level test suite and manual 9-job Node 22/24/26 compatibility matrix. On an actual Antigravity installation, use `pilah host-check`, `agy plugin validate --strict .`, and the H01–H06 protocol; log the exact source SHA. Only an independent evaluator can mark F01–F18, privacy approval, native-vs-PILAH A/B token savings, and registry installation as PASS. No self-signed or synthetic test output satisfies these gates.
+## Release checklist
 
-## November 25 benchmark and protocol readiness
+- [ ] Run source `npm run check`, `node scripts/check-release.mjs` and package hygiene on the exact release commit.
+- [ ] Complete the full 9-job Node/OS matrix for the release candidate.
+- [ ] Capture real installed-host H01–H06 acceptance with source/permission attestation.
+- [ ] Complete independently signed F01–F18 and privacy review.
+- [ ] Obtain accepted Native/PILAH A/B results or explicitly report savings as not measured.
+- [ ] Obtain detached approval bound to the exact approved release commit and registry digest.
+- [ ] Publish through gated workflows and independently verify registry versions.
 
-The current offline evaluator accepts missing official token usage **only as `null`**, never as zero or a source-byte estimate. It reports whether pairs are repeated, counterbalanced, and covered by provider usage; even perfectly balanced locally supplied captures remain `comparability.ready=false` without independent acceptance and host equivalence. Use `node scripts/export-benchmark.mjs <aggregated-report.json>` for a privacy-safe PILAH-format export; raw captures must stay with the evaluator.
-
-The stdio MCP server negotiates the shared tools/resources subset for `2024-10-07` (historical draft), `2024-11-05`, `2025-03-26`, `2025-06-18`, and `2025-11-25`. The newer `2026-07-28` `server/discover` protocol is NOT implemented or advertised. Live IDE negotiation, H01–H06, and F01–F18 are still required; these source changes do not satisfy external release approval.
-
-## Tool-selection forensic update (25 November 2026)
-
-A user-provided Kanban transcript has 128 planner responses, 125 native
-calls and **zero observed PILAH MCP invocations**. The skill was read; no
-independent evidence proves the MCP server was available in that session.
-The source now uses a shared PILAH eager/lazy/legacy tool-call matcher for
-historical usage and trace reporting; `pilah_mcp_availability` remains
-`not_observable_from_call_log`. This is tooling readiness, not completion
-of installed host acceptance. Do not close issue #127 or infer model token
-savings from weekly quota screenshots.
-
-## 27 November headless A/B validity
-
-PR #144 merged a private metadata-only capture auditor. Pilot #02 had permission denials in both variants, #03 produced a completed native response but a blocked/empty PILAH response, and #04 stopped Native after a quota error with no PILAH pair. **None of these trials establishes token efficiency.** Issue #145 covers fail-closed accepted-task token reporting and separation of failed attempt costs. Until matched host environment and independent acceptance are demonstrated, `comparability.ready` must remain false and accepted-task medians remain unknown.
+Nothing in this checklist is automatically satisfied by bumping the version to 1.1.0. `main` CI is a necessary source-quality check, not an independent external release certificate.
