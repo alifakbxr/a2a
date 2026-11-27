@@ -1,6 +1,6 @@
 # PILAH — independent validation backlog
 
-**Updated 27 November 2026 for source v1.1.0.** This page records evidence that **cannot** be substituted by a green CI build, issue closure, assistant interpretation, or a locally generated report. Historical issue closures were often **deferred/superseded**, not independent acceptance.
+**Updated 27 November 2026 for source v1.1.1.** This page records evidence that **cannot** be substituted by a green CI build, issue closure, assistant interpretation, or a locally generated report. Historical issue closures were often **deferred/superseded**, not independent acceptance.
 
 ## What source tests establish
 
@@ -43,4 +43,4 @@ The accepted-task evaluator intentionally reports `null` for an unverified compl
 - [ ] Obtain detached approval bound to the exact approved release commit and registry digest.
 - [ ] Publish through gated workflows and independently verify registry versions.
 
-Nothing in this checklist is automatically satisfied by bumping the version to 1.1.0. `main` CI is a necessary source-quality check, not an independent external release certificate.
+Nothing in this checklist is automatically satisfied by bumping the version to 1.1.1. `main` CI is a necessary source-quality check, not an independent external release certificate.

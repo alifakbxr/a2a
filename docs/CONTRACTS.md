@@ -171,7 +171,7 @@ The CLI `tokens` absolute workspace argument and `artifacts snapshot|list|diff|s
 - `tools/list` enforces a 6,500-byte serialized contract budget with bounded IDs and criteria. Removed unused `pilah_context.conversation_id`, `pilah_context.transcript_path`, and `pilah_evidence.version_number`; deprecated `allow_stale` never permits PASS.
 - Syntax validation recursively covers all source and script `.mjs` files on all CI/runtime-publish gates. `pilah doctor` advises about shell-managed Node version manager paths without executing a shell or changing user configuration.
 
-See [security](SECURITY.md), [compatibility](COMPATIBILITY.md), and release gate #15. PILAH source v1.1.0 is **not** independently certified or authorized for package publication; these safety controls remain part of the maintained contract.
+See [security](SECURITY.md), [compatibility](COMPATIBILITY.md), and release gate #15. PILAH source v1.1.1 is **not** independently certified or authorized for package publication; these safety controls remain part of the maintained contract.
 
 ## File safety and workspace origin
 

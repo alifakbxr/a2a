@@ -1,6 +1,6 @@
 # PILAH — release process
 
-**Current source: 1.1.0 (stable source baseline). Registry publication: NO-GO** until the independently signed release requirements below are met. This is a source-version change, **not** a published package, an authorized tag or proof of live Antigravity adoption.
+**Current source: 1.1.1 (stable source baseline). Registry publication: NO-GO** until the independently signed release requirements below are met. This is a source-version change, **not** a published package, an authorized tag or proof of live Antigravity adoption.
 
 ## 1. Source quality checks
 
@@ -14,7 +14,7 @@ node scripts/pilah.mjs doctor
 npm pack --dry-run
 ```
 
-Verify the npm package, `package-lock.json`, plugin manifest, MCP initialize version and dashboard all agree on `1.1.0`. Confirm the package tarball excludes tests, benchmarks, sensitive files and local databases.
+Verify the npm package, `package-lock.json`, plugin manifest, MCP initialize version and dashboard all agree on `1.1.1`. Confirm the package tarball excludes tests, benchmarks, sensitive files and local databases.
 
 Routine CI is **1** Ubuntu/Node 24 job per PR and **3** Ubuntu/macOS/Windows Node 24 jobs on a `main` push. The separately dispatched **9-job** compatibility matrix (3 OS × Node 22/24/26.13.1) is required before external release authorization. [CI guide](CI_EFFICIENCY.md).
 
@@ -45,19 +45,19 @@ The publishing workflows are deliberately `workflow_dispatch` only and run `scri
 
 | Registry | Target package |
 | --- | --- |
-| npmjs | `@aliip/pilah@1.1.0` |
-| GitHub Packages | `@alifakbxr/pilah@1.1.0` |
+| npmjs | `@aliip/pilah@1.1.1` |
+| GitHub Packages | `@alifakbxr/pilah@1.1.1` |
 
 These are **targets, not verified registry listings**. Once all signed gates have passed, a maintainer may run the guarded workflows. Only confirmed registry 404 is treated as absent; authentication, rate-limit and network failures must fail closed.
 
 Verify actual package availability after a successful upload:
 
 ```sh
-npm view @aliip/pilah@1.1.0 version --registry=https://registry.npmjs.org/
+npm view @aliip/pilah@1.1.1 version --registry=https://registry.npmjs.org/
 # Requires authorized GitHub Packages credentials:
-npm view @alifakbxr/pilah@1.1.0 version --registry=https://npm.pkg.github.com
+npm view @alifakbxr/pilah@1.1.1 version --registry=https://npm.pkg.github.com
 ```
 
-Do not create a Git tag or GitHub Release implying authorized publication until that process is complete. The historical 1.0.3 npmjs `EOTP` failure is recorded in the [changelog](../CHANGELOG.md); it does not prove or disprove publication of 1.1.0.
+Do not create a Git tag or GitHub Release implying authorized publication until that process is complete. The historical 1.0.3 npmjs `EOTP` failure is recorded in the [changelog](../CHANGELOG.md); it does not prove or disprove publication of 1.1.1.
 
 [Current build status](../BUILD_STATUS.md) · [Validation backlog](MAIN_VALIDATION_BACKLOG.md) · [Changelog](../CHANGELOG.md).

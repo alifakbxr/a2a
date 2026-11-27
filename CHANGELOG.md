@@ -2,6 +2,14 @@
 
 All notable PILAH source changes are documented here. Versions in this file describe source manifests; a version bump or Git merge alone does **not** establish a published package, installed-host validation, or independent release approval.
 
+## [1.1.1] - 2026-11-27
+
+### Documentation alignment and release status
+
+- Clarified registry publication status following manual npmjs release of `@aliip/pilah@1.1.0` with `latest` and `stable` distribution tags.
+- Maintained strict evaluation boundaries: independent external release gate (F01–F18) and full multi-OS compatibility verification remain independent prerequisites.
+- Synchronized documentation, package manifests, and release references across the repository.
+
 ## [1.1.0] - 2026-11-27
 
 ### Stable source baseline
@@ -21,7 +29,7 @@ All notable PILAH source changes are documented here. Versions in this file desc
 
 ### Release and benchmark status
 
-The 1.1.0 source baseline can be considered stable after its own CI passes. **Registry publication is independently gated and remains NO-GO** without signed F01–F18 acceptance, live installed Antigravity validation, privacy review and a signed authorization bound to the exact release commit. No tag or publication should be inferred from this entry.
+The 1.1.0 source baseline was tagged `v1.1.0` and published to npmjs as `@aliip/pilah@1.1.0` (with dist-tags `latest` and `stable`). Formal independent external verification (F01–F18 acceptance, live installed Antigravity audit, and signed release authorization) remains uncertified and tracked in the validation backlog.
 
 ## [1.0.4] - 2026-11-27
 

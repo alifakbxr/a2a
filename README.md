@@ -4,7 +4,7 @@
 
 PILAH helps an agent understand a codebase, scope change impact and plan verification without replacing the host's native tools. It does not edit your project, execute tests or switch models on its own.
 
-**Version 1.1.0 — stable source baseline.** The last verified main CI baseline passed **3/3** OS jobs (Ubuntu, macOS, Windows; Node 24). Version-specific CI is checked on the release candidate. Independent installed-host and F01–F18 acceptance remain **unverified**, so stable source is not a claim of registry publication, measured token savings or independently authorized release. See [status](BUILD_STATUS.md).
+**Version 1.1.1 — stable source baseline.** The last verified main CI baseline passed **3/3** OS jobs (Ubuntu, macOS, Windows; Node 24). Version-specific CI is checked on the release candidate. Independent installed-host and F01–F18 acceptance remain **unverified**, so stable source is not a claim of registry publication, measured token savings or independently authorized release. See [status](BUILD_STATUS.md).
 
 [Getting started](#quick-start) · [Documentation](docs/README.md) · [Changelog](CHANGELOG.md) · [License](LICENSE)
 
