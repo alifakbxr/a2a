@@ -51,7 +51,7 @@ The private Antigravity history showed repeated reads of the same path in a sess
 
 ## Low-token skill and MCP budgets — 19 November 2026
 
-Issue #44 addresses unnecessary instruction/context overhead on the `v2.0.1` development branch. The policy is **zero calls for trivial work; normally one targeted query OR bounded impact summary**; subsequent calls require new uncertainty or actual machine evidence. The skill no longer carries repeated CLI lists, chronological security incidents or release history.
+Historical issue #44 addressed unnecessary instruction/context overhead before the current 1.1.0 baseline. The policy is **zero calls for trivial work; normally one targeted query OR bounded impact summary**; subsequent calls require new uncertainty or actual machine evidence. The skill no longer carries repeated CLI lists, chronological security incidents or release history.
 
 | Static text surface | Before | Revised | Scope |
 | --- | ---: | ---: | --- |
