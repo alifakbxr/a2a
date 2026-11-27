@@ -26,8 +26,13 @@ const BASE_SPECS = [
   },
   {
     name:'impact',
-    description:'Static impact and candidate tests; not proof.',
-    inputSchema:{type:'object',additionalProperties:false,required:['workspace'],properties:{workspace:ws,changed:paths,depth:{type:'integer',minimum:1,maximum:4},summary:{type:'boolean',}}}
+    description:'Static impact and candidate tests; optional revision-pinned pagination for long lists (not runtime proof).',
+    inputSchema:{type:'object',additionalProperties:false,required:['workspace'],properties:{
+      workspace:ws,changed:paths,depth:{type:'integer',minimum:1,maximum:4},summary:{type:'boolean'},
+      affected_offset:{type:'integer',minimum:0,maximum:350,description:'Affected-list offset; fixed 25 items/page. For offset>0 provide expected_revision.'},
+      related_tests_offset:{type:'integer',minimum:0,maximum:350,description:'Related-tests offset; fixed 10 items/page. For offset>0 provide expected_revision.'},
+      expected_revision:{type:'string',maxLength:64,description:'Revision from a previous impact response; reject stale pages.'},
+    }}
   },
   {
     name:'verify',
