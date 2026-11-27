@@ -62,16 +62,16 @@ test('impact pages exhaust all affected files and test candidates without overla
  assert.equal(first.direct_dependencies.includes('src/base.js'),true);
 
  const affected=[...first.affected];
- let cursor=first.pagination.affected.next_offset,iterations=0;
+ let cursor=first.pagination.affected.next_cursor,iterations=0;
  while(cursor!==null){
   assert.ok(++iterations<=15,'bounded impact pagination');
-  const page=engine.impact({...base,affected_offset:cursor,expected_revision:first.revision});
+  const page=engine.impact({...base,cursor});
   assert.equal(page.revision,first.revision);
   assert.equal(page.affected_total,first.affected_total);
-  assert.equal(page.pagination.affected.offset,cursor);
+  assert.equal(page.pagination.affected.offset,Number(cursor.split(':').at(-1)));
   assert.equal(page.teamwork_advisory.affected_count,first.affected_total);
   affected.push(...page.affected);
-  cursor=page.pagination.affected.next_offset;
+  cursor=page.pagination.affected.next_cursor;
  }
  assert.equal(affected.length,first.affected_total);
  assert.equal(new Set(affected.map(x=>x.path)).size,affected.length);
@@ -81,14 +81,14 @@ test('impact pages exhaust all affected files and test candidates without overla
  assert.ok(!affected.some(x=>x.path==='src/base.js'));
 
  const related=[...first.related_tests];
- cursor=first.pagination.related_tests.next_offset;iterations=0;
+ cursor=first.pagination.related_tests.next_cursor;iterations=0;
  while(cursor!==null){
   assert.ok(++iterations<=35,'bounded related test pages');
-  const page=engine.impact({...base,related_tests_offset:cursor,expected_revision:first.revision});
+  const page=engine.impact({...base,cursor});
   assert.equal(page.revision,first.revision);
   assert.equal(page.related_tests_total,first.related_tests_total);
   related.push(...page.related_tests);
-  cursor=page.pagination.related_tests.next_offset;
+  cursor=page.pagination.related_tests.next_cursor;
  }
  assert.equal(related.length,first.related_tests_total);
  assert.equal(new Set(related).size,related.length);
@@ -106,15 +106,17 @@ test('continuation requires source revision and fails closed when files change b
  const {engine,project,write}=fixtures(t);
  const args={workspace:project,changed:['src/provider.js'],depth:3};
  const first=engine.impact(args);
- assert.ok(first.pagination.affected.next_offset>0);
- assert.throws(()=>engine.impact({...args,affected_offset:25}),/requires expected_revision/);
- assert.throws(()=>engine.impact({...args,affected_offset:25,summary:true,expected_revision:first.revision}),/summary cannot be paginated/);
- assert.throws(()=>engine.impact({...args,affected_offset:25,expected_revision:'not-a-revision'}),/Invalid impact source revision/);
- assert.throws(()=>engine.impact({...args,affected_offset:351,expected_revision:first.revision}),/Invalid integer/);
- const valid=engine.impact({...args,affected_offset:25,expected_revision:first.revision});
+ const pageCursor=first.pagination.affected.next_cursor;
+ assert.ok(pageCursor,'more affected items should provide a cursor');
+ assert.throws(()=>engine.impact({...args,cursor:'invalid'}),/Invalid impact cursor/);
+ assert.throws(()=>engine.impact({...args,cursor:pageCursor,summary:true}),/summary cannot use cursor/);
+ assert.throws(()=>engine.impact({...args,cursor:pageCursor,changed:['src/base.js']}),/Impact page scope mismatch/);
+ const pieces=pageCursor.split(':');
+ assert.throws(()=>engine.impact({...args,cursor:[pieces[0],pieces[1],pieces[2],'351'].join(':')}),/Invalid impact cursor/);
+ const valid=engine.impact({...args,cursor:pageCursor});
  assert.ok(valid.affected.length>0);
  write('src/provider.js',"import {base} from './base.js';\nexport const shared=base+1;\n");
- assert.throws(()=>engine.impact({...args,affected_offset:25,expected_revision:first.revision}),/Impact page source revision mismatch/);
+ assert.throws(()=>engine.impact({...args,cursor:pageCursor}),/Impact page source revision mismatch/);
  const fresh=engine.impact(args);
  assert.notEqual(fresh.revision,first.revision);
  assert.equal(fresh.pagination.affected.offset,0);
@@ -123,13 +125,13 @@ test('continuation requires source revision and fails closed when files change b
 test('MCP schema exposes bounded paging for public and legacy tools with safe stale errors',()=>{
  for(const name of ['pilah_impact','a2a_impact','verifykit_impact']){
   assert.doesNotThrow(()=>validateArgs(name,{
-   workspace:'/safe/example',changed:['src/provider.js'],affected_offset:25,
-   related_tests_offset:10,expected_revision:'a'.repeat(32),
+   workspace:'/safe/example',changed:['src/provider.js'],cursor:'a:a'.repeat(4),
   }));
-  assert.throws(()=>validateArgs(name,{workspace:'/safe/example',affected_offset:351}),/Invalid integer/);
-  assert.throws(()=>validateArgs(name,{workspace:'/safe/example',related_tests_offset:-1}),/Invalid integer/);
+  assert.throws(()=>validateArgs(name,{workspace:'/safe/example',cursor:'x'.repeat(97)}),/too long/i);
+  assert.throws(()=>validateArgs(name,{workspace:'/safe/example',affected_offset:25}),/Unknown argument/);
   assert.throws(()=>validateArgs(name,{workspace:'/safe/example',limit:100}),/Unknown argument/);
  }
  assert.equal(classifyMcpFailure('pilah_impact',new Error('Impact page source revision mismatch')).code,'source_freshness_unconfirmed');
- assert.equal(classifyMcpFailure('pilah_impact',new Error('Impact page requires expected_revision')).code,'invalid_tool_arguments');
+ assert.equal(classifyMcpFailure('pilah_impact',new Error('Invalid impact cursor')).code,'invalid_tool_arguments');
+ assert.equal(classifyMcpFailure('pilah_impact',new Error('Impact page scope mismatch')).code,'invalid_tool_arguments');
 });
