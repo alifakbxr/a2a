@@ -3,6 +3,11 @@
  * Standalone, zero-dependency, self-contained HTML application.
  */
 
+import {readFileSync} from 'node:fs';
+
+// Show the installed package version rather than a manually maintained badge.
+const VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+
 export function getMcpAppHtml() {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -156,7 +161,7 @@ export function getMcpAppHtml() {
   <header>
     <div class="brand">
       <span>PILAH</span>
-      <span class="badge">v1.0.4</span>
+      <span class="badge">v${VERSION}</span>
     </div>
     <div class="status-pill">
       <span class="status-dot"></span>
