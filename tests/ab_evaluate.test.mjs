@@ -11,7 +11,8 @@ test('requires independent acceptance evidence and matched repetitions',()=>{
  const r=evaluateManifest(m,n=>n==='n.json'?JSON.stringify({...final,num_turns:1}):JSON.stringify({...final,num_turns:2}));
  assert.equal(r.comparability.ready,false);assert.equal(r.variants.native.acceptance_passed.median,1);
  assert.equal(r.variants['pilah-on-demand'].acceptance_passed.median,0);
- assert.equal(r.variants.native.official_tokens.median,100);
+ assert.equal(r.variants.native.attempt_official_tokens.median,100);
+ assert.equal(r.variants.native.official_tokens.median,null); // no independent acceptance
  const captures={ 'n.json':JSON.stringify({...final,num_turns:1}), 'a.json':JSON.stringify({...final,num_turns:2}) };
  assert.equal(evaluateManifest(m,n=>captures[n],{minRepetitions:1}).comparability.capture_repetitions_ready,true);
  assert.equal(evaluateManifest(m,n=>captures[n],{minRepetitions:1}).comparability.ready,false);
@@ -67,7 +68,8 @@ test('missing official model usage is unknown, not zero or an invented baseline'
  assert.equal(out.comparability.official_usage_complete,false);
  assert.equal(out.variants.native.official_tokens.median,null);
  assert.equal(out.variants.native.official_usage_samples,0);
- assert.equal(out.variants['pilah-on-demand'].official_tokens.median,100);
+ assert.equal(out.variants['pilah-on-demand'].attempt_official_tokens.median,100);
+ assert.equal(out.variants['pilah-on-demand'].official_tokens.median,null);
  assert.throws(()=>parseCapture(JSON.stringify({status:'SUCCESS',usage:{total_tokens:'x'}})),/Invalid official usage/);
 });
 

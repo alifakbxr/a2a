@@ -1,6 +1,6 @@
 # PILAH — build and validation status
 
-**25 November 2026 — source release hardening candidate.** Canonical repository: [alifakbxr/pilah](https://github.com/alifakbxr/pilah). Source package and Antigravity manifest: **1.0.3**. The previous GitHub Packages identifier is frozen and no longer republished automatically. npmjs uses `@aliip/pilah`; GitHub Packages uses `@alifakbxr/pilah`. They are different registries and scopes. MCP stdio protocol handshake updated to support Antigravity's `2024-11-05`, `2024-10-07`, and `2025-03-26`. Documentation streamlined down to 13 essential documents, translated to full English, with quick install options via npm and CLI added.
+**27 November 2026 — source release hardening candidate.** Canonical repository: [alifakbxr/pilah](https://github.com/alifakbxr/pilah). Source package and Antigravity manifest: **1.0.4**. Source version is not proof of registry publication. The previous GitHub Packages identifier is frozen and no longer republished automatically. npmjs uses `@aliip/pilah`; GitHub Packages uses `@alifakbxr/pilah`. They are different registries and scopes. MCP stdio protocol handshake updated to support Antigravity's `2024-11-05`, `2024-10-07`, and `2025-03-26`. Documentation streamlined down to 13 essential documents, translated to full English, with quick install options via npm and CLI added.
 
 | Check | Verified evidence | Still unknown |
 | --- | --- | --- |
@@ -15,3 +15,7 @@
 **Release remains NO-GO** until independently signed acceptance and actual runtime evidence are collected. Success of repository tests never implies host adoption, model savings, or payment/security acceptance.
 
 Rebrand source is traceable to **PR #107**, and reduced CI to **PR #108**. See [release process](docs/RELEASE.md), [authorization](docs/RELEASE_AUTHORIZATION.md), and [validation backlog](docs/MAIN_VALIDATION_BACKLOG.md).
+
+## 27 November benchmark audit
+
+The headless audit utility from PR #144 is merged, but the A/B evaluator's accepted-task denominator requires the independent regression checks in issue #145. The 27 November pilot includes permission-denied or quota-interrupted captures and **zero independently comparable Native/PILAH pairs**. Run token totals for blocked attempts must not be reported as savings. Source tests and GitHub CI never substitute for independent Antigravity, model/quota parity, or F01–F18 acceptance.
