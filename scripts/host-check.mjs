@@ -28,7 +28,7 @@ export function inspectPluginList(raw,{format='json'}={}){
     if(Array.isArray(match.mcpServers)&&match.mcpServers.length===0)return {installed:'missing_mcp_component',plugin_name,inventory:'json'};
     return {installed:'listed',plugin_name,inventory:'json'};
   }
-  // Documented text form: '- pilah (enabled, 1.1.0)'.
+  // Documented text form: '- pilah (enabled, <version>)'.
   const rows=String(raw??'').split(/\r?\n/).map(line=>
     line.match(/^\s*-\s+(pilah|a2a)\s+\((enabled|disabled)(?:\s*,|\s*\))/i)
   ).filter(Boolean);
