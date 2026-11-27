@@ -14,7 +14,7 @@ const stub=({version=0,validation=0,list=0,plugins=[{name:'pilah',enabled:true,m
    if(cmd==='plugin list --json')return jsonSupported
      ?{status:list,stdout:JSON.stringify(plugins),stderr:''}
      :{status:1,stdout:'',stderr:'Unknown option'};
-   if(cmd==='plugin list')return {status:list,stdout:plain??'- pilah (enabled, 1.1.0)\n',stderr:''};
+   if(cmd==='plugin list')return {status:list,stdout:plain??`- pilah (enabled, ${packageVersion})\n`,stderr:''};
    return {status:1,stdout:'',stderr:'unsupported'};
  };
  return {calls,exec};
@@ -55,7 +55,7 @@ test('legacy name compatibility uses explicit enablement, not arbitrary text',()
  assert.equal(inspectPluginList('Other plugin mentions pilah is enabled',{format:'text'}).installed,'not_listed');
  assert.equal(inspectPluginList(JSON.stringify([{name:'a2a',enabled:true,mcpServers:['a2a']}])).installed,'listed');
  assert.equal(inspectPluginList('garbled').installed,'unknown');
- const x=stub({jsonSupported:false,plain:'Installed plugins:\n- pilah (enabled, 1.1.0)\n'});
+ const x=stub({jsonSupported:false,plain:`Installed plugins:\n- pilah (enabled, ${packageVersion})\n`});
  assert.equal(checkHost({exec:x.exec}).status,'local-preflight-passed');
  assert.ok(x.calls.includes('plugin list'));
 });
