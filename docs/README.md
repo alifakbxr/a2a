@@ -2,7 +2,9 @@
 
 Technical documentation index for **PILAH** (*Project Intelligence, Logic, Analysis & Handoffs*) on Google Antigravity.
 
-Official repository: [alifakbxr/pilah](https://github.com/alifakbxr/pilah).
+Official repository: [alifakbxr/pilah](https://github.com/alifakbxr/pilah). Stable source baseline: **1.1.0**. Registry publication requires independent authorization.
+
+[Changelog](../CHANGELOG.md) · [Build status](../BUILD_STATUS.md) · [Quick start](../README.md).
 
 ---
 
