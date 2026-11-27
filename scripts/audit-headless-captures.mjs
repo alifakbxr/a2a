@@ -61,7 +61,7 @@ export function inspectCapture(raw, stderr = '') {
     if (t.info?.error || t.info?.isError === true) toolErrors++;
     const safeName = PINNED_TOOLS.has(t.name) ? t.name : 'other';
     toolNames[safeName] = (toolNames[safeName] || 0) + 1;
-    if (safeName === 'call_mcp_tool') {
+    if (safeName === 'call_mcp_tool' && t.state === 'DONE') {
       mcpCalls++;
       const args = t.info.parameters || {};
       const target = args.ToolName || args.tool_name || '';
@@ -125,8 +125,9 @@ export function auditDirectory(folder) {
     const stderrPath = path.join(abs, name.replace(/\.jsonl$/, '.stderr'));
     const stderrSrc = readSafe(stderrPath, MAX_STDERR);
     const capture = src === null ? {status:'UNREADABLE',audit_status:'INVALID',quality:'unverified',reasons:['unsafe_or_oversized_capture']} : inspectCapture(src, stderrSrc || '');
-    if (src !== null && stderrSrc === null && fs.existsSync(stderrPath)) {
-      capture.reasons.push('unreadable_stderr'); capture.audit_status = 'INVALID';
+    if (src !== null && stderrSrc === null) {
+      capture.reasons.push(fs.existsSync(stderrPath) ? 'unreadable_stderr' : 'missing_stderr_capture');
+      capture.audit_status = 'INVALID';
     }
     runs.push({id:name.replace(/\.jsonl$/, ''), ...capture});
   }
