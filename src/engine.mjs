@@ -218,11 +218,22 @@ export class Engine {
     }
     throw new Error('Unknown context action');
   }
-  impact({workspace,changed=[],depth=3,summary=false}={}){
+  impact({workspace,changed=[],depth=3,summary=false,affected_offset=0,related_tests_offset=0,expected_revision}={}){
     validateChangedPaths(changed);
+    for(const [label,offset] of [['affected_offset',affected_offset],['related_tests_offset',related_tests_offset]]){
+      if(!Number.isSafeInteger(offset)||offset<0||offset>350)throw new Error('Invalid integer: '+label);
+    }
+    if(expected_revision!==undefined && (typeof expected_revision!=='string'|| !/^[a-f0-9]{32,64}$/i.test(expected_revision)))
+      throw new Error('Invalid impact source revision');
+    if(summary && (affected_offset>0||related_tests_offset>0))
+      throw new Error('Impact summary cannot be paginated');
+    if((affected_offset>0||related_tests_offset>0)&&!expected_revision)
+      throw new Error('Impact page requires expected_revision');
     const compact=getCompactMode();
     const s=this.sync(workspace,{verifyIntegrity:true});
-    const res=analyzeImpact(this.store,s.wsId,s.root,{changed,depth});
+    if(expected_revision&&s.revision!==expected_revision)
+      throw new Error('Impact page source revision mismatch');
+    const res=analyzeImpact(this.store,s.wsId,s.root,{changed,depth,affected_offset,related_tests_offset});
     // Always-On uses this one-call triage response for risky or multi-module work.
     // Preserve risk, uncertainty, source freshness, and total counts. Never imply
     // this bounded preview is complete coverage.
@@ -271,7 +282,7 @@ export class Engine {
           capability_confirmed:false,
           user_approval_required:true,
           automatic_worker_launch:false,
-          affected_count:res.affected.length,
+          affected_count:res.affected_total,
           risk:res.risk,
         }
       }:{}),
