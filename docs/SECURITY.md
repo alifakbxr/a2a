@@ -65,7 +65,7 @@ RCA assessments additionally preserve a local append-only experimental interpret
 Native test provenance requires an anchored, direct recognized test runner (with narrowly supported optional environment or `cd dir &&` prefix), an explicit successful numeric exit status, and matching local source/report hashes; matching test-runner substrings in unrelated shell commands or exit masking are rejected. This remains local metadata, never independent attestation. JUnit/TAP parsers now reject commented XML, incomplete/aborted TAP reports, malformed assertion numbering and hidden failure states rather than treating them as PASS. Session and optional conversation-metadata reads in CLI/hooks reject symlinked or oversized JSON. Actual Antigravity host payload variants and real user-visible behavior must still be tested externally.
 
 
-## Bounded local I/O and release config diagnostics (v2.0.1)
+## Bounded local I/O and release configuration diagnostics
 
 Local evidence metadata and snapshot reads are descriptor-pinned and size-bounded. The evidence history/freshness rehash budget is 4 MiB per artifact; oversized or symlinked metadata cannot establish fresh provenance. A recursive `.code-workspace` chain has a visited-set and depth limit. Workspace-owned side-question IDs cannot overwrite a row belonging to a different workspace. Sensitive independent acceptance files reject symlink leaves and oversized content, and reject unsafe owner-controlled parent links where configured.
 
