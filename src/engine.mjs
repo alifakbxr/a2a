@@ -218,22 +218,35 @@ export class Engine {
     }
     throw new Error('Unknown context action');
   }
-  impact({workspace,changed=[],depth=3,summary=false,affected_offset=0,related_tests_offset=0,expected_revision}={}){
+  impact({workspace,changed=[],depth=3,summary=false,cursor}={}){
     validateChangedPaths(changed);
-    for(const [label,offset] of [['affected_offset',affected_offset],['related_tests_offset',related_tests_offset]]){
-      if(!Number.isSafeInteger(offset)||offset<0||offset>350)throw new Error('Invalid integer: '+label);
-    }
-    if(expected_revision!==undefined && (typeof expected_revision!=='string'|| !/^[a-f0-9]{32,64}$/i.test(expected_revision)))
-      throw new Error('Invalid impact source revision');
-    if(summary && (affected_offset>0||related_tests_offset>0))
-      throw new Error('Impact summary cannot be paginated');
-    if((affected_offset>0||related_tests_offset>0)&&!expected_revision)
-      throw new Error('Impact page requires expected_revision');
+    // One opaque continuation token rather than three extra MCP parameters.
+    // It pins source revision and query scope; no paths or code are embedded.
+    const parsed=cursor===undefined?null:typeof cursor==='string'
+      ? /^([at]):([a-f0-9]{32,64}):([a-f0-9]{8}):([0-9]{1,3})$/.exec(cursor)
+      : null;
+    if(cursor!==undefined&&!parsed)throw new Error('Invalid impact cursor');
+    const pageOffset=parsed?Number(parsed[4]):0;
+    const pageSize=parsed?.[1]==='a'?25:10;
+    if(parsed&&(pageOffset<pageSize||pageOffset>350||pageOffset%pageSize!==0))
+      throw new Error('Invalid impact cursor');
+    if(summary&&parsed)throw new Error('Impact summary cannot use cursor');
     const compact=getCompactMode();
     const s=this.sync(workspace,{verifyIntegrity:true});
-    if(expected_revision&&s.revision!==expected_revision)
-      throw new Error('Impact page source revision mismatch');
-    const res=analyzeImpact(this.store,s.wsId,s.root,{changed,depth,affected_offset,related_tests_offset});
+    if(parsed&&parsed[2]!==s.revision)throw new Error('Impact page source revision mismatch');
+    const res=analyzeImpact(this.store,s.wsId,s.root,{
+      changed,depth,
+      affected_offset:parsed?.[1]==='a'?pageOffset:0,
+      related_tests_offset:parsed?.[1]==='t'?pageOffset:0,
+    });
+    const scope=sha256(JSON.stringify({
+      changed:res.changed,depth:Math.min(4,Math.max(1,Number(depth)||3))
+    })).slice(0,8);
+    if(parsed&&parsed[3]!==scope)throw new Error('Impact page scope mismatch');
+    // Continuations remain bounded at 25 affected or 10 tests per call.
+    const nextCursor=(type,offset)=>offset===null?null:`${type}:${s.revision}:${scope}:${offset}`;
+    res.pagination.affected.next_cursor=nextCursor('a',res.pagination.affected.next_offset);
+    res.pagination.related_tests.next_cursor=nextCursor('t',res.pagination.related_tests.next_offset);
     // Always-On uses this one-call triage response for risky or multi-module work.
     // Preserve risk, uncertainty, source freshness, and total counts. Never imply
     // this bounded preview is complete coverage.
