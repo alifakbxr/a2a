@@ -6,7 +6,7 @@ const paths={type:'array',items:{type:'string',maxLength:500},maxItems:200};
 const BASE_SPECS = [
   {
     name:'context',
-    description:'Scoped project symbols and file relations; static only.',
+    description:'Static project symbols and dependencies.',
     inputSchema:{
       type:'object',
       additionalProperties:false,
@@ -26,12 +26,10 @@ const BASE_SPECS = [
   },
   {
     name:'impact',
-    description:'Static impact and candidate tests; optional revision-pinned pagination for long lists (not runtime proof).',
+    description:'Static impact and candidate tests; not proof.',
     inputSchema:{type:'object',additionalProperties:false,required:['workspace'],properties:{
       workspace:ws,changed:paths,depth:{type:'integer',minimum:1,maximum:4},summary:{type:'boolean'},
-      affected_offset:{type:'integer',minimum:0,maximum:350,description:'Affected-list offset; fixed 25 items/page. For offset>0 provide expected_revision.'},
-      related_tests_offset:{type:'integer',minimum:0,maximum:350,description:'Related-tests offset; fixed 10 items/page. For offset>0 provide expected_revision.'},
-      expected_revision:{type:'string',maxLength:64,description:'Revision from a previous impact response; reject stale pages.'},
+      cursor:{type:'string',maxLength:96},
     }}
   },
   {
@@ -41,7 +39,7 @@ const BASE_SPECS = [
   },
   {
     name:'evidence',
-    description:'Local incidents, RCA, history and artifacts.',
+    description:'Local RCA and artifacts.',
     inputSchema:{
       type:'object',
       additionalProperties:false,
