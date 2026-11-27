@@ -190,7 +190,7 @@ export function evaluateFile(manifestFile){
   const root=path.dirname(full),manifest=JSON.parse(fs.readFileSync(full,'utf8'));
   return evaluateManifest(manifest,name=>safeCapture(root,name),{
     readStderr:name=>{
-      const sidecar=name.replace(/\\.jsonl$/,'')+'.stderr';
+      const sidecar=name.replace(/\.jsonl$/,'')+'.stderr';
       const full=path.resolve(root,sidecar);
       if(!fs.existsSync(full))return null;
       return safeCapture(root,sidecar,1024*1024);
