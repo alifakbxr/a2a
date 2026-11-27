@@ -1,6 +1,6 @@
 # PILAH — independent validation backlog
 
-**Updated 25 November 2026.** Source `main` uses PILAH `1.0.3`; canonical GitHub repository is `alifakbxr/pilah`. Real IDE and external acceptance are tracked in issues #127 and #128; npm registry publishing remains blocked in issue #133. Historical issue closure is not proof that any external test was executed. Earlier historical issue labels were **deferred/superseded**, not independently verified; active acceptance obligations are tracked separately in #127 and #128.
+**Updated 27 November 2026.** Source `main` uses PILAH `1.0.4`; canonical GitHub repository is `alifakbxr/pilah`. Historical scope includes closed issues #127 and #128, but closure does not independently satisfy live IDE or external acceptance. The last observed npm publication failed and current registry publication remains unverified; source version must not be interpreted as a published package. Historical issue closure is not proof that any external test was executed. Earlier historical issue labels were **deferred/superseded**, not independently verified; active acceptance obligations are tracked separately in #127 and #128.
 
 ## What automated tests establish
 
@@ -47,3 +47,7 @@ historical usage and trace reporting; `pilah_mcp_availability` remains
 `not_observable_from_call_log`. This is tooling readiness, not completion
 of installed host acceptance. Do not close issue #127 or infer model token
 savings from weekly quota screenshots.
+
+## 27 November headless A/B validity
+
+PR #144 merged a private metadata-only capture auditor. Pilot #02 had permission denials in both variants, #03 produced a completed native response but a blocked/empty PILAH response, and #04 stopped Native after a quota error with no PILAH pair. **None of these trials establishes token efficiency.** Issue #145 covers fail-closed accepted-task token reporting and separation of failed attempt costs. Until matched host environment and independent acceptance are demonstrated, `comparability.ready` must remain false and accepted-task medians remain unknown.
