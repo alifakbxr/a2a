@@ -218,19 +218,20 @@ proof of installed host availability, or token savings.
 ## Installed-host H02 follow-up: unprompted selection and page completeness
 
 An operator-provided Antigravity trace from 26 November 2026 establishes a
-**successful explicitly requested** \`a2a_pilah/pilah_impact\` call against an
+**successful explicitly requested** PILAH impact tool call against an
 authorized ordinary workspace: \`src/storage.mjs\` had 42 affected static
 candidates, of which 25 were returned, and 33 related tests, of which 10 were
 returned. \`result_truncated:true\` was an intentional output cap;
 \`analysis_complete:false\` is the correct permanent static-only disclaimer.
 The host model separately returned HTTP 503 capacity errors.
 
-New bounded continuation fields allow fetching remaining static candidates
-without increasing each MCP response: \`affected_offset\` (25 entries/page)
-and \`related_tests_offset\` (10 entries/page). Set the exact prior
-\`revision\` as \`expected_revision\` when either offset is nonzero. Stop when
-the corresponding \`pagination.*.next_offset\` is null; abort and restart from
-page zero if the source revision changed. Existing H02 source correctness
+One bounded continuation field allows fetching remaining static candidates
+without increasing each MCP response: use \`cursor\` set to the required
+\`pagination.affected.next_cursor\` (25 entries/page) or
+\`pagination.related_tests.next_cursor\` (10 entries/page).
+These tokens include the previous source revision and changed-path/depth
+fingerprint; reject stale or mismatched scope, and stop when next_cursor is
+null. Restart from page zero if source changes. Existing H02 source correctness
 requirements remain: compare a known dependency/consumer fixture and confirm
 an unrelated sibling is excluded.
 
