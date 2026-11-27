@@ -20,6 +20,7 @@ Official repository: [alifakbxr/pilah](https://github.com/alifakbxr/pilah).
 ## 2. Testing, Efficiency & Releases
 
 - [Host Validation](HOST_VALIDATION.md): Local preflight procedures for verifying plugin registration on `agy` CLI.
+- [Headless Capture Audit](HEADLESS_CAPTURE_AUDIT.md): Offline metadata-only analysis of CLI token captures, quota errors and permission-denied runs.
 - [CI Efficiency & Runner Budget](CI_EFFICIENCY.md): GitHub Actions runner configuration for fast and resource-efficient testing.
 - [Release Process & Registry Verification](RELEASE.md): Pre-release checklist and package publication verification.
 - [Release Authorization](RELEASE_AUTHORIZATION.md): Independent release verification contract and commit integrity.
