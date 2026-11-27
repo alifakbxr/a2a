@@ -2,7 +2,7 @@
   "$schema": "https://antigravity.google/schemas/v1/plugin.json",
   "name": "pilah",
   "displayName": "PILAH",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "PILAH (Project Intelligence, Logic, Analysis & Handoffs): native-first engineering context, minimal-change guidance and evidence-scoped verification for Google Antigravity.",
   "logo": "assets/logo.svg",
   "author": {
