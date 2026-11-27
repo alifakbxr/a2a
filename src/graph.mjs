@@ -75,7 +75,12 @@ export function rankFallbackTests(changed,available,limit=5){
   }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.file.localeCompare(b.file)).slice(0,limit).map(x=>x.file);
 }
 
-export function analyzeImpact(store,wsId,workspace,{changed=[],depth=3}={}){
+// Fixed small pages preserve compact MCP responses while permitting complete
+// static listings. Follow-up pages are pinned to source revision by Engine.
+export function analyzeImpact(store,wsId,workspace,{changed=[],depth=3,affected_offset=0,related_tests_offset=0}={}){
+  for(const [label,offset] of [['affected_offset',affected_offset],['related_tests_offset',related_tests_offset]]){
+    if(!Number.isSafeInteger(offset)||offset<0||offset>350)throw new Error('Invalid integer: '+label);
+  }
   const rawPaths=(changed.length?changed:gitChanges(workspace)).slice(0,200);
   const paths=[];
   for(const raw of rawPaths){
@@ -138,15 +143,27 @@ export function analyzeImpact(store,wsId,workspace,{changed=[],depth=3}={}){
   const entryReview=inferEntryPointRisks(uniquePaths);
   if(entryReview.requires_role_matrix||entryReview.requires_domain_invariant_tests)risks.push('unverified-runtime-authorization-or-domain-constraints');
   const risk=risks.includes('security-or-state-sensitive')?'high':risks.length>=2?'medium':uniquePaths.length?'low':'unknown';
-  const affected=candidates.filter(n=>n.kind!=='symbol'&&n.kind!=='feature');
-  const uniqueTests=uniq(relatedTests);
+  // Stable order matters when a model fetches page 2 on the same revision.
+  const byPath=(a,b)=>String(a.path||'').localeCompare(String(b.path||''))||a.id.localeCompare(b.id);
+  const affected=candidates.filter(n=>n.kind!=='symbol'&&n.kind!=='feature').sort(byPath);
+  const uniqueTests=uniq(relatedTests).sort();
+  const affectedPage=affected.slice(affected_offset,affected_offset+25);
+  const testsPage=uniqueTests.slice(related_tests_offset,related_tests_offset+10);
+  const page=(offset,items,total)=>({
+    offset,returned:items.length,total,
+    next_offset:offset+items.length<total?offset+items.length:null,
+  });
   return {
-    changed:uniquePaths,affected:affected.slice(0,25),affected_total:affected.length,
-    related_tests:uniqueTests.slice(0,10),related_tests_total:uniqueTests.length,
+    changed:uniquePaths,affected:affectedPage,affected_total:affected.length,
+    related_tests:testsPage,related_tests_total:uniqueTests.length,
+    pagination:{
+      affected:page(affected_offset,affectedPage,affected.length),
+      related_tests:page(related_tests_offset,testsPage,uniqueTests.length),
+    },
     fallback_test_candidates:relatedTests.length?[]:fallback,risk,signals:risks,
-    direct_dependencies:[...directDependencies].slice(0,20),direct_dependencies_total:directDependencies.size,
-    observed_consumers:[...observedConsumers].filter(p=>!uniquePaths.includes(p)).slice(0,25),
-    heuristic_test_candidates:[...heuristicTests].slice(0,10),
+    direct_dependencies:[...directDependencies].sort().slice(0,20),direct_dependencies_total:directDependencies.size,
+    observed_consumers:[...observedConsumers].filter(p=>!uniquePaths.includes(p)).sort().slice(0,25),
+    heuristic_test_candidates:[...heuristicTests].sort().slice(0,10),
     entry_point_review:entryReview,
     coverage:{graph_nodes_visited:visited.size,traversal_depth:cappedDepth,static_only:true,
       dependency_direction:'reverse-imports-for-affected;forward-imports-for-dependencies',
