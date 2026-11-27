@@ -1,6 +1,8 @@
 # PILAH — release process
 
-**Current source: 1.1.1 (stable source baseline). Registry publication: NO-GO** until the independently signed release requirements below are met. This is a source-version change, **not** a published package, an authorized tag or proof of live Antigravity adoption.
+**Current source: 1.1.1 (stable source baseline). Registry publication: NO-GO** until the independently signed release requirements below are met. The existing `v1.1.1` tag and GitHub Release are source-only references, **not** a published package, an authorization or proof of live Antigravity adoption.
+
+The latest npmjs publication recorded by this project is `@aliip/pilah@1.1.0`. Publication of 1.1.1 to npmjs or GitHub Packages is not verified. Check the live registry before relying on package versions or distribution tags.
 
 ## 1. Source quality checks
 
@@ -41,7 +43,9 @@ Run the [H01–H06 host scenarios](HOST_VALIDATION.md): tool registration/select
 
 ## 4. Publication and verification
 
-The publishing workflows are deliberately `workflow_dispatch` only and run `scripts/release-authorization.mjs` before network publication. The approved package identities are:
+Both checked-in publishing workflows are deliberately `workflow_dispatch` only. They run `scripts/release-authorization.mjs` before network publication and are intended to be dispatched from `main`. No current publish workflow is triggered by a Git `push` or GitHub `release` event. The validator contains additional tag-event checks, but those checks do not configure a workflow trigger.
+
+The approved package identities are:
 
 | Registry | Target package |
 | --- | --- |
@@ -58,6 +62,10 @@ npm view @aliip/pilah@1.1.1 version --registry=https://registry.npmjs.org/
 npm view @alifakbxr/pilah@1.1.1 version --registry=https://npm.pkg.github.com
 ```
 
-Do not create a Git tag or GitHub Release implying authorized publication until that process is complete. The historical 1.0.3 npmjs `EOTP` failure is recorded in the [changelog](../CHANGELOG.md); it does not prove or disprove publication of 1.1.1.
+### Source-only tags and GitHub Releases
+
+A source tag or GitHub Release may identify a repository snapshot without authorizing a package release. It must be labelled clearly as **source-only — not published to npmjs or GitHub Packages** and must link to this status page. The existing `v1.1.1` tag and GitHub Release are to be interpreted this way. They do not trigger the current publishing workflows and do not satisfy any signed authorization gate.
+
+Do not create a tag or GitHub Release that implies package publication or approval before the guarded publication process completes. The historical 1.0.3 npmjs `EOTP` failure is recorded in the [changelog](../CHANGELOG.md); it does not prove or disprove publication of 1.1.1.
 
 [Current build status](../BUILD_STATUS.md) · [Validation backlog](MAIN_VALIDATION_BACKLOG.md) · [Changelog](../CHANGELOG.md).

@@ -4,38 +4,55 @@
 
 PILAH helps an agent understand a codebase, scope change impact and plan verification without replacing the host's native tools. It does not edit your project, execute tests or switch models on its own.
 
-**Version 1.1.1 — stable source baseline.** The last verified main CI baseline passed **3/3** OS jobs (Ubuntu, macOS, Windows; Node 24). Version-specific CI is checked on the release candidate. Independent installed-host and F01–F18 acceptance remain **unverified**, so stable source is not a claim of registry publication, measured token savings or independently authorized release. See [status](BUILD_STATUS.md).
+**Version 1.1.1 — stable source baseline (source only).** CI on the exact source commit passed **3/3** Node 24 OS jobs ([run](https://github.com/alifakbxr/pilah/actions/runs/45945302975)). The latest npmjs publication recorded by this project is `@aliip/pilah@1.1.0`; publication of 1.1.1 is not verified. The `v1.1.1` Git tag and GitHub Release are source-only, not package publication or authorization. Independent installed-host and F01–F18 acceptance remain **unverified**. See [status](BUILD_STATUS.md).
 
 [Getting started](#quick-start) · [Documentation](docs/README.md) · [Changelog](CHANGELOG.md) · [License](LICENSE)
 
 ## Quick start
 
-**Requirements:** Node.js >=22.13.0, Antigravity or its CLI for plugin integration.
+### 1. Install the CLI
 
-Install the npm CLI:
+The latest npmjs publication recorded by this project is `@aliip/pilah@1.1.0`. Check the live registry version before installing:
 
 ```sh
-npm install -g @aliip/pilah
+npm view @aliip/pilah version --registry=https://registry.npmjs.org/
+npm install -g @aliip/pilah@1.1.0
 pilah doctor
 ```
 
-Or work directly from the source:
+Installing the npm package gives you the PILAH CLI. It is separate from registering the Antigravity plugin.
+
+### 2. Install the Antigravity plugin
+
+Install the registry package through the Antigravity CLI:
+
+```sh
+agy plugin install @aliip/pilah
+agy plugin list --json
+```
+
+Or install the current source from GitHub (v1.1.1):
+
+```sh
+agy plugin install github:alifakbxr/pilah
+```
+
+For local development, clone the repository and install the checkout:
 
 ```sh
 git clone https://github.com/alifakbxr/pilah.git
 cd pilah
+agy plugin install .
+agy plugin validate --strict .
+agy plugin list --json
 node scripts/pilah.mjs doctor
 npm run check
 node scripts/check-release.mjs
 ```
 
-For Antigravity, install a source checkout using `agy plugin install .` or follow the host's supported plugin UI/CLI flow. Verify on your actual machine using:
+Where supported by your Antigravity version, the plugin can also be added from **Settings → Customizations → Add Plugin** using `@aliip/pilah` or the repository URL. Menu labels and remote-source support can vary by host version.
 
-```sh
-agy plugin validate --strict .
-agy plugin list --json
-node scripts/pilah.mjs host-check
-```
+**Version distinction:** the npm registry install resolves the published package version (currently recorded as 1.1.0), while the GitHub source install uses the 1.1.1 source baseline. The 1.1.1 Git tag/Release does not mean that 1.1.1 has been published to npm.
 
 An installed plugin or successful CLI preflight is not proof the IDE has loaded and selected its MCP tools; use the [host validation runbook](docs/HOST_VALIDATION.md).
 

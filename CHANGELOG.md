@@ -6,9 +6,11 @@ All notable PILAH source changes are documented here. Versions in this file desc
 
 ### Documentation alignment and release status
 
-- Clarified registry publication status following manual npmjs release of `@aliip/pilah@1.1.0` with `latest` and `stable` distribution tags.
-- Maintained strict evaluation boundaries: independent external release gate (F01–F18) and full multi-OS compatibility verification remain independent prerequisites.
-- Synchronized documentation, package manifests, and release references across the repository.
+- Separated the 1.1.1 source baseline from the latest npmjs publication recorded by the project, `@aliip/pilah@1.1.0`; no 1.1.1 registry publication is claimed.
+- Documented the existing `v1.1.1` tag and GitHub Release as source-only references, not package publication or authorization.
+- Corrected release-trigger documentation to match the checked-in `workflow_dispatch`-only publishing workflows.
+- Restored explicit npm CLI, Antigravity CLI and source-checkout installation paths.
+- Aligned host-check text fixtures with the package manifest version.
 
 ## [1.1.0] - 2026-11-27
 
@@ -29,7 +31,7 @@ All notable PILAH source changes are documented here. Versions in this file desc
 
 ### Release and benchmark status
 
-The 1.1.0 source baseline was tagged `v1.1.0` and published to npmjs as `@aliip/pilah@1.1.0` (with dist-tags `latest` and `stable`). Formal independent external verification (F01–F18 acceptance, live installed Antigravity audit, and signed release authorization) remains uncertified and tracked in the validation backlog.
+The 1.1.0 source baseline was tagged `v1.1.0`; the project records `@aliip/pilah@1.1.0` as manually published to npmjs. The visible repository Actions history does not contain a matching guarded publish-workflow run, and no signed approval artifact is linked from the repository. Whether separate out-of-band approval existed cannot be determined from this repository. Do not infer npm dist-tags from this changelog; verify them against the live registry. This historical publication does not authorize 1.1.1 or any future release. Formal independent external verification (F01–F18 acceptance, live installed Antigravity audit, and signed release authorization) remains uncertified and tracked in the validation backlog.
 
 ## [1.0.4] - 2026-11-27
 
