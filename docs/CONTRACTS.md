@@ -11,7 +11,7 @@ Four public, JSON-RPC 2.0 **stdio** tools. Every tool requires an authorized abs
 | MCP tool | `action` / `operation` | Meaning |
 | --- | --- | --- |
 | `pilah_context` | `inspect`, `query`, `freshness`, `tokens`, `skeleton`, `orchestration` | Code inventory, static graph, tokens, declared native teamwork advisor |
-| `pilah_impact` | `changed`, `depth` (1–4), `summary` | Bounded static change-impact analysis; uncertainty remains |
+| `pilah_impact` | `changed`, `depth` (1–4), `summary`, `affected_offset`, `related_tests_offset`, `expected_revision` | Revision-pinned 25 affected / 10 related-tests per response; static uncertainty remains |
 | `pilah_verify` | `plan`, `assess`, `verify_handoff`, `assess_release`, `assess_semantic`, `assess_browser` | Test planning, scoped local machine results, independent signed release assessment |
 | `pilah_evidence` | `list`, `runs`, `incidents`, `record_incident`, `add_hypothesis`, `assess_hypothesis`, `hypotheses`, `delete_incident`, `side_questions`, `record_side_question`, `artifact_versions`, `artifact_diff`, `snapshot_artifact`, `save_checkpoint`, `model_recovery`, `tool_recovery` | Revision-bound evidence, incident hypotheses, explicit checkpoints, bounded recovery guidance |
 
@@ -176,3 +176,11 @@ See [security](SECURITY.md), [compatibility](COMPATIBILITY.md), and release gate
 ## File safety and workspace origin (v2.0.1)
 
 Evidence list/freshness rehashes are bounded to 4 MiB per report. The release manifest is parsed and hashed from one bounded pinned read; independent acceptance registry and trusted keys reject group/world-writable files, symlinks and malformed JSON with sanitized diagnostics. Local side-question records are restricted to their owning workspace. Recursive workspace-file expansion has a visited set and depth bound; IDE SQLite trust-state reads have size/type limits. Relative snapshots are anchored to the approved project root; Antigravity brain artifacts require matching active conversation scope. See [security](SECURITY.md) and [compatibility](COMPATIBILITY.md). These are local safety gates, not proof of external software acceptance.
+
+### Revision-bound impact pagination
+
+By default, `pilah_impact` returns the first 25 affected items and the first 10 related test candidates. The counts `affected_total` and `related_tests_total` refer to all discovered static candidates (subject to graph traversal limits). The `pagination.affected.next_offset` and `pagination.related_tests.next_offset` fields tell the caller whether more entries remain; null means no next page.
+
+Use a follow-up `pilah_impact` with the **same workspace, changed paths, and depth**, `summary:false`, and the desired `affected_offset` or `related_tests_offset`. Any nonzero offset requires `expected_revision` from the previous page; the call refuses to return stale/mixed-source pages when files change. Bounds: 0–350 offsets; fixed 25/10 page sizes; no unbounded all-at-once retrieval. A `summary:true` request remains a separate one-shot triage response and cannot be paginated.
+
+Paging retrieves more **static results**, not more runtime proof. `coverage.analysis_complete:false` and relevant uncertainty must remain visible; the returned graph may still have index or traversal limitations. Avoid extra MCP calls when the default page is already sufficient.
