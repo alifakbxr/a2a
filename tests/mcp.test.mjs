@@ -137,3 +137,90 @@ test('MCP stdio supports 2025-06-18 and 2025-11-25 core capabilities without cla
   }finally{await close()}
  }
 });
+
+
+test('stdio MCP impact cursor retrieves bounded pages, preserves source revision and denies stale reuse',async()=>{
+ const {temp,ask,close}=spawnServer();
+ try{
+  const workspace=path.join(temp,'impact-workspace');
+  const put=(name,body)=>{
+   const file=path.join(workspace,name);
+   fs.mkdirSync(path.dirname(file),{recursive:true});
+   fs.writeFileSync(file,body);
+  };
+  put('package.json',JSON.stringify({name:'impact-stdio-fixture',type:'module'}));
+  put('src/provider.js','export const shared=1;\n');
+  put('src/else.js','export const elseValue=1;\n');
+  for(let i=0;i<36;i++)put('src/consumer'+String(i).padStart(2,'0')+'.js',
+   "import {shared} from './provider.js'; export const checked=shared;\n");
+  for(let i=0;i<15;i++)put('tests/provider'+String(i).padStart(2,'0')+'.test.js',
+   "import {shared} from '../src/provider.js'; export const ok=shared===1;\n");
+  put('src/unrelated.js',"import {elseValue} from './else.js'; export const ignored=elseValue;\n");
+  const allowlist=path.join(temp,'.config','a2a','allowed-workspaces.json');
+  fs.mkdirSync(path.dirname(allowlist),{recursive:true});
+  fs.writeFileSync(allowlist,JSON.stringify({version:1,allowed:[fs.realpathSync(workspace)],revoked:[]}));
+
+  const listed=await ask({jsonrpc:'2.0',id:100,method:'tools/list'});
+  const impactTool=listed.result.tools.find(t=>t.name==='pilah_impact');
+  assert.ok(impactTool);
+  assert.equal(impactTool.inputSchema.properties.cursor.type,'string');
+
+  let id=101;
+  const call=async args=>{
+   const result=await ask({jsonrpc:'2.0',id:id++,method:'tools/call',
+    params:{name:'pilah_impact',arguments:args}});
+   assert.ok(result.result,'MCP call must have result envelope');
+   return {envelope:result.result,data:JSON.parse(result.result.content[0].text)};
+  };
+  const inputs={workspace,changed:['src/provider.js'],depth:3,summary:false};
+  const first=await call(inputs);
+  assert.equal(first.envelope.isError,false);
+  assert.equal(first.data.coverage.analysis_complete,false);
+  assert.equal(first.data.coverage.result_truncated,true);
+  assert.equal(first.data.affected.length,25);
+  assert.ok(first.data.affected_total>=51);
+  assert.ok(first.data.related_tests_total>=15);
+  assert.ok(first.data.pagination.affected.next_cursor);
+  assert.ok(first.data.pagination.related_tests.next_cursor);
+  assert.equal(first.data.teamwork_advisory.affected_count,first.data.affected_total);
+
+  const items=[...first.data.affected],related=[...first.data.related_tests];
+  let cursor=first.data.pagination.affected.next_cursor;
+  let pages=0;
+  while(cursor!==null){
+   assert.ok(++pages<=15,'bounded continuation loop');
+   const result=await call({...inputs,cursor});
+   assert.equal(result.envelope.isError,false);
+   assert.equal(result.data.revision,first.data.revision);
+   assert.equal(result.data.affected_total,first.data.affected_total);
+   items.push(...result.data.affected);
+   cursor=result.data.pagination.affected.next_cursor;
+  }
+  assert.equal(items.length,first.data.affected_total);
+  assert.equal(new Set(items.map(i=>i.path)).size,items.length);
+  assert.ok(!items.some(i=>i.path==='src/unrelated.js'||i.path==='src/else.js'));
+  cursor=first.data.pagination.related_tests.next_cursor;pages=0;
+  while(cursor!==null){
+   assert.ok(++pages<=20,'bounded related-tests continuation');
+   const result=await call({...inputs,cursor});
+   assert.equal(result.envelope.isError,false);
+   related.push(...result.data.related_tests);
+   cursor=result.data.pagination.related_tests.next_cursor;
+  }
+  assert.equal(related.length,first.data.related_tests_total);
+  assert.equal(new Set(related).size,related.length);
+  assert.ok(related.some(p=>p==='tests/provider14.test.js'));
+
+  const continuation=first.data.pagination.affected.next_cursor;
+  const invalid=await call({...inputs,cursor:continuation,changed:['src/else.js']});
+  assert.equal(invalid.envelope.isError,true);
+  assert.equal(invalid.data.code,'invalid_tool_arguments');
+  assert.ok(!JSON.stringify(invalid).includes(temp),'Invalid cursor must not leak workspace path');
+
+  put('src/provider.js','export const shared=2;\n');
+  const stale=await call({...inputs,cursor:continuation});
+  assert.equal(stale.envelope.isError,true);
+  assert.equal(stale.data.code,'source_freshness_unconfirmed');
+  assert.ok(!JSON.stringify(stale).includes(temp),'Stale cursor must not leak workspace path');
+ }finally{await close()}
+});
