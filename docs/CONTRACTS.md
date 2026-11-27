@@ -163,7 +163,7 @@ JUnit parsing refuses commented-out testcases, unsupported DTDs, incomplete stru
 The CLI `tokens` absolute workspace argument and `artifacts snapshot|list|diff|show` now use explicit `fs`/`path` imports and a bounded symlink-safe `active-session.json` reader. Cross-platform artifact root falls back to `getHomeDir()`. These local test/CLI fixes have no effect on the independent release gate #15.
 
 
-## v2.0.1 reliability and privacy contract updates (19 November 2026)
+## Reliability and privacy contract (historical implementation notes)
 
 - Four public MCP tools remain. `pilah_evidence` includes opt-in Adaptive 5 Whys RCA operations; local hypotheses remain non-causal suggestions unless supported by exact source-bound machine assertions.
 - `pilah://status` returns redacted workspace **counts** and booleans only, not host paths or per-project names. `resources/read` errors sanitize authorization failures.
@@ -171,9 +171,9 @@ The CLI `tokens` absolute workspace argument and `artifacts snapshot|list|diff|s
 - `tools/list` enforces a 6,500-byte serialized contract budget with bounded IDs and criteria. Removed unused `pilah_context.conversation_id`, `pilah_context.transcript_path`, and `pilah_evidence.version_number`; deprecated `allow_stale` never permits PASS.
 - Syntax validation recursively covers all source and script `.mjs` files on all CI/runtime-publish gates. `pilah doctor` advises about shell-managed Node version manager paths without executing a shell or changing user configuration.
 
-See [security](SECURITY.md), [compatibility](COMPATIBILITY.md), and release gate #15. PILAH v2.0.1 is **not** externally certified or authorized for publishing.
+See [security](SECURITY.md), [compatibility](COMPATIBILITY.md), and release gate #15. PILAH source v1.1.0 is **not** independently certified or authorized for package publication; these safety controls remain part of the maintained contract.
 
-## File safety and workspace origin (v2.0.1)
+## File safety and workspace origin
 
 Evidence list/freshness rehashes are bounded to 4 MiB per report. The release manifest is parsed and hashed from one bounded pinned read; independent acceptance registry and trusted keys reject group/world-writable files, symlinks and malformed JSON with sanitized diagnostics. Local side-question records are restricted to their owning workspace. Recursive workspace-file expansion has a visited set and depth bound; IDE SQLite trust-state reads have size/type limits. Relative snapshots are anchored to the approved project root; Antigravity brain artifacts require matching active conversation scope. See [security](SECURITY.md) and [compatibility](COMPATIBILITY.md). These are local safety gates, not proof of external software acceptance.
 
