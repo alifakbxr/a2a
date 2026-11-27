@@ -131,10 +131,10 @@ PILAH provides 4 local stdio MCP tools:
 | --- | --- | --- |
 | `pilah_context` | Query symbols, file relationships, and directional dependencies | Inspects relevant files only (never dumps entire repository) |
 | `pilah_impact` | Static change-impact analysis and candidate test suggestions | Computes static references, not dynamic execution |
-
-When `pilah_impact` returns `result_truncated: true`, its `pagination` fields enable revision-pinned follow-up pages (25 affected files and 10 related tests per call). See [tool contracts](docs/CONTRACTS.md). This does not establish complete runtime coverage or measured token savings.
 | `pilah_verify` | Structured Given/When/Then verification test planning | Produces test plans, does not execute tests automatically |
 | `pilah_evidence` | Evidence recording, incident checkpoints, and recovery notes | Does not falsify reports or elevate permissions |
+
+When `pilah_impact` returns `result_truncated: true`, its `pagination` fields enable revision-pinned follow-up pages (25 affected files and 10 related tests per call). See [tool contracts](docs/CONTRACTS.md). This does not establish complete runtime coverage or measured token savings.
 
 For full input/output specifications, see [MCP Contracts](docs/CONTRACTS.md).
 
