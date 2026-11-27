@@ -1,21 +1,26 @@
-# PILAH — build and validation status
+# PILAH — source and release status
 
-**27 November 2026 — source release hardening candidate.** Canonical repository: [alifakbxr/pilah](https://github.com/alifakbxr/pilah). Source package and Antigravity manifest: **1.0.4**. Source version is not proof of registry publication. The previous GitHub Packages identifier is frozen and no longer republished automatically. npmjs uses `@aliip/pilah`; GitHub Packages uses `@alifakbxr/pilah`. They are different registries and scopes. MCP stdio protocol handshake updated to support Antigravity's `2024-11-05`, `2024-10-07`, and `2025-03-26`. Documentation streamlined down to 13 essential documents, translated to full English, with quick install options via npm and CLI added.
+**27 November 2026 — v1.1.0 stable source baseline.** Canonical source: [alifakbxr/pilah](https://github.com/alifakbxr/pilah). Version 1.1.0 refers to the npm source manifest, lockfile and Antigravity plugin manifest. It does **not** assert a published npm/GitHub Packages version.
 
-| Check | Verified evidence | Still unknown |
+## Verified source scope
+
+| Evidence | Status | Boundary |
 | --- | --- | --- |
-| Node source CI | **3/3** OS jobs passed on [main at cffffb8](https://github.com/alifakbxr/pilah/actions/runs/45374933008) | New security/host hardening commit still requires its own CI |
-| npmjs 1.0.3 | [npmjs workflow](https://github.com/alifakbxr/pilah/actions/runs/45375423126) failed with registry `EOTP` (one-time password required) | Confirm npm Trusted Publisher and scope authorization, then signed release acceptance |
-| GitHub Packages 1.0.3 | [Workflow](https://github.com/alifakbxr/pilah/actions/runs/45374986597) reported success while release evidence was conditionally skipped | Independently verify the published version; do not treat it as an authorized release |
-| New workflow policy | Release authorization is mandatory and absent evidence must fail; registry lookup distinguishes 404 from operational errors; no swallowed publish failure | Actual CI and authorized publication must be tested independently |
-| Antigravity H01–H06 | Source preflight/runbook exists | Actual installed-host execution and tool-choice traces |
-| Independent F01–F18 | Frozen acceptance plan exists | Real isolated browser/PHP/DB test results with independent signed proof |
-| Native vs PILAH | A/B methodology exists | Matched trials and provider-reported tokens/cost per accepted task |
+| Main CI before the version bump | **3/3 passed** on Ubuntu/macOS/Windows, Node 24 ([run](https://github.com/alifakbxr/pilah/actions/runs/45933929631)) | Verify the 1.1.0 candidate at its own commit |
+| PR #144 and PR #146 | Merged: headless audit, accepted-task denominator and regression tests | Local parser correctness, not live agent correctness |
+| 1.1.0 source manifests and documentation | Release candidate in this update | Exact candidate CI and contract check must pass |
+| Historical source branding | PILAH rebrand [PR #107](https://github.com/alifakbxr/pilah/pull/107), CI optimization [PR #108](https://github.com/alifakbxr/pilah/pull/108) | Historical traceability only |
 
-**Release remains NO-GO** until independently signed acceptance and actual runtime evidence are collected. Success of repository tests never implies host adoption, model savings, or payment/security acceptance.
+PILAH's runtime is based on Node >=22.13.0 and four local MCP tools. The normal CI configuration uses **3/3** Node 24 OS jobs for main pushes; the full **9-job** Node 22/24/26.13.1 × three-OS matrix must be manually checked before an authorized package release.
 
-Rebrand source is traceable to **PR #107**, and reduced CI to **PR #108**. See [release process](docs/RELEASE.md), [authorization](docs/RELEASE_AUTHORIZATION.md), and [validation backlog](docs/MAIN_VALIDATION_BACKLOG.md).
+## External acceptance and publication
 
-## 27 November benchmark audit
+**Source stability:** the source-level APIs, tests, privacy boundaries and documentation are maintained as the 1.1.0 baseline.
 
-The headless audit utility from PR #144 is merged, but the A/B evaluator's accepted-task denominator requires the independent regression checks in issue #145. The 27 November pilot includes permission-denied or quota-interrupted captures and **zero independently comparable Native/PILAH pairs**. Run token totals for blocked attempts must not be reported as savings. Source tests and GitHub CI never substitute for independent Antigravity, model/quota parity, or F01–F18 acceptance.
+**Package-release gate: NO-GO.** Installed Antigravity H01–H06 adoption, externally executed F01–F18, independent privacy review, controlled Native/PILAH A/B acceptance, and a signed approval for the exact release commit are **unverified**. No source-only CI can satisfy these gates.
+
+The 27 November headless pilot contained **zero independently comparable Native/PILAH pairs**. Quota/permission-blocked attempts are not efficiency wins. Issue #145 was closed after PR #146 introduced fail-closed task acceptance metrics; source closure is not independent validation.
+
+The old npmjs 1.0.3 attempt failed with `EOTP`; historical GitHub Packages job status did not establish authorized publication. Check actual registry artifacts independently before claiming any version is installed.
+
+See [changelog](CHANGELOG.md), [release process](docs/RELEASE.md), [release authorization](docs/RELEASE_AUTHORIZATION.md) and [validation backlog](docs/MAIN_VALIDATION_BACKLOG.md).
