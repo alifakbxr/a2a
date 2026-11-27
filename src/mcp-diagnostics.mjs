@@ -4,7 +4,7 @@ import {ALL_TOOLS} from './tools.mjs';
 export function classifyMcpFailure(toolName,error){
  const msg=String(error?.message||error||'').slice(0,2000);
  const spec=ALL_TOOLS.find(x=>x.name===toolName);
- if(/Unknown argument:|Missing (?!resource uri)|Invalid (type|value|integer|array|object|item):|Arguments must be|Value too long:|Invalid impact source revision|Impact page requires expected_revision|Impact summary cannot be paginated/i.test(msg)){
+ if(/Unknown argument:|Missing (?!resource uri)|Invalid (type|value|integer|array|object|item):|Arguments must be|Value too long:|Invalid impact cursor|Impact page scope mismatch|Impact summary cannot use cursor/i.test(msg)){
   return {status:'error',code:'invalid_tool_arguments',message:'The tool request does not match the allowed input contract.',
    accepted_parameters:spec?Object.keys(spec.inputSchema.properties):[],
    required_parameters:spec?.inputSchema.required??[],
