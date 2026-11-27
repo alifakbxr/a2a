@@ -8,7 +8,7 @@ The actual release contract lives in [`scripts/release-authorization.mjs`](../sc
 
 ## Mandatory gate
 
-1. The publishing checkout must match the **current approved `main` commit** and the actual repository identity expected by the validator. Tag-triggered publication requires an exact `v<package.json version>` tag; manual dispatch must use the permitted branch.
+1. Both checked-in publishing workflows are currently `workflow_dispatch` only and must be dispatched from `main`; no current workflow subscribes to `push` or GitHub `release` events. The publishing checkout must match the **current approved `main` commit** and the repository identity expected by the validator. The validator also contains a guard for tag-based events (`v<package.json version>`), but that code path is not a configured trigger in either checked-in workflow. A tag never grants authorization.
 2. An independently configured repository variable must pin the approved 40-character commit SHA. There is no automatic approval or emergency bypass.
 3. Externally controlled secrets must provide an evidence manifest, a frozen acceptance registry, and pinned evaluator/reviewer **Ed25519 public keys**. Their exact key names are in the publishing workflow.
 4. All required frozen scenarios **F01–F18** must be independently executed, source-bound and supported by valid signed machine-evidence receipts. Missing, partial, stale, self-asserted or inconsistent reports must fail closed.
