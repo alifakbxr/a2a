@@ -28,10 +28,22 @@ test('directory audit reports missing pair and never pretends savings',()=>{
  try{
  fs.writeFileSync(path.join(folder,'native-04.jsonl'),jsonl(result({status:'ERROR',response:'',error:'Individual quota reached.'})));
  fs.writeFileSync(path.join(folder,'native-03.jsonl'),jsonl(result()));
+ fs.writeFileSync(path.join(folder,'native-03.stderr'),'');
  fs.writeFileSync(path.join(folder,'pilah-03.jsonl'),jsonl(result({response:'',denied_actions:[1]})));
+ fs.writeFileSync(path.join(folder,'pilah-03.stderr'),'');
  const report=auditDirectory(folder);
  assert.equal(report.pairs.length,2);assert.equal(report.mechanically_complete,1);
  assert.equal(report.pairs.find(p=>p.repeat==='04').pilah,'MISSING');
  assert.ok(report.pairs.every(p=>p.descriptive_total_token_delta===null));
  }finally{fs.rmSync(folder,{recursive:true,force:true})}
+});
+
+test('missing stderr capture cannot be assumed free of hidden denial',()=>{
+ const folder=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-capture-test-'));
+ try {
+ fs.writeFileSync(path.join(folder,'native-02.jsonl'),jsonl(result()));
+ const r=auditDirectory(folder).runs[0];
+ assert.ok(r.reasons.includes('missing_stderr_capture'));
+ assert.equal(r.audit_status,'INVALID');
+ } finally { fs.rmSync(folder,{recursive:true,force:true}); }
 });
