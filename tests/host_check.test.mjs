@@ -11,7 +11,7 @@ const stub=({version=0,validation=0,list=0,plugins=[{name:'pilah',enabled:true,m
    if(cmd==='plugin list --json')return jsonSupported
      ?{status:list,stdout:JSON.stringify(plugins),stderr:''}
      :{status:1,stdout:'',stderr:'Unknown option'};
-   if(cmd==='plugin list')return {status:list,stdout:plain??'- pilah (enabled, 1.0.3)\n',stderr:''};
+   if(cmd==='plugin list')return {status:list,stdout:plain??'- pilah (enabled, 1.1.0)\n',stderr:''};
    return {status:1,stdout:'',stderr:'unsupported'};
  };
  return {calls,exec};
@@ -48,11 +48,11 @@ test('missing CLI, failed strict validation and unreliable listing cannot PASS',
 test('legacy name compatibility uses explicit enablement, not arbitrary text',()=>{
  assert.deepEqual(inspectPluginList('- a2a (enabled, 2.1.0)',{format:'text'}),
    {installed:'listed',plugin_name:'a2a',inventory:'text'});
- assert.equal(inspectPluginList('- pilah (disabled, 1.0.3)',{format:'text'}).installed,'disabled');
+ assert.equal(inspectPluginList('- pilah (disabled, 1.1.0)',{format:'text'}).installed,'disabled');
  assert.equal(inspectPluginList('Other plugin mentions pilah is enabled',{format:'text'}).installed,'not_listed');
  assert.equal(inspectPluginList(JSON.stringify([{name:'a2a',enabled:true,mcpServers:['a2a']}])).installed,'listed');
  assert.equal(inspectPluginList('garbled').installed,'unknown');
- const x=stub({jsonSupported:false,plain:'Installed plugins:\n- pilah (enabled, 1.0.3)\n'});
+ const x=stub({jsonSupported:false,plain:'Installed plugins:\n- pilah (enabled, 1.1.0)\n'});
  assert.equal(checkHost({exec:x.exec}).status,'local-preflight-passed');
  assert.ok(x.calls.includes('plugin list'));
 });
