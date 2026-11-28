@@ -46,3 +46,16 @@ test('PreInvocation is silent when learning is on-demand or workspace is not aut
   assert.deepEqual(recommendSkillGuidance({...payload(f,task),workspacePaths:[path.join(f.root,'other')]},f.baseDir),{});
  }finally{f.restore()}
 });
+
+test('infers CLI surface from the documented transcript path on Windows and POSIX',()=>{
+ const f=fixture();try{
+  const cliDir=path.join(f.home,'.gemini','antigravity-cli','skills','cli-helper');
+  fs.mkdirSync(cliDir,{recursive:true});
+  fs.writeFileSync(path.join(cliDir,'SKILL.md'),'---\nname: cli-helper\ndescription: CLI terminal command workflow helper\n---\n');
+  const task='Create a CLI terminal command workflow helper for shell automation';
+  const transcript=path.join(f.home,'.gemini','antigravity-cli','brain','conv-guidance-1','logs','transcript.jsonl');
+  const result=recommendSkillGuidance({...payload(f,task),transcriptPath:transcript},f.baseDir);
+  assert.equal(result.injectSteps.length,1);
+  assert.match(result.injectSteps[0].systemMessage.systemMessage,/cli-helper/);
+ }finally{f.restore()}
+});
