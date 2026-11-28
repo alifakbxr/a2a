@@ -15,3 +15,9 @@ test('skips routine tasks',()=>{assert.equal(rankSkills({task:'fix typo',skills}
 test('usage is a bounded tie-breaker and cannot create a match',()=>{const none=rankSkills({task:'Write a product roadmap for next quarter',skills,usage:{'vue-ui':1000}});assert.notEqual(none.status,'recommended');const r=rankSkills({task:'Build Vue components and frontend interactions',skills,usage:{'vue-ui':1000}});assert.equal(r.recommendations[0].name,'vue-ui');assert.ok(r.recommendations[0].score<=10)});
 test('rejects malformed limits and oversized inputs',()=>{assert.throws(()=>rankSkills({task:'x',skills,maxResults:3}),/maxResults/);assert.throws(()=>rankSkills({task:'x'.repeat(4001),skills}),/task/);assert.throws(()=>rankSkills({task:'valid enough task terms',skills:Array(201).fill(skills[0])}),/skills/)});
 test('abstains on unrelated or ambiguous tasks',()=>{assert.notEqual(rankSkills({task:'Tell me a funny story about a sleepy cat',skills}).status,'recommended');assert.ok(['ambiguous','skipped','no_match'].includes(rankSkills({task:'Build the system and improve the application for users',skills}).status))});
+
+test('does not automatically recommend Skills marked disable-model-invocation',()=>{
+ const manual={name:'manual-review',description:'Review deployment changes and release risks',disableModelInvocation:true};
+ const result=rankSkills({task:'Review deployment changes and release risks before production',skills:[manual]});
+ assert.notEqual(result.status,'recommended');
+});
