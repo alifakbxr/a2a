@@ -3,76 +3,25 @@ import path from 'node:path';
 import os from 'node:os';
 import {readSafeBytesFile} from './security.mjs';
 import {loadSkillMetadataCache,saveSkillMetadataCache} from './skill-metadata-cache.mjs';
-const HOSTS=new Set(['app','cli','ide']),MAX_SKILLS=200,MAX_SKILL_BYTES=16*1024,MAX_DEPTH=2,MAX_ANCESTORS=8,MAX_CACHE_ENTRIES=400;
-function safeDir(p){try{const s=fs.lstatSync(p);return s.isDirectory()&&!s.isSymbolicLink()}catch{return false}}
-function safeChain(dir,boundary){const target=path.resolve(dir),base=path.resolve(boundary),rel=path.relative(base,target);if(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel))return false;let cur=base;if(!safeDir(cur))return false;for(const seg of rel.split(path.sep).filter(Boolean)){
-  cur=path.join(cur,seg);
-  if(!safeDir(cur)){
-   if(process.platform==='darwin'&&base===path.parse(base).root&&['var','tmp','etc'].includes(seg)){
-    try{const real=fs.realpathSync(cur);if(real===path.join('/private',seg)){cur=real;continue}}catch{}
-   }
-   return false;
-  }
- }return true}
-function scalar(raw){let v=raw.trim();if(!v)return '';if(v.startsWith('"')){try{const x=JSON.parse(v);return typeof x==='string'?x:null}catch{return null}}if(v.startsWith("'"))return v.endsWith("'")&&v.length>=2?v.slice(1,-1).replace(/''/g,"'"):null;if(/[|>&*!{}\[\],]/.test(v))return null;return v.replace(/\s+#.*$/,'').trim()}
-export function parseSkillFrontmatter(text){
- if(typeof text!=='string')return null;
- const s=text.replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n');
- if(!s.startsWith('---\n'))return null;const end=s.indexOf('\n---',4);if(end<0)return null;
- const fields={};
- for(const line of s.slice(4,end).split('\n')){
-  if(!line.trim()||line.trimStart().startsWith('#'))continue;
-  const m=line.match(/^([a-z][a-z0-9_-]*):\s*(.*?)\s*$/i);if(!m)continue;
-  const key=m[1].toLowerCase();if(!['name','description'].includes(key))continue;
-  if(Object.hasOwn(fields,key))return null;const value=scalar(m[2]);if(value===null)return null;fields[key]=value;
- }
- if(!fields.name||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(fields.name)||fields.name.length>64||!fields.description||fields.description.length>1024||/[\u0000-\u001f\u007f]/.test(fields.description))return null;
- return{name:fields.name,description:fields.description};
-}
-function readSkill(dir,source,cache){
- if(!safeDir(dir))return null;const file=path.join(dir,'SKILL.md');let before;try{before=fs.lstatSync(file)}catch{return null}
- if(before.isSymbolicLink()||!before.isFile()||before.size>MAX_SKILL_BYTES)return null;
- const signature=[before.dev,before.ino,before.size,before.mtimeMs,before.ctimeMs].join(':'),cached=cache.entries.get(file);let metadata;
- if(cached?.signature===signature){cache.hits++;metadata=cached.metadata}
- else{cache.misses++;const read=readSafeBytesFile(file,{maxBytes:MAX_SKILL_BYTES,checkParentDir:false});if(!read.ok)return null;metadata=parseSkillFrontmatter(read.bytes.toString('utf8'));if(!metadata){cache.entries.delete(file);cache.dirty=true;return null}
-  if(cache.entries.size>=MAX_CACHE_ENTRIES&&!cache.entries.has(file))cache.entries.delete(cache.entries.keys().next().value);
-  cache.entries.delete(file);cache.entries.set(file,{signature,metadata});cache.dirty=true;
- }
- return{...metadata,source};
-}
-function addRoot(a,dir,source){if(!a.some(x=>x.path===dir))a.push({path:dir,source})}
-function workspaceRoots(workspace,home){if(typeof workspace!=='string'||!workspace.trim())return[];let cur=path.resolve(workspace);const roots=[];for(let i=0;i<MAX_ANCESTORS;i++){if(!safeDir(cur))break;for(const folder of ['.agents','.agent','_agents','_agent'])addRoot(roots,path.join(cur,folder,'skills'),'workspace');const parent=path.dirname(cur);if(parent===cur||parent===path.resolve(home))break;cur=parent}return roots}
-function getRoots({host,home,workspace}){const roots=workspaceRoots(workspace,home);addRoot(roots,path.join(home,'.gemini','config','skills'),'global');if(host==='ide')addRoot(roots,path.join(home,'.gemini','antigravity','skills'),'legacy-ide');if(host==='cli'){addRoot(roots,path.join(home,'.gemini','antigravity-cli','skills'),'cli-only');addRoot(roots,path.join(home,'.gemini','skills'),'cli-only');const plugins=path.join(home,'.gemini','config','plugins');if(safeDir(plugins))try{for(const e of fs.readdirSync(plugins,{withFileTypes:true}).slice(0,100))if(e.isDirectory()&&!e.isSymbolicLink())addRoot(roots,path.join(plugins,e.name,'skills'),'plugin-cli')}catch{}}return roots}
-function walk(root,source,boundary,cache){if(!safeChain(root,boundary))return[];const found=[];const visit=(dir,depth)=>{if(found.length>=MAX_SKILLS||depth>MAX_DEPTH||!safeDir(dir))return;const skill=readSkill(dir,source,cache);if(skill){found.push(skill);return}let entries;try{entries=fs.readdirSync(dir,{withFileTypes:true})}catch{return}for(const e of entries){if(found.length>=MAX_SKILLS)break;if(e.isDirectory()&&!e.isSymbolicLink()&&!e.name.startsWith('.'))visit(path.join(dir,e.name),depth+1)}};visit(root,0);return found}
-// Resolve a completed host file-read event to a Skill only when the file is
-// inside a documented Skill root and its metadata passes the same safe parser.
-export function identifySkillFile({filePath,home=process.env.HOME||process.env.USERPROFILE||os.homedir(),workspace=null}={}){
- if(typeof filePath!=='string'||filePath.length>4096||!path.isAbsolute(filePath))return null;
- const target=path.resolve(filePath);
- if(path.basename(target)!=='SKILL.md')return null;
- const homeRoot=path.resolve(home),roots=[];
- for(const host of HOSTS)for(const root of getRoots({host,home:homeRoot,workspace}))addRoot(roots,root.path,root.source);
- const cache={entries:new Map(),hits:0,misses:0};
- for(const root of roots){
-  const boundary=path.parse(path.resolve(root.path)).root;
-  if(!safeChain(root.path,boundary))continue;
-  const relative=path.relative(root.path,target);
-  if(relative==='..'||relative.startsWith('..'+path.sep)||path.isAbsolute(relative))continue;
-  const parts=relative.split(path.sep);
-  if(parts.length<2||parts.length>MAX_DEPTH+1||parts.at(-1)!=='SKILL.md')continue;
-  const parent=path.dirname(target);
-  if(!safeChain(parent,boundary))continue;
-  const skill=readSkill(parent,root.source,cache);
-  if(skill)return{name:skill.name,source:skill.source};
- }
- return null;
-}
 
-export function discoverSkills({host='ide',home=process.env.HOME||process.env.USERPROFILE||os.homedir(),workspace=null}={}){
- if(!HOSTS.has(host))throw new Error('host must be app, cli, or ide');
- const homeRoot=path.resolve(home),roots=getRoots({host,home:homeRoot,workspace}),cache=loadSkillMetadataCache(homeRoot);cache.hits=0;cache.misses=0;
- const skills=[],seen=new Set();
- for(const root of roots){const boundary=path.parse(path.resolve(root.path)).root;for(const skill of walk(root.path,root.source,boundary,cache)){const key=skill.name.toLowerCase();if(seen.has(key))continue;seen.add(key);skills.push(skill);if(skills.length>=MAX_SKILLS)break}if(skills.length>=MAX_SKILLS)break}
- const persisted=saveSkillMetadataCache(cache,homeRoot);
- return{host,skills,scanned_roots:roots.filter(x=>safeDir(x.path)).map(x=>({source:x.source,available:true})),cache:{hits:cache.hits,misses:cache.misses,entries:cache.entries.size,max_entries:MAX_CACHE_ENTRIES,persistent:cache.valid===true,persisted},limits:{max_skills:MAX_SKILLS,max_skill_bytes:MAX_SKILL_BYTES}};
-}
+const HOSTS=new Set(['app','cli','ide']),ALIASES=['.agents','.agent','_agents','_agent'];
+const MAX_SKILLS=200,MAX_SKILL_BYTES=16*1024,MAX_ANCESTORS=32,MAX_CACHE_ENTRIES=400;
+const MAX_MANIFEST_BYTES=64*1024,MAX_MANIFEST_DEPTH=4,MAX_MANIFESTS=64;
+function safeDir(p){try{const s=fs.lstatSync(p);return s.isDirectory()&&!s.isSymbolicLink()}catch{return false}}
+function safeFile(p,max=MAX_MANIFEST_BYTES){try{const s=fs.lstatSync(p);return s.isFile()&&!s.isSymbolicLink()&&s.size<=max}catch{return false}}
+function safeChain(dir,boundary){const target=path.resolve(dir),base=path.resolve(boundary),rel=path.relative(base,target);if(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel))return false;let cur=base;if(!safeDir(cur))return false;for(const seg of rel.split(path.sep).filter(Boolean)){cur=path.join(cur,seg);if(!safeDir(cur))return false}return true}
+function scalar(raw){let v=raw.trim();if(!v)return '';if(v.startsWith('"')){try{const x=JSON.parse(v);return typeof x==='string'?x:null}catch{return null}}if(v.startsWith("'"))return v.endsWith("'")&&v.length>=2?v.slice(1,-1).replace(/''/g,"'"):null;if(/[|>&*!{}\[\],]/.test(v))return null;return v.replace(/\s+#.*$/,'').trim()}
+export function parseSkillFrontmatter(text){if(typeof text!=='string')return null;const s=text.replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n');if(!s.startsWith('---\n'))return null;const end=s.indexOf('\n---',4);if(end<0)return null;const fields={};for(const line of s.slice(4,end).split('\n')){if(!line.trim()||line.trimStart().startsWith('#'))continue;const m=line.match(/^([a-z][a-z0-9_-]*):\s*(.*?)\s*$/i);if(!m)continue;const key=m[1].toLowerCase();if(!['name','description'].includes(key))continue;if(Object.hasOwn(fields,key))return null;const value=scalar(m[2]);if(value===null)return null;fields[key]=value}if(!fields.name||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(fields.name)||fields.name.length>64||!fields.description||fields.description.length>1024||/[\u0000-\u001f\u007f]/.test(fields.description))return null;return{name:fields.name,description:fields.description}}
+function readSkill(dir,source,cache,{plugin=null}={}){if(!safeDir(dir))return null;const file=path.join(dir,'SKILL.md');let before;try{before=fs.lstatSync(file)}catch{return null}if(before.isSymbolicLink()||!before.isFile()||before.size>MAX_SKILL_BYTES)return null;const signature=[before.dev,before.ino,before.size,before.mtimeMs,before.ctimeMs].join(':'),cached=cache.entries.get(file);let metadata;if(cached?.signature===signature){cache.hits++;metadata=cached.metadata}else{cache.misses++;const read=readSafeBytesFile(file,{maxBytes:MAX_SKILL_BYTES,checkParentDir:false});if(!read.ok)return null;metadata=parseSkillFrontmatter(read.bytes.toString('utf8'));if(!metadata){cache.entries.delete(file);cache.dirty=true;return null}if(cache.entries.size>=MAX_CACHE_ENTRIES&&!cache.entries.has(file))cache.entries.delete(cache.entries.keys().next().value);cache.entries.delete(file);cache.entries.set(file,{signature,metadata});cache.dirty=true}return{...metadata,name:plugin?plugin+':'+metadata.name:metadata.name,source,plugin:plugin||undefined,filePath:file}}
+function addRoot(a,dir,source,extra={}){const resolved=path.resolve(dir);if(!a.some(x=>x.path===resolved&&x.source===source))a.push({path:resolved,source,...extra})}
+function repoBoundary(workspace){const start=path.resolve(workspace);if(!safeDir(start))return start;let cur=start;for(let i=0;i<MAX_ANCESTORS;i++){const marker=path.join(cur,'.git');try{const s=fs.lstatSync(marker);if(!s.isSymbolicLink()&&(s.isDirectory()||s.isFile()))return cur}catch{}const parent=path.dirname(cur);if(parent===cur)break;cur=parent}return start}
+function workspaceLevels(workspace){if(typeof workspace!=='string'||!workspace.trim()||!path.isAbsolute(workspace))return{levels:[],repoRoot:null};const start=path.resolve(workspace),repoRoot=repoBoundary(start),levels=[];let cur=start;for(let i=0;i<MAX_ANCESTORS;i++){if(!safeDir(cur))break;levels.push(cur);if(cur===repoRoot)break;const parent=path.dirname(cur);if(parent===cur)break;cur=parent}return{levels,repoRoot}}
+function readJson(file,max=MAX_MANIFEST_BYTES){if(!safeFile(file,max))return null;try{const r=readSafeBytesFile(file,{maxBytes:max,checkParentDir:false});if(!r.ok)return null;const x=JSON.parse(r.bytes.toString('utf8'));return x&&typeof x==='object'&&!Array.isArray(x)?x:null}catch{return null}}
+function validList(v){return Array.isArray(v)&&v.length<=200&&v.every(x=>typeof x==='string'&&x.length>0&&x.length<=512&&!x.includes('\0'))}
+function matchesFilter(skill,filters){if(!filters||!filters.length)return true;const name=skill.name.split(':').at(-1),rel=skill.relativePath||name;return filters.includes(name)||filters.includes(skill.name)||filters.includes(rel)}
+function scanSkillRoot(root,source,boundary,cache,{plugin=null,includeOnly=null,exclude=[]}={}){if(!safeChain(root,boundary))return[];const found=[],direct=path.join(root,'SKILL.md');if(safeFile(direct,MAX_SKILL_BYTES)){const item=readSkill(root,source,cache,{plugin});if(item){item.relativePath=path.basename(root);if(matchesFilter(item,includeOnly)&&!(exclude.length&&(exclude.includes(item.name)||exclude.includes(item.relativePath))))found.push(item)}return found}let entries;try{entries=fs.readdirSync(root,{withFileTypes:true})}catch{return found}for(const e of entries){if(found.length>=MAX_SKILLS)break;if(!e.isDirectory()||e.isSymbolicLink()||e.name.startsWith('.'))continue;const item=readSkill(path.join(root,e.name),source,cache,{plugin});if(!item)continue;item.relativePath=e.name;if(matchesFilter(item,includeOnly)&&!exclude.includes(e.name)&&!exclude.includes(item.name))found.push(item)}return found}
+function discoverManifest(file,{kind,repoRoot,cache,state,depth=0,seen=new Set()}={}){if(depth>MAX_MANIFEST_DEPTH||state.manifests>=MAX_MANIFESTS)return[];const absolute=path.resolve(file);if(seen.has(absolute))return[];seen.add(absolute);state.manifests++;const doc=readJson(absolute);if(!doc)return[];const parent=path.dirname(absolute),base=kind==='personal'?parent:path.dirname(parent),boundary=kind==='personal'?path.parse(base).root:(repoRoot||base),out=[];if(Array.isArray(doc.inherits))for(const inherited of doc.inherits.slice(0,32)){if(!inherited||typeof inherited.path!=='string'||!path.isAbsolute(inherited.path)||inherited.path.length>4096)continue;const items=discoverManifest(inherited.path,{kind:'inherited',repoRoot:null,cache,state,depth:depth+1,seen}),filter=validList(inherited.include_only)?inherited.include_only:null;out.push(...(filter?items.filter(x=>matchesFilter(x,filter)):items))}if(Array.isArray(doc.entries))for(const entry of doc.entries.slice(0,100)){if(!entry||typeof entry.path!=='string'||entry.path.length>4096)continue;const includeOnly=validList(entry.include_only)?entry.include_only:null,exclude=validList(entry.exclude)?entry.exclude:[],absoluteEntry=path.isAbsolute(entry.path),target=path.resolve(base,entry.path);let root=absoluteEntry?path.resolve(entry.path):target;if(!absoluteEntry&&!safeDir(root)&&repoRoot)root=path.resolve(repoRoot,entry.path);const rootBoundary=absoluteEntry?path.parse(root).root:(repoRoot||base);out.push(...scanSkillRoot(root,'manifest',rootBoundary,cache,{includeOnly,exclude}))}if(validList(doc.exclude))state.excludes.push(...doc.exclude);return out}
+function getRoots({host,home,workspace}){const roots=[],{levels,repoRoot}=workspaceLevels(workspace),manifests=[];for(const level of levels)for(const alias of ALIASES){const custom=path.join(level,alias);addRoot(roots,path.join(custom,'skills'),'workspace');const manifest=path.join(custom,'skills.json');if(safeFile(manifest))manifests.push(manifest)}const config=path.join(home,'.gemini','config');if(host==='cli'){addRoot(roots,path.join(home,'.gemini','antigravity-cli','skills'),'cli-only');addRoot(roots,path.join(home,'.gemini','skills'),'cli-only')}addRoot(roots,path.join(config,'skills'),'global');if(host==='ide')addRoot(roots,path.join(home,'.gemini','antigravity','skills'),'legacy-ide');const pluginBase=path.join(config,'plugins');if(safeDir(pluginBase)){let entries=[];try{entries=fs.readdirSync(pluginBase,{withFileTypes:true}).slice(0,100)}catch{}for(const e of entries)if(e.isDirectory()&&!e.isSymbolicLink())addRoot(roots,path.join(pluginBase,e.name,'skills'),'plugin',{plugin:e.name})}return{roots,manifests,personalManifest:path.join(config,'skills.json'),repoRoot,levels}}
+function scanAll({host,home,workspace,cache}){const config=getRoots({host,home,workspace}),state={manifests:0,excludes:[]},skills=[];for(const manifest of config.manifests)skills.push(...discoverManifest(manifest,{kind:'workspace',repoRoot:config.repoRoot,cache,state}));if(safeFile(config.personalManifest))skills.push(...discoverManifest(config.personalManifest,{kind:'personal',repoRoot:null,cache,state}));const excluded=new Set(state.excludes),candidates=[];for(const root of config.roots){const boundary=root.source==='workspace'?(config.repoRoot||root.path):root.source==='plugin'?path.dirname(path.dirname(root.path)):path.parse(root.path).root;candidates.push(...scanSkillRoot(root.path,root.source,boundary,cache,{plugin:root.plugin}))}candidates.push(...skills);const priority={'cli-only':0,workspace:1,manifest:1,global:2,'legacy-ide':3,plugin:4},seen=new Set(),result=[];candidates.sort((a,b)=>(priority[a.source]??5)-(priority[b.source]??5));for(const skill of candidates){const key=skill.name.toLowerCase(),base=skill.name.split(':').at(-1);if(seen.has(key)||excluded.has(skill.name)||excluded.has(base))continue;seen.add(key);result.push(skill);if(result.length>=MAX_SKILLS)break}return{...config,skills:result,state}}
+export function identifySkillFile({filePath,home=process.env.HOME||process.env.USERPROFILE||os.homedir(),workspace=null,host='ide'}={}){if(typeof filePath!=='string'||filePath.length>4096||!path.isAbsolute(filePath)||path.basename(filePath)!=='SKILL.md')return null;const cache={entries:new Map(),hits:0,misses:0},catalog=scanAll({host:HOSTS.has(host)?host:'ide',home:path.resolve(home),workspace,cache}),target=path.resolve(filePath);for(const skill of catalog.skills)if(skill.filePath===target)return{name:skill.name,source:skill.source};return null}
+export function discoverSkills({host='ide',home=process.env.HOME||process.env.USERPROFILE||os.homedir(),workspace=null,transcriptPath=null}={}){const p=String(transcriptPath||'').replaceAll('\\','/').toLowerCase(),selected=HOSTS.has(host)?host:p.includes('/antigravity-cli/')?'cli':p.includes('/antigravity-ide/')?'ide':'app',homeRoot=path.resolve(home),cache=loadSkillMetadataCache(homeRoot);cache.hits=0;cache.misses=0;const catalog=scanAll({host:selected,home:homeRoot,workspace,cache}),persisted=saveSkillMetadataCache(cache,homeRoot);return{host:selected,skills:catalog.skills.map(({relativePath,filePath,...skill})=>skill),scanned_roots:catalog.roots.filter(x=>safeDir(x.path)).map(x=>({source:x.source,available:true})),manifest_count:catalog.state.manifests,cache:{hits:cache.hits,misses:cache.misses,entries:cache.entries.size,max_entries:MAX_CACHE_ENTRIES,persistent:cache.valid===true,persisted},limits:{max_skills:MAX_SKILLS,max_skill_bytes:MAX_SKILL_BYTES,max_manifest_bytes:MAX_MANIFEST_BYTES}}}
