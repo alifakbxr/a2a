@@ -1,5 +1,6 @@
 import {discoverSkills} from './skill-catalog.mjs';
-export {discoverSkills};
+import {rankSkills} from './skill-ranking.mjs';
+export {discoverSkills,rankSkills};
 // Read-only, bounded skill exclusion diagnostic. Plugin installation does not
 // prove skill inclusion in every Antigravity conversation or subagent.
 import path from 'node:path';
