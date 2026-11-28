@@ -10,6 +10,9 @@ const MAX_SKILLS=200;
 const MAX_SKILL_BYTES=16*1024;
 const MAX_DEPTH=2;
 const MAX_ANCESTORS=8;
+const MAX_CACHE_ENTRIES=400;
+const metadataCache=new Map();
+let cacheHits=0,cacheMisses=0;
 
 function safeDir(dir){
   try{const st=fs.lstatSync(dir);return st.isDirectory()&&!st.isSymbolicLink()}catch{return false}
@@ -44,10 +47,27 @@ function parseFrontmatter(text){
 function readSkill(dir,source){
   if(!safeDir(dir))return null;
   const file=path.join(dir,'SKILL.md');
-  const read=readSafeBytesFile(file,{maxBytes:MAX_SKILL_BYTES,checkParentDir:false});
-  if(!read.ok)return null;
-  const metadata=parseFrontmatter(read.bytes.toString('utf8'));
-  if(!metadata)return null;
+  let before;
+  try{before=fs.lstatSync(file)}catch{return null}
+  if(before.isSymbolicLink()||!before.isFile()||before.size>MAX_SKILL_BYTES)return null;
+  const signature=[before.dev,before.ino,before.size,before.mtimeMs,before.ctimeMs].join(':');
+  const cached=metadataCache.get(file);
+  let metadata;
+  if(cached?.signature===signature){
+    cacheHits++;
+    metadata=cached.metadata;
+  }else{
+    cacheMisses++;
+    const read=readSafeBytesFile(file,{maxBytes:MAX_SKILL_BYTES,checkParentDir:false});
+    if(!read.ok)return null;
+    metadata=parseFrontmatter(read.bytes.toString('utf8'));
+    if(!metadata){metadataCache.delete(file);return null;}
+    if(metadataCache.size>=MAX_CACHE_ENTRIES){
+      const oldest=metadataCache.keys().next().value;
+      if(oldest)metadataCache.delete(oldest);
+    }
+    metadataCache.set(file,{signature,metadata});
+  }
   return {...metadata,source};
 }
 function addRoot(roots,dir,source){
@@ -117,5 +137,5 @@ export function discoverSkills({host='ide',home=process.env.HOME||process.env.US
     }
     if(skills.length>=MAX_SKILLS)break;
   }
-  return {host,skills,scanned_roots:roots.filter(x=>safeDir(x.path)).map(x=>({source:x.source,available:true})),limits:{max_skills:MAX_SKILLS,max_skill_bytes:MAX_SKILL_BYTES}};
+  return {host,skills,scanned_roots:roots.filter(x=>safeDir(x.path)).map(x=>({source:x.source,available:true})),cache:{hits:cacheHits,misses:cacheMisses,entries:metadataCache.size,max_entries:MAX_CACHE_ENTRIES},limits:{max_skills:MAX_SKILLS,max_skill_bytes:MAX_SKILL_BYTES}};
 }
