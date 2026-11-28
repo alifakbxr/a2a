@@ -10,3 +10,15 @@ test('recognizes CLI-only and legacy IDE roots only on documented surfaces',()=>
 test('rejects malformed metadata and symlinked Skill folders/files',()=>{const f=fixture();try{const root=path.join(f.root,'.gemini','config','skills');fs.mkdirSync(root,{recursive:true});const bad=path.join(root,'bad');fs.mkdirSync(bad);fs.writeFileSync(path.join(bad,'SKILL.md'),'no frontmatter');const real=path.join(f.root,'real');fs.mkdirSync(real);fs.writeFileSync(path.join(real,'SKILL.md'),'---\nname: linked\ndescription: linked skill\n---');try{fs.symlinkSync(real,path.join(root,'linked-dir'),'dir')}catch{}fs.mkdirSync(path.join(root,'linked-file'),{recursive:true});try{fs.symlinkSync(path.join(real,'SKILL.md'),path.join(root,'linked-file','SKILL.md'))}catch{}assert.deepEqual(discoverSkills({host:'app',home:f.root}).skills,[])}finally{f.clean()}});
 test('deduplicates names and rejects unknown hosts',()=>{const f=fixture();try{const ws=path.join(f.root,'repo');fs.mkdirSync(ws,{recursive:true});f.skill(ws,'.agents/skills/one','same','first');f.skill(path.join(f.root,'.gemini','config'),'skills/two','same','second');assert.equal(discoverSkills({host:'ide',home:f.root,workspace:ws}).skills.length,1);assert.throws(()=>discoverSkills({host:'desktop',home:f.root}),/host must be/)}finally{f.clean()}});
 test('parses BOM and Windows CRLF; rejects duplicate and unsafe scalar fields',()=>{assert.deepEqual(parseSkillFrontmatter('\uFEFF---\r\nname: laravel-api\r\ndescription: "Laravel API validation"\r\n---\r\n'),{name:'laravel-api',description:'Laravel API validation'});assert.deepEqual(parseSkillFrontmatter("---\nname: docs\ndescription: 'Write it''s docs'\n---"),{name:'docs',description:"Write it's docs"});assert.equal(parseSkillFrontmatter('---\nname: docs\nname: other\ndescription: docs\n---'),null);assert.equal(parseSkillFrontmatter('---\nname: docs\ndescription: [unsafe]\n---'),null);assert.equal(parseSkillFrontmatter('---\nname: docs\ndescription: \n---'),null)});
+
+test('discovers backward-compatible Antigravity customization folder aliases',()=>{
+ const f=fixture();
+ try{
+  const ws=path.join(f.root,'repo','packages','app');fs.mkdirSync(ws,{recursive:true});
+  f.skill(path.join(f.root,'repo'),'.agent/skills','legacy-agent','Legacy .agent skill');
+  f.skill(path.join(f.root,'repo'),'_agents/skills','legacy-agents','Legacy _agents skill');
+  f.skill(path.join(f.root,'repo'),'_agent/skills','legacy-agent-singular','Legacy _agent skill');
+  const r=discoverSkills({host:'ide',home:f.root,workspace:ws});
+  assert.deepEqual(r.skills.map(x=>x.name),['legacy-agent','legacy-agents','legacy-agent-singular']);
+ }finally{f.clean()}
+});
