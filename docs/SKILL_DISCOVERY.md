@@ -21,7 +21,7 @@ The catalog only reads the Skill folder's `SKILL.md` frontmatter and requires bo
 - The host remains authoritative for Skill discovery, availability, activation and execution.
 - A listed Skill is **available on disk**, not necessarily loaded into the current conversation.
 - Plugin-managed Skills on App/IDE remain host-managed because their on-disk storage path is not a stable public contract.
-- The `PreInvocation` hook injects a short hint only for high-confidence matches, only in an explicitly authorized workspace, and only when the recommendation fingerprint changes within that conversation. It is not a documented Skill activation API and cannot force the host to load a Skill.
+- The `PreInvocation` hook runs only in the explicit `always-on` mode and injects a short hint only for high-confidence matches, only in an explicitly authorized workspace, and only when the recommendation fingerprint changes within that conversation. It is not a documented Skill activation API and cannot force the host to load a Skill.
 - The hook defaults to the IDE path matrix. Set `PILAH_HOST_SURFACE=app|cli|ide` when a host installation needs a different documented path set; a validated `hostSurface` event field takes precedence.
 - No model calls, network requests, filesystem writes, shell execution or Skill-body reads occur during catalog discovery or ranking.
 - Usage counters are bounded, workspace-scoped and included in workspace privacy status/purge accounting.
