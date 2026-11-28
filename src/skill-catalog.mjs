@@ -53,20 +53,20 @@ function readSkill(dir,source){
 function addRoot(roots,dir,source){
   if(!roots.some(x=>x.path===dir))roots.push({path:dir,source});
 }
-function workspaceRoots(workspace){
+function workspaceRoots(workspace,home){
   if(typeof workspace!=='string'||!workspace.trim())return [];
   let current=path.resolve(workspace),roots=[];
   for(let i=0;i<MAX_ANCESTORS;i++){
     if(!safeDir(current))break;
     addRoot(roots,path.join(current,'.agents','skills'),'workspace');
     const parent=path.dirname(current);
-    if(parent===current||parent===os.homedir())break;
+    if(parent===current||parent===path.resolve(home))break;
     current=parent;
   }
   return roots;
 }
 function getRoots({host,home,workspace}){
-  const roots=workspaceRoots(workspace);
+  const roots=workspaceRoots(workspace,home);
   addRoot(roots,path.join(home,'.gemini','config','skills'),'global');
   if(host==='ide')addRoot(roots,path.join(home,'.gemini','antigravity','skills'),'legacy-ide');
   if(host==='cli'){
