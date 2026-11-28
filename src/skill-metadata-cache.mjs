@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-const VERSION=1,MAX_ENTRIES=400,MAX_BYTES=256*1024;
+const VERSION=2,MAX_ENTRIES=400,MAX_BYTES=256*1024;
 const isDir=p=>{try{const s=fs.lstatSync(p);return s.isDirectory()&&!s.isSymbolicLink()}catch{return false}};
 function privateDir(home,create=false){
  const root=path.resolve(home);if(!isDir(root))return null;
