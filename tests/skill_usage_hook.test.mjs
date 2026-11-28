@@ -26,11 +26,12 @@ function fixture(){
   fs.rmSync(root,{recursive:true,force:true});
  }};
 }
+// Mirrors the documented Antigravity PostToolUse payload: no hookEventName.
 function event(skillFile,overrides={}){
- return{hookEventName:'PostToolUse',conversationId:'conv-skill-read-1',workspacePaths:[overrides.workspace],toolCall:{name:'view_file',args:{AbsolutePath:skillFile,IsSkillFile:true,...overrides.args}},error:overrides.error||''};
+ return{conversationId:'conv-skill-read-1',workspacePaths:[overrides.workspace],toolCall:{name:'view_file',args:{AbsolutePath:skillFile,IsSkillFile:true,...overrides.args}},error:overrides.error||''};
 }
 
-test('records only successful full reads of validated Skill files in authorized workspaces',()=>{
+test('records documented PostToolUse payloads without a synthetic hookEventName',()=>{
  const f=fixture();
  try{
   const payload=event(f.skillFile,{workspace:f.workspace});
@@ -43,6 +44,15 @@ test('records only successful full reads of validated Skill files in authorized 
    assert.deepEqual({...row},{source:'workspace',usage_count:1});
    assert.equal(store.all('PRAGMA table_info(skill_usage)').some(x=>x.name.toLowerCase().includes('path')),false);
   }finally{store.close()}
+ }finally{f.restore()}
+});
+
+test('rejects an explicitly mismatched event name',()=>{
+ const f=fixture();
+ try{
+  const payload={...event(f.skillFile,{workspace:f.workspace}),hookEventName:'PreToolUse'};
+  assert.equal(recordObservedSkillUse(payload,f.baseDir),false);
+  assert.equal(fs.existsSync(path.join(f.baseDir,'a2a.sqlite')),false);
  }finally{f.restore()}
 });
 
