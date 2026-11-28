@@ -26,7 +26,7 @@ export function loadSkillMetadataCache(home){
   if(value?.version!==VERSION||!value.entries||typeof value.entries!=='object'||Array.isArray(value.entries))return{entries,file,dirty:false,valid:false};
   for(const[key,item]of Object.entries(value.entries)){
    if(key.length<=4096&&typeof item?.signature==='string'&&item.signature.length<=256&&typeof item.metadata?.name==='string'&&typeof item.metadata?.description==='string'){
-    entries.set(key,{signature:item.signature,metadata:{name:item.metadata.name,description:item.metadata.description}});
+    entries.set(key,{signature:item.signature,metadata:{name:item.metadata.name,description:item.metadata.description,...(item.metadata.disableModelInvocation===true?{disableModelInvocation:true}:{})}});
     if(entries.size>=MAX_ENTRIES)break;
    }
   }
