@@ -7,17 +7,16 @@ PILAH maintains a bounded, read-only metadata inventory aligned with Antigravity
 - Workspace .agents/skills/<skill>/SKILL.md and aliases .agent/, _agents/, and _agent/.
 - Workspace customization folders from the current directory up to the detected repository root. Without a repository marker, only the current workspace folder is scanned.
 - Personal ~/.gemini/config/skills/ and ~/.gemini/config/skills.json manifest.
+- Repository personal customization folders configured through .gemini/config.json and personal_customization_dir.
 - IDE legacy ~/.gemini/antigravity/skills/.
-- CLI-only ~/.gemini/antigravity-cli/skills/ and ~/.gemini/skills/, which have higher precedence than workspace/global Skills.
-- Installed plugin folders under ~/.gemini/config/plugins/<plugin>/skills/. Plugin Skill names are namespaced as <plugin>:<skill>.
+- CLI-only ~/.gemini/antigravity-cli/skills/ and ~/.gemini/skills/, which take precedence over all other local sources and are not hidden by manifest exclusions.
+- Installed plugins under ~/.gemini/config/plugins/<plugin> with a valid plugin.json (or .antigravity-plugin/plugin.json) and skills/<skill>/SKILL.md. Plugin Skill names are namespaced as <plugin>:<skill>.
 
-Antigravity built-in Skills are host-managed and are not ordinary local Skill files; PILAH does not invent or mirror them. Plugin discovery is based on installed plugin directories. Whether a plugin is enabled and its Skill is loaded remains host-owned state, not something PILAH can independently assert.
+Antigravity built-in Skills are host-managed and are not ordinary local Skill files; PILAH does not invent or mirror them. Plugin discovery is based on installed plugin manifests and directories. Whether a plugin is enabled and its Skill is loaded remains host-owned state, not something PILAH can independently assert.
 
 ## Discovery manifests
 
-PILAH reads workspace skills.json files in .agents/ and the documented aliases between the workspace and repository root, plus ~/.gemini/config/skills.json. It supports bounded entries, inherits, include_only, and exclude fields. Inherited manifest paths must be absolute. Relative workspace entry paths resolve from the directory containing the customization folder, with repository-root fallback; personal paths resolve from ~/.gemini/config/. Manifest traversal is capped at four levels and 64 manifests. Wildcards are not interpreted. Unsafe paths, symlinks, malformed JSON, oversized manifests, and invalid filters are ignored.
-
-Standard folders are scanned one level deep: skills/<skill-folder>/SKILL.md. Deeper folders are considered only when explicitly named by a manifest entry.
+PILAH reads workspace skills.json files in .agents/ and the documented aliases between the workspace and repository root, plus ~/.gemini/config/skills.json. It supports bounded entries, inherits, include_only, and exclude fields. Inherited manifest paths must be absolute. Relative workspace entry paths resolve from the directory containing the customization folder, with repository-root fallback; personal paths resolve from ~/.gemini/config/. Repository personal-folder manifests resolve relative entries from the repository root. Manifest traversal is capped at four levels and 64 manifests. Wildcards are not interpreted. A manifest can explicitly select deeper Skill paths through include_only; otherwise standard folders are scanned one level deep. Unsafe paths, symlinks, malformed JSON, oversized manifests, and invalid filters are ignored.
 
 ## Metadata, cache, and limits
 
