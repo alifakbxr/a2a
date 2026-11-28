@@ -15,7 +15,7 @@ const GROUPS=[
  ['bug','fix','debug','debugging','error','issue','masalah','perbaiki','baiki','memperbaiki'],
  ['file','files','berkas','dokumen','document','documents','upload','unggah'],
  ['image','images','gambar','foto','photo','media'],
- ['workflow','pipeline','automation','automate','otomatisasi','alur','ci','cd','actions']
+ ['workflow','pipeline','automate','otomatisasi','alur','ci','cd','actions']
 ];
 const ALIAS=new Map();for(const g of GROUPS)for(const w of g)ALIAS.set(w,g);
 function norm(t){let x=t.toLowerCase().normalize('NFKC');if(x.length>6){for(const p of ['meng','men','mem','ber','per','peng'])if(x.startsWith(p)&&x.length>p.length+2){x=x.slice(p.length);break}if(x.endsWith('kan')&&x.length>7)x=x.slice(0,-3);else if(x.endsWith('nya')&&x.length>6)x=x.slice(0,-3);else if(x.endsWith('an')&&x.length>6)x=x.slice(0,-2)}return x}
