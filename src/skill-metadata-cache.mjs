@@ -42,6 +42,6 @@ export function saveSkillMetadataCache(cache,home){
  const temp=path.join(dir,'.skill-cache-'+crypto.randomUUID()+'.tmp');let fd;
  try{
   fd=fs.openSync(temp,fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|(fs.constants.O_NOFOLLOW||0),0o600);
-  fs.writeFileSync(fd,content);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,file);cache.file=file;cache.dirty=false;return true;
+  fs.writeFileSync(fd,content);fs.closeSync(fd);fd=undefined;try{fs.renameSync(temp,file)}catch(error){if(process.platform!=='win32')throw error;fs.rmSync(file,{force:true});fs.renameSync(temp,file)}cache.file=file;cache.dirty=false;return true;
  }catch{return false}finally{if(fd!==undefined)try{fs.closeSync(fd)}catch{}try{fs.unlinkSync(temp)}catch{}}
 }

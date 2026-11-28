@@ -5,7 +5,15 @@ import {readSafeBytesFile} from './security.mjs';
 import {loadSkillMetadataCache,saveSkillMetadataCache} from './skill-metadata-cache.mjs';
 const HOSTS=new Set(['app','cli','ide']),MAX_SKILLS=200,MAX_SKILL_BYTES=16*1024,MAX_DEPTH=2,MAX_ANCESTORS=8,MAX_CACHE_ENTRIES=400;
 function safeDir(p){try{const s=fs.lstatSync(p);return s.isDirectory()&&!s.isSymbolicLink()}catch{return false}}
-function safeChain(dir,boundary){const target=path.resolve(dir),base=path.resolve(boundary),rel=path.relative(base,target);if(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel))return false;let cur=base;if(!safeDir(cur))return false;for(const seg of rel.split(path.sep).filter(Boolean)){cur=path.join(cur,seg);if(!safeDir(cur))return false}return true}
+function safeChain(dir,boundary){const target=path.resolve(dir),base=path.resolve(boundary),rel=path.relative(base,target);if(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel))return false;let cur=base;if(!safeDir(cur))return false;for(const seg of rel.split(path.sep).filter(Boolean)){
+  cur=path.join(cur,seg);
+  if(!safeDir(cur)){
+   if(process.platform==='darwin'&&base===path.parse(base).root&&['var','tmp','etc'].includes(seg)){
+    try{const real=fs.realpathSync(cur);if(real===path.join('/private',seg)){cur=real;continue}}catch{}
+   }
+   return false;
+  }
+ }return true}
 function scalar(raw){let v=raw.trim();if(!v)return '';if(v.startsWith('"')){try{const x=JSON.parse(v);return typeof x==='string'?x:null}catch{return null}}if(v.startsWith("'"))return v.endsWith("'")&&v.length>=2?v.slice(1,-1).replace(/''/g,"'"):null;if(/[|>&*!{}\[\],]/.test(v))return null;return v.replace(/\s+#.*$/,'').trim()}
 export function parseSkillFrontmatter(text){
  if(typeof text!=='string')return null;

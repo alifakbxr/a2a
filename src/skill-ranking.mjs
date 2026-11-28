@@ -3,7 +3,7 @@ const MAX_TASK_CHARS=4000,MAX_SKILLS=200,MAX_RESULTS=2;
 const GROUPS=[
  ['auth','authentication','authorization','authorize','login','signin','permission','access','akses','hakakses','izin','masuk','otentikasi','otorisasi'],
  ['user','users','pengguna','guna','akun','account','accounts','customer','pelanggan'],
- ['database','databases','db','basisdata','basis','data','sql','postgres','postgresql','mysql','migration','migrations','schema','skema','migrasi'],
+ ['database','databases','db','basisdata','basis','sql','postgres','postgresql','mysql','migration','migrations','schema','skema','migrasi'],
  ['frontend','ui','interface','tampilan','antarmuka','view','component','components','komponen','halaman','dashboard','panel'],
  ['backend','server','api','endpoint','controller','controllers','layanan','service','services'],
  ['validation','validate','validator','validasi','form','forms','input'],
@@ -33,7 +33,7 @@ export function rankSkills({task,skills=[],usage={},maxResults=MAX_RESULTS,thres
  for(const skill of skills){
   if(!skill||typeof skill.name!=='string'||skill.name.length>64||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(skill.name)||typeof skill.description!=='string'||skill.description.length>1024)continue;
   const names=new Set(terms(skill.name.replaceAll('-',' '))),desc=new Set(terms(skill.description)),n=fieldScore(query,names,4.2),d=fieldScore(query,desc,1.35),matched=new Set(query.filter(q=>match(q,names)||match(q,desc))),coverage=matched.size/query.length,raw=n.score+d.score;
-  const count=Number.isSafeInteger(usage[skill.name.toLowerCase()])&&usage[skill.name.toLowerCase()]>0?Math.min(usage[skill.name.toLowerCase()],1000):0,boost=Math.min(.6,Math.log1p(count)*.12)+(skill.source==='workspace'?.2:0),score=raw/Math.max(2,Math.sqrt(query.length))*2+boost;
+  const count=Number.isSafeInteger(usage[skill.name.toLowerCase()])&&usage[skill.name.toLowerCase()]>0?Math.min(usage[skill.name.toLowerCase()],1000):0,boost=Math.min(.6,Math.log1p(count)*.12)+(skill.source==='workspace'?.2:0),score=Math.min(10,raw/Math.max(2,Math.sqrt(query.length))*2+boost);
   if(score<threshold||matched.size<2)continue;
   ranked.push({name:skill.name,description:skill.description,source:skill.source||'unknown',score:Number(score.toFixed(3)),matched_terms:matched.size,coverage:Number(coverage.toFixed(3)),match_basis:{name_terms:n.matched,description_terms:d.matched,exact_name_terms:n.exact,usage_count:count}});
  }

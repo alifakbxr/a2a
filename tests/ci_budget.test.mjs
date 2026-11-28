@@ -12,7 +12,7 @@ test('routine CI runs 1 full-suite PR job, 3 OS main jobs, and 9 optional manual
  assert.match(yaml,/workflow_dispatch:/);
  assert.doesNotMatch(yaml,/branches: \[main, 'v2\.0\.1'\]/);
  assert.match(yaml,/github\.event_name == 'pull_request' && '\["ubuntu-latest"\]'/);
- assert.match(yaml,/\["ubuntu-latest","macos-latest","windows-latest"\]/);
+ assert.match(yaml,/os: \[ubuntu-latest, macos-latest, windows-latest\]/);
  assert.match(yaml,/github\.event_name == 'workflow_dispatch' && '\["22","24","26\.13\.1"\]'/);
  assert.match(yaml,/\|\| '\["24"\]'/);
  assert.match(yaml,/cancel-in-progress: true/);
