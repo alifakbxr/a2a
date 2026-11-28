@@ -6,7 +6,7 @@ import os from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {parseArtifact,verifyHandoff} from '../src/verification.mjs';
-import {isDirectTestCommand,handleHookEvent,detectSideQuestionInfo} from '../scripts/hook.mjs';
+import {isDirectTestCommand,handleHookEvent,detectSideQuestionInfo,recommendSkillGuidance} from '../scripts/hook.mjs';
 import {recommendSkills} from '../src/skill-discovery.mjs';
 import {sha256,authorizeWorkspace,invalidateWorkspaceCache} from '../src/security.mjs';
 import {Store} from '../src/storage.mjs';
@@ -200,7 +200,7 @@ test('PreInvocation injects one high-confidence Skill hint per changed recommend
   const direct=recommendSkills({task:payload.lastUserInput,host:'ide',home:x.home,workspace:x.work});
   assert.equal(direct.status,'recommended',JSON.stringify(direct));
   assert.equal(direct.confidence,'high',JSON.stringify(direct));
-  const first=handleHookEvent(payload,{baseDir:x.data});
+  const first=recommendSkillGuidance(payload,x.data,{throwErrors:true});
   assert.equal(first.injectSteps.length,1);
   assert.match(first.injectSteps[0].systemMessage.systemMessage,/laravel-api/);
   assert.doesNotMatch(first.injectSteps[0].systemMessage.systemMessage,/Laravel API endpoint validation and authorization/);
