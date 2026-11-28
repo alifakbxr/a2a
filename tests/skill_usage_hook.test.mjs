@@ -112,3 +112,15 @@ test('observes CLI-only and plugin Skill reads using the documented transcript s
   }finally{store.close()}
  }finally{f.restore()}
 });
+
+test('records a Skill loaded through a personal skills.json manifest',()=>{
+ const f=fixture();try{
+  const shared=path.join(f.home,'shared-skills','manifest-helper');fs.mkdirSync(shared,{recursive:true});
+  const manifestSkill=path.join(shared,'SKILL.md');fs.writeFileSync(manifestSkill,'---\nname: manifest-helper\ndescription: Shared manifest Skill helper\n---\n');
+  const config=path.join(f.home,'.gemini','config');fs.mkdirSync(config,{recursive:true});
+  fs.writeFileSync(path.join(config,'skills.json'),JSON.stringify({entries:[{path:path.join(f.home,'shared-skills')}]}));
+  const payload={...event(manifestSkill,{workspace:f.workspace}),transcriptPath:path.join(f.home,'.gemini','antigravity','brain','conv','logs','transcript.jsonl')};
+  assert.equal(recordObservedSkillUse(payload,f.baseDir),true);
+  const store=new Store(f.baseDir);try{const id=store.register(f.workspace);assert.equal(store.get('SELECT source FROM skill_usage WHERE workspace_id=? AND skill_name=?',id,'manifest-helper').source,'global-manifest')}finally{store.close()}
+ }finally{f.restore()}
+});
