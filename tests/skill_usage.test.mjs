@@ -15,10 +15,10 @@ test('Skill usage is recorded only with explicit host-observed activation eviden
   const workspaceId=store.register(workspace);
   assert.throws(()=>store.recordSkillUsage({workspaceId,skillName:'laravel-api'}),/host-observed/);
   assert.deepEqual(store.getSkillUsage(workspaceId),{});
-  const first=store.recordSkillUsage({workspaceId,skillName:'Laravel-API',source:'workspace',activationEvidence:'host_observed'});
+  const first=store.recordSkillUsage({workspaceId,skillName:'Laravel-API',source:'workspace',observationEvidence:'host_observed_full_read'});
   assert.equal(first.skill_name,'laravel-api');
   assert.equal(first.usage_count,1);
-  const second=store.recordSkillUsage({workspaceId,skillName:'laravel-api',source:'global',activationEvidence:'host_observed'});
+  const second=store.recordSkillUsage({workspaceId,skillName:'laravel-api',source:'global',observationEvidence:'host_observed_full_read'});
   assert.equal(second.usage_count,2);
   assert.deepEqual(store.getSkillUsage(workspaceId),{'laravel-api':2});
   assert.equal(store.getSkillUsage('unknown-workspace').constructor,Object);
@@ -34,7 +34,7 @@ test('Skill usage stores no task or prompt content and is workspace isolated',()
  try{
   const a=store.register(path.join(root,'a'));
   const b=store.register(path.join(root,'b'));
-  store.recordSkillUsage({workspaceId:a,skillName:'security-review',source:'global',activationEvidence:'host_observed'});
+  store.recordSkillUsage({workspaceId:a,skillName:'security-review',source:'global',observationEvidence:'host_observed_full_read'});
   assert.deepEqual(store.getSkillUsage(a),{'security-review':1});
   assert.deepEqual(store.getSkillUsage(b),{});
   const columns=store.all('PRAGMA table_info(skill_usage)').map(x=>x.name);
@@ -50,8 +50,8 @@ test('Skill usage rejects invalid source and unsafe names',()=>{
  const store=new Store(path.join(root,'db'));
  try{
   const workspaceId=store.register(path.join(root,'workspace'));
-  assert.throws(()=>store.recordSkillUsage({workspaceId,skillName:'bad\nname',source:'external',activationEvidence:'host_observed'}),/Invalid Skill/);
-  assert.throws(()=>store.recordSkillUsage({workspaceId,skillName:'skill',source:'external',activationEvidence:'host_observed'}),/Invalid Skill source/);
+  assert.throws(()=>store.recordSkillUsage({workspaceId,skillName:'bad\nname',source:'external',observationEvidence:'host_observed_full_read'}),/Invalid Skill/);
+  assert.throws(()=>store.recordSkillUsage({workspaceId,skillName:'skill',source:'external',observationEvidence:'host_observed_full_read'}),/Invalid Skill source/);
  }finally{
   store.close();
   fs.rmSync(root,{recursive:true,force:true});
@@ -84,7 +84,7 @@ test('accepts every discovered manifest source category',()=>{
   const workspace=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-skill-source-workspace-'));
   const id=store.register(workspace);
   for(const source of ['personal-workspace','workspace-manifest','global-manifest'])
-   assert.equal(store.recordSkillUsage({workspaceId:id,skillName:'sample-skill',source,activationEvidence:'host_observed'}).source,source);
+   assert.equal(store.recordSkillUsage({workspaceId:id,skillName:'sample-skill',source,observationEvidence:'host_observed_full_read'}).source,source);
   fs.rmSync(workspace,{recursive:true,force:true});
  }finally{store.close();fs.rmSync(root,{recursive:true,force:true})}
 });
