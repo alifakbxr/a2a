@@ -16,7 +16,7 @@ function weightedOverlap(query,field,weight){
 export function rankSkills({task,skills=[],usage={},maxResults=MAX_RESULTS,threshold=2,allowRoutine=false}={}){
  if(typeof task!=='string'||task.length>MAX_TASK_CHARS)throw new Error('task must be a string up to 4000 characters');
  if(!Array.isArray(skills)||skills.length>MAX_SKILLS)throw new Error('skills must contain at most 200 entries');
- if(!usage||typeof usage!=='object'||Array.isArray(usage))throw new Error('usage must be an object');
+ if(!usage||typeof usage!=='object'||Array.isArray(usage)||(Object.getPrototypeOf(usage)!==Object.prototype&&Object.getPrototypeOf(usage)!==null))throw new Error('usage must be a plain object');
  if(!Number.isSafeInteger(maxResults)||maxResults<1||maxResults>MAX_RESULTS)throw new Error('maxResults must be 1 or 2');
  if(typeof threshold!=='number'||!Number.isFinite(threshold)||threshold<1||threshold>20)throw new Error('threshold must be between 1 and 20');
  const query=[...new Set(terms(task).filter(x=>!STOP.has(x)))];
@@ -24,7 +24,7 @@ export function rankSkills({task,skills=[],usage={},maxResults=MAX_RESULTS,thres
  if(!query.length)return {status:'skipped',reason:'No meaningful task terms were found.',recommendations:[]};
  const ranked=[];
  for(const skill of skills){
-  if(!skill||typeof skill.name!=='string'||typeof skill.description!=='string')continue;
+  if(!skill||typeof skill.name!=='string'||skill.name.length>64||! /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(skill.name)||typeof skill.description!=='string'||skill.description.length>1024)continue;
   const name=weightedOverlap(query,skill.name,3),description=weightedOverlap(query,skill.description,1);
   const raw=name.score+description.score;
   if(raw<threshold)continue;
