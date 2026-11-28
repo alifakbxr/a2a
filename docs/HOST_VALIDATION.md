@@ -247,3 +247,26 @@ For efficiency, run at least five counterbalanced independent pairs under
 frozen source/model/effort/permissions and provider-reported usage. No
 repository unit test, weekly quota screenshot, or simulated transcript
 substitutes for that evidence.
+
+
+## v1.2.0 Agent Skills acceptance (operator-run; not CI proof)
+
+The Skill-aware path is opt-in. Keep the default `on-demand` mode for baseline checks; enable `always-on` only for the dedicated scenarios below:
+
+```sh
+node scripts/pilah.mjs mode always-on
+```
+
+If the host surface is not IDE-default, set `PILAH_HOST_SURFACE=app` or `PILAH_HOST_SURFACE=cli` in the environment used to launch Antigravity. Then restart the host and confirm the hook appears in `/hooks` where that command is supported.
+
+| ID | When | Independently observed evidence |
+| --- | --- | --- |
+| S01 | On-demand mode + a task with a matching Skill | No injected Skill guidance |
+| S02 | Always-on mode + a simple/underspecified task | No injected Skill guidance |
+| S03 | Always-on mode + an authorized workspace + one clearly relevant Skill | One concise high-confidence hint; host independently loads/uses the Skill if appropriate |
+| S04 | Repeat the same task in the same conversation | No duplicate hint for the same recommendation fingerprint |
+| S05 | Change the task so a different Skill is clearly relevant | A new hint only if the recommendation fingerprint changes |
+| S06 | Run from an untrusted/revoked workspace | No Skill scan/injection from that workspace |
+| S07 | Compare App, CLI and IDE Skill roots | Correct host-specific discovery; no undocumented plugin path assumptions |
+
+A hint is **not** proof of Skill activation. Capture the actual Skill invocation/host trace before marking S03 as PASS. PILAH does not automatically learn usage counts until the host exposes a documented, reliable activation signal. Do not claim task-quality or token improvements from synthetic lexical benchmark results.
