@@ -35,6 +35,6 @@ test('rejects malformed limits and oversized inputs',()=>{
 });
 
 test('ambiguous or weak matches are not promoted as recommendations',()=>{
- const result=rankSkills({task:'Build something useful with data',skills:[{name:'data-tool',description:'Useful data work'}],threshold:1});
+ const result=rankSkills({task:'Find useful item',skills:[{name:'data-tool',description:'Useful data work'}],threshold:1});
  assert.ok(['ambiguous','skipped','no_match'].includes(result.status));
 });
