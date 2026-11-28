@@ -43,6 +43,7 @@ test('ignores malformed metadata, symlinked Skill folders and symlinked SKILL.md
   const bad=path.join(root,'bad');fs.mkdirSync(bad);fs.writeFileSync(path.join(bad,'SKILL.md'),'no frontmatter');
   const real=path.join(f.root,'real');fs.mkdirSync(real);fs.writeFileSync(path.join(real,'SKILL.md'),'---\\nname: linked\\ndescription: linked skill\\n---');
   try{fs.symlinkSync(real,path.join(root,'linked-dir'),'dir')}catch{}
+  fs.mkdirSync(path.join(root,'linked-file'),{recursive:true});
   try{fs.symlinkSync(path.join(real,'SKILL.md'),path.join(root,'linked-file','SKILL.md'))}catch{}
   assert.deepEqual(discoverSkills({host:'app',home:f.root}).skills,[]);
  }finally{f.clean()}
