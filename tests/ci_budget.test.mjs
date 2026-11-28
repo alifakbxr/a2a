@@ -17,7 +17,7 @@ test('routine CI runs 1 full-suite PR job, 3 OS main jobs, and 9 optional manual
  assert.match(yaml,/\|\| '\["24"\]'/);
  assert.match(yaml,/cancel-in-progress: true/);
  assert.match(yaml,/github\.event\.pull_request\.number \|\| github\.ref/);
- for(const check of ['npm run syntax','npm test','node scripts/check-release.mjs','npm pack --dry-run','sqlite-compat.mjs'])
+ for(const check of ['npm run syntax','npm test','npm run benchmark:skills','node scripts/check-release.mjs','npm pack --dry-run','sqlite-compat.mjs'])
   assert.ok(yaml.includes(check),'CI skipped a mandatory gate: '+check);
 });
 

@@ -1,13 +1,16 @@
 name: CI Test & Quality Gate
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+
 concurrency:
   group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+
 jobs:
   test:
     name: Test & Validate (${{ matrix.os }} - Node ${{ matrix.node-version }})
@@ -18,30 +21,39 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # PRs and main pushes cover all OS on Node 24; manual runs cover Node 22/24/26.
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # PR: 1 full-suite job (Linux/Node 24); main push: 3 OS on Node 24.
+        # Manual workflow_dispatch: complete 3 OS × Node 22/24/26.13.1 matrix.
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest","macos-latest","windows-latest"]') }}
         node-version: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["22","24","26.13.1"]' || '["24"]') }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+
       - name: Runtime version and built-in SQLite smoke
         run: |
           node --version
           node -p "process.versions.sqlite"
           node --input-type=module -e "import {Database} from './src/sqlite-compat.mjs'; const db=new Database(':memory:'); db.exec('CREATE TABLE smoke (id INTEGER PRIMARY KEY, value TEXT)'); db.prepare('INSERT INTO smoke(value) VALUES(?)').run('ok'); if(db.prepare('SELECT value FROM smoke').get().value!=='ok') process.exit(1); db.close();"
-      - name: Syntax & Compilation Check
+
+      - name: Syntax & Compilation Check (all src/scripts ESM)
         run: npm run syntax
+
       - name: Run Test Suite
         run: npm test
+
       - name: Run Skill Routing Benchmark
         run: npm run benchmark:skills
       - name: Verify Release Contracts & Schema Drift
         run: node scripts/check-release.mjs
-      - name: Inspect Package Tarball Contents
+
+      - name: Inspect Package Tarball Contents (Dry-Run)
         run: |
           npm pack --dry-run
+          # Ensure sensitive or unwanted files are never packaged
           ! npm pack --dry-run 2>&1 | grep -E '\.env|\.pem|\.key|\.sqlite|\.tmp|tests\/|benchmarks\/'

@@ -4,7 +4,7 @@ const GROUPS=[
  ['auth','authentication','authorization','authorize','login','signin','permission','access','akses','hakakses','izin','masuk','otentikasi','otorisasi'],
  ['user','users','pengguna','guna','akun','account','accounts','customer','pelanggan'],
  ['database','databases','db','basisdata','basis','sql','postgres','postgresql','mysql','migration','migrations','schema','skema','migrasi'],
- ['frontend','ui','interface','tampilan','antarmuka','view','component','components','komponen','halaman','dashboard','panel'],
+ ['frontend','ui','interface','tampilan','antarmuka','view','component','components','komponen','halaman','panel'],
  ['backend','server','api','endpoint','controller','controllers','layanan','service','services'],
  ['validation','validate','validator','validasi','form','forms','input'],
  ['security','secure','vulnerability','vulnerabilities','keamanan','aman','audit','threat','ancaman'],
@@ -22,7 +22,7 @@ function norm(t){let x=t.toLowerCase().normalize('NFKC');if(x.length>6){for(cons
 function terms(v){return(String(v||'').toLowerCase().normalize('NFKC').match(/[\p{L}\p{N}]+(?:[+#]+)?/gu)||[]).map(norm).filter(x=>x.length>1&&!STOP.has(x))}
 function match(q,set){for(const t of ALIAS.get(q)||[q])if(set.has(t))return t===q?1:.72;return 0}
 function fieldScore(query,set,weight){let score=0,matched=0,exact=0;for(const q of query){const m=match(q,set);if(m){score+=weight*m;matched++;if(m===1)exact++}}return{score,matched,exact}}
-export function rankSkills({task,skills=[],usage={},maxResults=MAX_RESULTS,threshold=2.2,allowRoutine=false}={}){
+export function rankSkills({task,skills=[],usage={},maxResults=MAX_RESULTS,threshold=1.2,allowRoutine=false}={}){
  if(typeof task!=='string'||task.length>MAX_TASK_CHARS)throw Error('task must be a string up to 4000 characters');
  if(!Array.isArray(skills)||skills.length>MAX_SKILLS)throw Error('skills must contain at most 200 entries');
  if(!usage||typeof usage!=='object'||Array.isArray(usage)||(Object.getPrototypeOf(usage)!==Object.prototype&&Object.getPrototypeOf(usage)!==null))throw Error('usage must be a plain object');
