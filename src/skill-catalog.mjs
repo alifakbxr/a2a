@@ -41,7 +41,7 @@ function parseFrontmatter(text){
     if((value.startsWith('"')&&value.endsWith('"'))||(value.startsWith("'")&&value.endsWith("'")))value=value.slice(1,-1);
     fields[match[1]]=value;
   }
-  if(!fields.name||!fields.description||fields.name.length>128||fields.description.length>1024)return null;
+  if(!fields.name||! /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(fields.name)||fields.name.length>64||!fields.description||fields.description.length>1024)return null;
   return {name:fields.name,description:fields.description};
 }
 function readSkill(dir,source){
