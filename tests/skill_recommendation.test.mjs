@@ -37,3 +37,16 @@ test('recommendSkills works without a store and does not create one',()=>{
   assert.deepEqual(result.recommendations,[]);
  }finally{fs.rmSync(root,{recursive:true,force:true})}
 });
+
+test('ranks namespaced plugin Skills without dropping the namespace',()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-plugin-rank-'));
+ try{
+  const skills=[{name:'code-tools:security-review',description:'Security audit authentication and authorization vulnerabilities',source:'plugin'}];
+  const result=recommendSkills({task:'Audit authentication and authorization security vulnerabilities',host:'app',home:root,workspace:root});
+  assert.notEqual(result.status,'recommended','no local Skill installed');
+  const {rankSkills}=await import('../src/skill-ranking.mjs');
+  const ranked=rankSkills({task:'Audit authentication and authorization security vulnerabilities',skills});
+  assert.equal(ranked.status,'recommended');
+  assert.equal(ranked.recommendations[0].name,'code-tools:security-review');
+ }finally{fs.rmSync(root,{recursive:true,force:true})}
+});
