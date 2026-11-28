@@ -30,7 +30,7 @@ Ranking is deterministic and local. It normalizes English/Indonesian terms, uses
 
 The dedicated PreInvocation hook runs before each model invocation, requires always-on, an authorized workspace and a high-confidence match, and injects only a short hint. Host surface is derived from the documented transcript path (App, CLI or IDE); an explicit test override is supported. PILAH never invokes MCP, activates Skills, changes permissions, or overrides native agent choice.
 
-Usage learning observes successful, un-ranged PostToolUse/view_file events only when the host explicitly sets IsSkillFile=true for a valid SKILL.md under a discovered Skill root. Missing IsSkillFile metadata is treated as unverified and is not learned. It records a workspace-scoped Skill name, source category, count and timestamp only. This is evidence of a completed full-file read, not proof that a Skill improved task quality. Learning is opt-in and stops when the workspace is not authorized.
+Usage learning observes successful, un-ranged PostToolUse/view_file events only when the host explicitly sets IsSkillFile=true for a valid SKILL.md under a discovered Skill root. Missing IsSkillFile metadata is treated as unverified and is not learned. It records a workspace-scoped Skill name, source category, count and timestamp only. Source categories distinguish workspace, repository personal folder, workspace manifest, global folder, global manifest, CLI-only, IDE legacy and plugin origin. This is evidence of a completed full-file read, not proof that a Skill improved task quality. Learning is opt-in and stops when the workspace is not authorized.
 
 ## Evidence boundaries
 
