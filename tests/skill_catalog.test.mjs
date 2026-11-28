@@ -7,7 +7,7 @@ import {discoverSkills} from '../src/skill-catalog.mjs';
 
 function fixture(){
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-skill-catalog-'));
- const skill=(base,folder,name,description)=>{const dir=path.join(base,folder);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'SKILL.md'),`---\\nname: ${name}\\ndescription: ${description}\\n---\\n\\n# ${name}\\n`);return dir;};
+ const skill=(base,folder,name,description)=>{const dir=path.join(base,folder);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'SKILL.md'),`---\nname: ${name}\ndescription: ${description}\n---\n\n# ${name}\n`);return dir;};
  return {root,skill,clean:()=>fs.rmSync(root,{recursive:true,force:true})};
 }
 
@@ -41,7 +41,7 @@ test('ignores malformed metadata, symlinked Skill folders and symlinked SKILL.md
  try{
   const root=path.join(f.root,'.gemini','config','skills');fs.mkdirSync(root,{recursive:true});
   const bad=path.join(root,'bad');fs.mkdirSync(bad);fs.writeFileSync(path.join(bad,'SKILL.md'),'no frontmatter');
-  const real=path.join(f.root,'real');fs.mkdirSync(real);fs.writeFileSync(path.join(real,'SKILL.md'),'---\\nname: linked\\ndescription: linked skill\\n---');
+  const real=path.join(f.root,'real');fs.mkdirSync(real);fs.writeFileSync(path.join(real,'SKILL.md'),'---\nname: linked\ndescription: linked skill\n---');
   try{fs.symlinkSync(real,path.join(root,'linked-dir'),'dir')}catch{}
   fs.mkdirSync(path.join(root,'linked-file'),{recursive:true});
   try{fs.symlinkSync(path.join(real,'SKILL.md'),path.join(root,'linked-file','SKILL.md'))}catch{}
