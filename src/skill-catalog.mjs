@@ -14,6 +14,18 @@ const MAX_ANCESTORS=8;
 function safeDir(dir){
   try{const st=fs.lstatSync(dir);return st.isDirectory()&&!st.isSymbolicLink()}catch{return false}
 }
+function safeChain(dir,boundary){
+  const target=path.resolve(dir),base=path.resolve(boundary);
+  const rel=path.relative(base,target);
+  if(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel))return false;
+  let cursor=base;
+  if(!safeDir(cursor))return false;
+  for(const segment of rel.split(path.sep).filter(Boolean)){
+    cursor=path.join(cursor,segment);
+    if(!safeDir(cursor))return false;
+  }
+  return true;
+}
 function parseFrontmatter(text){
   if(typeof text!=='string'||!text.startsWith('---\\n'))return null;
   const end=text.indexOf('\\n---',4);
@@ -36,7 +48,7 @@ function readSkill(dir,source){
   if(!read.ok)return null;
   const metadata=parseFrontmatter(read.bytes.toString('utf8'));
   if(!metadata)return null;
-  return {...metadata,source,path:dir};
+  return {...metadata,source};
 }
 function addRoot(roots,dir,source){
   if(!roots.some(x=>x.path===dir))roots.push({path:dir,source});
@@ -71,8 +83,8 @@ function getRoots({host,home,workspace}){
   }
   return roots;
 }
-function walk(root,source){
-  if(!safeDir(root))return [];
+function walk(root,source,boundary){
+  if(!safeChain(root,boundary))return [];
   const found=[];
   const visit=(dir,depth)=>{
     if(found.length>=MAX_SKILLS||depth>MAX_DEPTH||!safeDir(dir))return;
@@ -95,7 +107,8 @@ export function discoverSkills({host='ide',home=process.env.HOME||process.env.US
   const roots=getRoots({host,home:homeRoot,workspace});
   const skills=[],seen=new Set();
   for(const root of roots){
-    for(const skill of walk(root.path,root.source)){
+    const boundary=root.source==='workspace'?path.resolve(workspace):homeRoot;
+    for(const skill of walk(root.path,root.source,boundary)){
       const key=skill.name.toLowerCase();
       if(seen.has(key))continue;
       seen.add(key);
