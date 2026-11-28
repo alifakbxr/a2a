@@ -1,4 +1,9 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {discoverSkills,parseSkillFrontmatter} from '../src/skill-catalog.mjs';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {discoverSkills,parseSkillFrontmatter} from '../src/skill-catalog.mjs';
 function fixture(){const root=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-skill-catalog-'));const skill=(base,folder,name,description)=>{const dir=path.join(base,folder);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'SKILL.md'),'---\nname: '+name+'\ndescription: '+description+'\n---\n# body\n');return dir};return{root,skill,clean:()=>fs.rmSync(root,{recursive:true,force:true})}}
 test('discovers workspace and global Skills for documented hosts without loading bodies',()=>{const f=fixture();try{const ws=path.join(f.root,'repo','packages','app');fs.mkdirSync(ws,{recursive:true});f.skill(path.join(f.root,'repo'),'.agents/skills','workspace-skill','Use for workspace tasks');f.skill(path.join(f.root,'.gemini','config'),'skills/global-skill','global-skill','Use for global tasks');for(const host of ['app','cli','ide']){const r=discoverSkills({host,home:f.root,workspace:ws});assert.deepEqual(r.skills.map(x=>x.name),['workspace-skill','global-skill']);assert.ok(r.skills.every(x=>!('body'in x)))}}finally{f.clean()}});
 test('recognizes CLI-only and legacy IDE roots only on documented surfaces',()=>{const f=fixture();try{f.skill(path.join(f.root,'.gemini','antigravity-cli'),'skills/cli-only','cli-only','CLI skill');f.skill(path.join(f.root,'.gemini','antigravity'),'skills/legacy-ide','legacy-ide','IDE legacy skill');assert.deepEqual(discoverSkills({host:'cli',home:f.root}).skills.map(x=>x.name),['cli-only']);assert.deepEqual(discoverSkills({host:'ide',home:f.root}).skills.map(x=>x.name),['legacy-ide']);assert.deepEqual(discoverSkills({host:'app',home:f.root}).skills,[])}finally{f.clean()}});

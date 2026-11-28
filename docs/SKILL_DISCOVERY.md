@@ -4,9 +4,9 @@ PILAH's catalog is a bounded, read-only metadata inventory. It is not a Skill lo
 
 ## Discovery and cache
 
-The App/CLI/IDE path matrix is unchanged. Discovery is capped at 200 Skills, 16 KiB per metadata file, two nested directory levels and eight workspace ancestors. Only frontmatter name and description are parsed; Skill bodies, scripts and resources are never read. UTF-8 BOM, LF and Windows CRLF are supported. Duplicate required keys, invalid names, empty/oversized descriptions and unsafe scalar forms are rejected. Symlink Skill directories/files are rejected.
+The documented App/CLI/IDE path matrix remains unchanged. Discovery is capped at 200 Skills, 16 KiB per metadata file, two nested directory levels and eight workspace ancestors. Only frontmatter name and description are parsed; Skill bodies, scripts and resources are never read. UTF-8 BOM, LF and Windows CRLF are supported. Duplicate required keys, invalid names, empty/oversized descriptions and unsafe scalar forms are rejected. Symlink Skill directories/files are rejected.
 
-Validated metadata is cached across hook processes in private \`~/.config/pilah/skill-metadata-cache.json\`. It stores file identity/timestamps plus name and description only, is capped at 400 entries and 256 KiB, and is atomically replaced with private permissions. Device, inode, size, mtime or ctime changes invalidate entries. Unsafe or unavailable cache state fails closed; discovery continues without cache. No task text or Skill body is stored.
+Validated metadata is cached across hook processes in private `~/.config/pilah/skill-metadata-cache.json`. It stores file identity/timestamps plus name and description only, is capped at 400 entries and 256 KiB, and is atomically replaced with private permissions. Device, inode, size, mtime or ctime changes invalidate entries. Unsafe or unavailable cache state fails closed; discovery continues without cache. No task text or Skill body is stored.
 
 ## Local ranking
 
@@ -14,6 +14,8 @@ Ranking is deterministic and local. It normalizes English/Indonesian terms, uses
 
 ## Hook behavior and limits
 
-PreInvocation uses a dedicated \`scripts/skill-hook.mjs\` entrypoint rather than importing the full scanner, engine and verification hook. It remains opt-in through \`always-on\`, requires an authorized workspace and injects only a high-confidence hint. It does not force Skill activation. Antigravity still starts a hook process for each registered PreInvocation event; PILAH reduces the loaded module graph and repeated metadata parsing but does not claim zero process-start overhead.
+PreInvocation uses a dedicated `scripts/skill-hook.mjs` entrypoint rather than importing the full scanner, engine and verification hook. It remains opt-in through `always-on`, requires an authorized workspace and injects only a high-confidence hint. It does not force Skill activation. Antigravity still starts a hook process for each registered PreInvocation event; PILAH reduces the loaded module graph and repeated metadata parsing but does not claim zero process-start overhead.
 
-Automatic usage learning remains disabled: PILAH has not established a documented, independently verifiable host event for actual Skill activation. A manually supplied \`host_observed\` marker is not independent proof.
+Recommendation injection is capped at two distinct fingerprints per conversation, with duplicate fingerprints suppressed. State stores only fingerprints and counters, never task text.
+
+Automatic usage learning remains disabled: PILAH has not established a documented, independently verifiable host event for actual Skill activation. A manually supplied `host_observed` marker is not independent proof.

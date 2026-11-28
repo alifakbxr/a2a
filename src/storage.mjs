@@ -57,6 +57,7 @@ export class Store {
       ['assessed_revision_id','TEXT'],['updated_at','TEXT']
     ])this.#ensureColumn('hypotheses',column,type);
     this.db.exec(DDL);
+    this.#ensureColumn('skill_recommendation_state','injection_count','INTEGER NOT NULL DEFAULT 1');
     // Existing v2.0.1 SQLite databases must upgrade in place, without
     // deleting prior user checkpoints or requiring a new major DB schema.
     this.#ensureColumn('recovery_checkpoints','decisions_json',"TEXT NOT NULL DEFAULT '[]'");
@@ -178,13 +179,13 @@ export class Store {
       throw new Error('Invalid conversation ID');
     if(typeof fingerprint!=='string'||! /^[a-f0-9]{64}$/.test(fingerprint))
       throw new Error('Invalid Skill recommendation fingerprint');
-    const previous=this.get('SELECT fingerprint FROM skill_recommendation_state WHERE workspace_id=? AND conversation_id=?',workspaceId,conversationId);
-    if(previous?.fingerprint===fingerprint)return false;
-    this.run(`INSERT INTO skill_recommendation_state(workspace_id,conversation_id,fingerprint,updated_at)
-      VALUES(?,?,?,?)
+    const previous=this.get('SELECT fingerprint,injection_count FROM skill_recommendation_state WHERE workspace_id=? AND conversation_id=?',workspaceId,conversationId);
+    if(previous?.fingerprint===fingerprint||(previous?.injection_count||0)>=2)return false;
+    this.run(`INSERT INTO skill_recommendation_state(workspace_id,conversation_id,fingerprint,injection_count,updated_at)
+      VALUES(?,?,?,?,?)
       ON CONFLICT(workspace_id,conversation_id) DO UPDATE SET
-        fingerprint=excluded.fingerprint,updated_at=excluded.updated_at`,
-      workspaceId,conversationId,fingerprint,new Date().toISOString());
+        fingerprint=excluded.fingerprint,injection_count=skill_recommendation_state.injection_count+1,updated_at=excluded.updated_at`,
+      workspaceId,conversationId,fingerprint,(previous?.injection_count||0)+1,new Date().toISOString());
     this.run('DELETE FROM skill_recommendation_state WHERE workspace_id=? AND conversation_id NOT IN (SELECT conversation_id FROM skill_recommendation_state WHERE workspace_id=? ORDER BY updated_at DESC LIMIT 200)',workspaceId,workspaceId);
     return true;
   }

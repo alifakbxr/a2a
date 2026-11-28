@@ -67,6 +67,8 @@ test('Skill guidance fingerprint is deduplicated per authorized workspace and co
   assert.equal(store.shouldInjectSkillRecommendation({workspaceId,conversationId:'conv-guidance-1',fingerprint}),true);
   assert.equal(store.shouldInjectSkillRecommendation({workspaceId,conversationId:'conv-guidance-1',fingerprint}),false);
   assert.equal(store.shouldInjectSkillRecommendation({workspaceId,conversationId:'conv-guidance-1',fingerprint:'b'.repeat(64)}),true);
+  assert.equal(store.shouldInjectSkillRecommendation({workspaceId,conversationId:'conv-guidance-1',fingerprint:'c'.repeat(64)}),false,'per-conversation injection cap is two');
+  assert.equal(store.get('SELECT injection_count FROM skill_recommendation_state WHERE workspace_id=? AND conversation_id=?',workspaceId,'conv-guidance-1').injection_count,2);
   assert.equal(store.shouldInjectSkillRecommendation({workspaceId,conversationId:'conv-guidance-2',fingerprint}),true);
   assert.throws(()=>store.shouldInjectSkillRecommendation({workspaceId,conversationId:'../bad',fingerprint}),/conversation ID/);
  }finally{

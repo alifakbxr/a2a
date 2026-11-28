@@ -1,5 +1,14 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {rankSkills} from '../src/skill-ranking.mjs';
-const skills=[{name:'laravel-api',description:'Laravel PHP REST API controllers request validation authorization middleware backend endpoints',source:'workspace'},{name:'vue-ui',description:'Vue JavaScript frontend components reactive state composables user interface interactions'},{name:'database-migrations',description:'SQL PostgreSQL MySQL schema design database migrations indexes constraints data models'},{name:'security-review',description:'Security audit threat modeling authentication authorization secrets vulnerabilities'},{name:'browser-testing',description:'Playwright browser automation end-to-end tests user journeys assertions selectors'},{name:'documentation',description:'Write maintain README guides API references tutorials developer documentation'}];
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {rankSkills} from '../src/skill-ranking.mjs';
+const skills=[
+ {name:'laravel-api',description:'Laravel PHP REST API controllers request validation authorization middleware backend endpoints',source:'workspace'},
+ {name:'vue-ui',description:'Vue JavaScript frontend components reactive state composables user interface interactions'},
+ {name:'database-migrations',description:'SQL PostgreSQL MySQL schema design database migrations indexes constraints data models'},
+ {name:'security-review',description:'Security audit threat modeling authentication authorization secrets vulnerabilities'},
+ {name:'browser-testing',description:'Playwright browser automation end-to-end tests user journeys assertions selectors'},
+ {name:'documentation',description:'Write maintain README guides API references tutorials developer documentation'}
+];
 test('ranks direct English tasks',()=>{const r=rankSkills({task:'Implement Laravel API endpoint validation and authorization',skills});assert.equal(r.status,'recommended');assert.equal(r.recommendations[0].name,'laravel-api');assert.ok(r.recommendations.length<=2)});
 test('matches Indonesian tasks to English Skill metadata',()=>{const cases=[['Perbaiki proses masuk agar pengguna tidak bisa mengakses dashboard orang lain','laravel-api'],['Buat tampilan komponen Vue untuk halaman pengguna','vue-ui'],['Tambahkan migrasi basis data PostgreSQL dan indeks','database-migrations'],['Audit keamanan dan hak akses akun pengguna','security-review'],['Buat pengujian browser otomatis untuk alur checkout','browser-testing']];for(const [task,expected] of cases){const r=rankSkills({task,skills});assert.equal(r.status,'recommended',task);assert.equal(r.recommendations[0].name,expected,task)}});
 test('skips routine tasks',()=>{assert.equal(rankSkills({task:'fix typo',skills}).status,'skipped');assert.equal(rankSkills({task:'',skills}).status,'skipped')});

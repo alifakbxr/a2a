@@ -1,1 +1,11 @@
-{"pilah-session-telemetry":{"PreInvocation":[{"type":"command","command":"node ./scripts/skill-hook.mjs","timeout":5}],"SessionStart":[{"type":"command","command":"node ./scripts/hook.mjs","timeout":5}],"PostToolUse":[{"matcher":"run_command","hooks":[{"type":"command","command":"node ./scripts/hook.mjs","timeout":5}]},{"matcher":"write_file|edit_file|write_to_file|replace_file_content|multi_replace_file_content","hooks":[{"type":"command","command":"node ./scripts/hook.mjs","timeout":5}]}],"PreToolUse":[{"matcher":"run_command","hooks":[{"type":"command","command":"node ./scripts/hook.mjs","timeout":5}]}]}}
+{
+ "pilah-session-telemetry":{
+  "PreInvocation":[{"type":"command","command":"node ./scripts/skill-hook.mjs","timeout":5}],
+  "SessionStart":[{"type":"command","command":"node ./scripts/hook.mjs","timeout":5}],
+  "PostToolUse":[
+   {"matcher":"run_command","hooks":[{"type":"command","command":"node ./scripts/hook.mjs","timeout":5}]},
+   {"matcher":"write_file|edit_file|write_to_file|replace_file_content|multi_replace_file_content","hooks":[{"type":"command","command":"node ./scripts/hook.mjs","timeout":5}]}
+  ],
+  "PreToolUse":[{"matcher":"run_command","hooks":[{"type":"command","command":"node ./scripts/hook.mjs","timeout":5}]}]
+ }
+}

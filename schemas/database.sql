@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS skill_recommendation_state (
   workspace_id TEXT NOT NULL,
   conversation_id TEXT NOT NULL,
   fingerprint TEXT NOT NULL,
+  injection_count INTEGER NOT NULL DEFAULT 1 CHECK(injection_count BETWEEN 1 AND 2),
   updated_at TEXT NOT NULL,
   PRIMARY KEY(workspace_id,conversation_id),
   FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE

@@ -6,7 +6,8 @@ import os from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {parseArtifact,verifyHandoff} from '../src/verification.mjs';
-import {isDirectTestCommand,handleHookEvent,detectSideQuestionInfo,recommendSkillGuidance} from '../scripts/hook.mjs';
+import {isDirectTestCommand,handleHookEvent,detectSideQuestionInfo} from '../scripts/hook.mjs';
+import {recommendSkillGuidance} from '../src/skill-guidance.mjs';
 import {recommendSkills} from '../src/skill-discovery.mjs';
 import {sha256,authorizeWorkspace,invalidateWorkspaceCache,setA2AMode} from '../src/security.mjs';
 import {Store} from '../src/storage.mjs';
@@ -71,6 +72,9 @@ test('#51: hook manifest registers native edit and PreInvocation events',()=>{
  const groups=Object.values(hooks);
  const triggers=groups.flatMap(g=>Object.keys(g));
  assert.equal(triggers.includes('PreInvocation'),true);
+ const pre=groups.flatMap(g=>g.PreInvocation||[]);
+ assert.ok(pre.some(x=>x.command==='node ./scripts/skill-hook.mjs'));
+ assert.ok(pre.every(x=>!x.command.includes('scripts/hook.mjs')));
  const matchers=groups.flatMap(g=>g.PostToolUse||[]).map(x=>x.matcher);
  for(const tool of ['write_file','edit_file','write_to_file','replace_file_content','multi_replace_file_content'])
   assert.ok(matchers.some(m=>new RegExp(m).test(tool)),tool);
