@@ -5,7 +5,7 @@ const MAX_SKILLS=200;
 const MAX_RESULTS=2;
 function terms(value){
  return String(value||'').toLowerCase().normalize('NFKC')
-  .match(/[\\p{L}\\p{N}][\\p{L}\\p{N}_+#.-]{1,}/gu)||[];
+  .match(/[\\p{L}\\p{N}]+(?:[+#]+)?/gu)||[];
 }
 function weightedOverlap(query,field,weight){
  const fieldTerms=new Set(terms(field));
@@ -16,6 +16,7 @@ function weightedOverlap(query,field,weight){
 export function rankSkills({task,skills=[],usage={},maxResults=MAX_RESULTS,threshold=2,allowRoutine=false}={}){
  if(typeof task!=='string'||task.length>MAX_TASK_CHARS)throw new Error('task must be a string up to 4000 characters');
  if(!Array.isArray(skills)||skills.length>MAX_SKILLS)throw new Error('skills must contain at most 200 entries');
+ if(!usage||typeof usage!=='object'||Array.isArray(usage))throw new Error('usage must be an object');
  if(!Number.isSafeInteger(maxResults)||maxResults<1||maxResults>MAX_RESULTS)throw new Error('maxResults must be 1 or 2');
  if(typeof threshold!=='number'||!Number.isFinite(threshold)||threshold<1||threshold>20)throw new Error('threshold must be between 1 and 20');
  const query=[...new Set(terms(task).filter(x=>!STOP.has(x)))];
@@ -39,7 +40,7 @@ export function rankSkills({task,skills=[],usage={},maxResults=MAX_RESULTS,thres
  if(!recommendations.length)return {status:'no_match',reason:'No Skill met the deterministic relevance threshold.',recommendations:[]};
  const first=recommendations[0],second=recommendations[1];
  const margin=second?first.score-second.score:first.score;
- const confidence=first.matched_terms>=3&&margin>=1?'high':first.matched_terms>=2?'medium':'low';
+ const confidence=first.matched_terms>=3&&margin>=1?'high':(first.match_basis.name_terms>=1||first.matched_terms>=3)?'medium':'low';
  if(confidence==='low')return {status:'ambiguous',reason:'Matches are too weak to recommend a Skill confidently.',recommendations:[]};
  return {status:'recommended',confidence,reason:'Matched task terms against Skill names and descriptions; usage history is a bounded tie-breaker only.',recommendations};
 }
