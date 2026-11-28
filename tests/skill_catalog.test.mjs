@@ -46,3 +46,5 @@ test('preserves manual-only Skill metadata without auto-recommending it',()=>{
  const parsed=parseSkillFrontmatter('---\nname: manual-review\ndescription: Review deployment changes and release risks\ndisable-model-invocation: true\n---\n');
  assert.deepEqual(parsed,{name:'manual-review',description:'Review deployment changes and release risks',disableModelInvocation:true});
 });
+
+test('manifest entries can point directly to one Skill.md file',()=>{const f=fixture();try{const repo=path.join(f.root,'repo');fs.mkdirSync(path.join(repo,'.git'),{recursive:true});f.skill(repo,'.agents/skills/single-file','single-file','A directly referenced Skill');fs.writeFileSync(path.join(repo,'.agents','skills.json'),JSON.stringify({entries:[{path:'.agents/skills/single-file/SKILL.md'}]}));const r=discoverSkills({host:'app',home:f.root,workspace:repo});assert.deepEqual(r.skills.map(x=>x.name),['single-file'])}finally{f.clean()}});
