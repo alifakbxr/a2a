@@ -50,7 +50,7 @@ test('Skill usage rejects invalid source and unsafe names',()=>{
  const store=new Store(path.join(root,'db'));
  try{
   const workspaceId=store.register(path.join(root,'workspace'));
-  assert.throws(()=>store.recordSkillUsage({workspaceId,skillName:'bad\\nname',source:'external',activationEvidence:'host_observed'}),/Invalid Skill/);
+  assert.throws(()=>store.recordSkillUsage({workspaceId,skillName:'bad\nname',source:'external',activationEvidence:'host_observed'}),/Invalid Skill/);
   assert.throws(()=>store.recordSkillUsage({workspaceId,skillName:'skill',source:'external',activationEvidence:'host_observed'}),/Invalid Skill source/);
  }finally{
   store.close();
