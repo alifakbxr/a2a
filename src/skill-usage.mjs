@@ -21,7 +21,7 @@ export function recordObservedSkillUse(payload,baseDir){
  let workspace=null;
  for(const candidate of candidates){try{workspace=requireAuthorizedWorkspace(candidate);break}catch{}}
  if(!workspace)return false;
- const skill=identifySkillFile({filePath,home:getHomeDir(),workspace});
+ const transcriptPath=typeof payload?.transcriptPath==='string'?payload.transcriptPath.replaceAll('\\\\','/').toLowerCase():'';\n const host=transcriptPath.includes('/antigravity-cli/')?'cli':transcriptPath.includes('/antigravity-ide/')?'ide':'app';\n const skill=identifySkillFile({filePath,home:getHomeDir(),workspace,host});
  if(!skill)return false;
  let store;
  try{
