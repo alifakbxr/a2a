@@ -710,3 +710,21 @@ test('inspection never trusts file stat metadata alone for revision freshness',(
   const refreshed=e.context({workspace:root,action:'inspect'});
   assert.notEqual(refreshed.revision,first.revision);
 }));
+
+
+test('revision and graph index roll back together when index persistence fails',()=>withEngine((e,root,write)=>{
+  const initial=e.sync(root);
+  assert.ok(e.impact({workspace:root,changed:['src/auth.js']}).observed_consumers.includes('src/page.js'));
+  write('src/page.js','export function page(){return true}\n');
+  const persistIndex=e.store.persistIndex.bind(e.store);
+  e.store.persistIndex=()=>{throw new Error('simulated index persistence failure')};
+  assert.throws(()=>e.sync(root),/simulated index persistence failure/);
+  e.store.persistIndex=persistIndex;
+  const state=e.store.get('SELECT current_revision_id,indexed_revision_id FROM workspaces WHERE id=?',initial.wsId);
+  assert.equal(state.current_revision_id,initial.revision,'failed index persistence must not publish a new current revision');
+  assert.equal(state.indexed_revision_id,initial.revision,'the indexed revision marker must remain aligned');
+  const recovered=e.sync(root);
+  assert.notEqual(recovered.revision,initial.revision);
+  const impact=e.impact({workspace:root,changed:['src/auth.js']});
+  assert.ok(!impact.observed_consumers.includes('src/page.js'),'recovered graph must reflect the current source imports');
+}));

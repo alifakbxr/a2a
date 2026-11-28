@@ -42,6 +42,7 @@ export class Store {
     this.db=new Database(this.file);
     this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=4000; PRAGMA trusted_schema=OFF;');
     this.#ensureColumn('workspaces','current_revision_id','TEXT');
+    this.#ensureColumn('workspaces','indexed_revision_id','TEXT');
     this.#ensureColumn('files','mtime_ms','REAL');
     this.#ensureColumn('files','ctime_ms','REAL');
     for(const [name,type] of [['scan_duration_ms','REAL'],['scan_read_files','INTEGER'],['scan_reused_files','INTEGER'],['scan_read_bytes','INTEGER']])this.#ensureColumn('telemetry',name,type);
@@ -104,8 +105,8 @@ export class Store {
     this.run('UPDATE workspaces SET current_revision_id=? WHERE id=?',id,wsId);
     return id;
   }
-  persistIndex(wsId,rev,files,nodes,edges){
-    this.transaction(()=>{
+  persistIndex(wsId,rev,files,nodes,edges,{inTransaction=false}={}){
+    const persist=()=>{
       const existingFiles=new Map(this.all('SELECT path,content_sha,bytes,mtime_ms,ctime_ms FROM files WHERE workspace_id=?',wsId).map(r=>[r.path,r]));
       const incomingFiles=new Map(files.map(f=>[f.path,f]));
       const delFile=this.db.prepare('DELETE FROM files WHERE workspace_id=? AND path=?');
@@ -142,7 +143,17 @@ export class Store {
           insEdge.run(wsId,x.id,x.from,x.to,x.kind,x.basis||'source',x.state||'observed',x.file||null,rev);
         }
       }
+      this.run('UPDATE workspaces SET indexed_revision_id=? WHERE id=?',rev,wsId);
+    };
+    if(inTransaction)persist();else this.transaction(persist);
+  }
+  persistSnapshot(wsId,snapshot,git,env,files,nodes,edges){
+    let revision;
+    this.transaction(()=>{
+      revision=this.insertRevision(wsId,snapshot,git,env);
+      this.persistIndex(wsId,revision,files,nodes,edges,{inTransaction:true});
     });
+    return revision;
   }
   // Local privacy control: only rows associated with an explicitly authorized
   // workspace. Unscoped historical notes and project artifacts on disk remain untouched.
