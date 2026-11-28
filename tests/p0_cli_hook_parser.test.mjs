@@ -6,7 +6,8 @@ import os from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {parseArtifact,verifyHandoff} from '../src/verification.mjs';
-import {isDirectTestCommand,handleHookEvent,detectSideQuestionInfo} from '../scripts/hook.mjs';\nimport {recommendSkills} from '../src/skill-discovery.mjs';
+import {isDirectTestCommand,handleHookEvent,detectSideQuestionInfo} from '../scripts/hook.mjs';
+import {recommendSkills} from '../src/skill-discovery.mjs';
 import {sha256,authorizeWorkspace,invalidateWorkspaceCache} from '../src/security.mjs';
 import {Store} from '../src/storage.mjs';
 
