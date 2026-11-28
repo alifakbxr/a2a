@@ -185,6 +185,7 @@ export class Store {
       ON CONFLICT(workspace_id,conversation_id) DO UPDATE SET
         fingerprint=excluded.fingerprint,updated_at=excluded.updated_at`,
       workspaceId,conversationId,fingerprint,new Date().toISOString());
+    this.run('DELETE FROM skill_recommendation_state WHERE workspace_id=? AND conversation_id NOT IN (SELECT conversation_id FROM skill_recommendation_state WHERE workspace_id=? ORDER BY updated_at DESC LIMIT 200)',workspaceId,workspaceId);
     return true;
   }
   recordSkillUsage({workspaceId,skillName,source='unknown',activationEvidence}={}) {
@@ -206,6 +207,7 @@ export class Store {
         usage_count=MIN(skill_usage.usage_count+1,1000000),
         last_used_at=excluded.last_used_at`,
       workspaceId,normalized,source,1,now);
+    this.run('DELETE FROM skill_usage WHERE workspace_id=? AND skill_name NOT IN (SELECT skill_name FROM skill_usage WHERE workspace_id=? ORDER BY last_used_at DESC LIMIT 200)',workspaceId,workspaceId);
     return this.get('SELECT skill_name,source,usage_count,last_used_at FROM skill_usage WHERE workspace_id=? AND skill_name=?',workspaceId,normalized);
   }
   getSkillUsage(workspaceId) {
