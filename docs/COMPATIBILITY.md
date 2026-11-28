@@ -52,7 +52,7 @@ The CI test does not have access to the user's Pop!_OS GUI session; a live Antig
 
 ### Skill inclusion versus plugin MCP availability
 
-The v1.2.0 development branch adds a bounded, read-only Skill metadata catalog. See [Agent Skills discovery](SKILL_DISCOVERY.md) for the documented App/CLI/IDE path matrix and activation limitations. The catalog is not yet wired into invocation routing or hooks.
+The v1.2.0 development branch adds a bounded, read-only Skill metadata catalog, deterministic local ranking and a high-confidence-only `PreInvocation` guidance hook. See [Agent Skills discovery](SKILL_DISCOVERY.md) for the documented App/CLI/IDE path matrix, deduplication rules and activation limitations.
 
 An enabled plugin and four green MCP tools do not imply the PILAH skill metadata is in the **current** agent context. Antigravity may exclude skills through a global `~/.gemini/config/skills.json`, workspace `.agents/skills.json`, or subagent context filtering. Run `node scripts/pilah.mjs doctor` to inspect the **global manifest only** (`skill_discovery`), then check `/skills` in the actual IDE/CLI session and `agy plugin validate --strict`. `/skills reload` refreshes CLI discovery without invoking an PILAH MCP tool. Do not automatically remove exclusions or duplicate the skill in a second location. An `Excluded` indicator is not by itself proof of an MCP server outage or evidence that the model would choose PILAH when included.
 
