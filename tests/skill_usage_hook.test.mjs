@@ -86,3 +86,28 @@ test('usage learning is opt-in and stops immediately after workspace revocation'
   assert.equal(fs.existsSync(path.join(f.baseDir,'a2a.sqlite')),false);
  }finally{f.restore()}
 });
+
+test('observes CLI-only and plugin Skill reads using the documented transcript surface',()=>{
+ const f=fixture();
+ try{
+  const cliDir=path.join(f.home,'.gemini','antigravity-cli','skills','cli-helper');
+  fs.mkdirSync(cliDir,{recursive:true});
+  const cliFile=path.join(cliDir,'SKILL.md');
+  fs.writeFileSync(cliFile,'---\nname: cli-helper\ndescription: CLI workflow helper\n---\n');
+  const cliPayload={...event(cliFile,{workspace:f.workspace}),transcriptPath:path.join(f.home,'.gemini','antigravity-cli','brain','conv','logs','transcript.jsonl')};
+  assert.equal(recordObservedSkillUse(cliPayload,f.baseDir),true);
+  const pluginDir=path.join(f.home,'.gemini','config','plugins','code-tools');
+  fs.mkdirSync(path.join(pluginDir,'skills','review'),{recursive:true});
+  fs.writeFileSync(path.join(pluginDir,'plugin.json'),JSON.stringify({name:'code-tools',version:'1.0.0'}));
+  const pluginFile=path.join(pluginDir,'skills','review','SKILL.md');
+  fs.writeFileSync(pluginFile,'---\nname: review\ndescription: Review code and security issues\n---\n');
+  const pluginPayload={...event(pluginFile,{workspace:f.workspace}),transcriptPath:path.join(f.home,'.gemini','antigravity','brain','conv','logs','transcript.jsonl')};
+  assert.equal(recordObservedSkillUse(pluginPayload,f.baseDir),true);
+  const store=new Store(f.baseDir);
+  try{
+   const id=store.register(f.workspace);
+   assert.equal(store.get('SELECT source FROM skill_usage WHERE workspace_id=? AND skill_name=?',id,'cli-helper').source,'cli-only');
+   assert.equal(store.get('SELECT source FROM skill_usage WHERE workspace_id=? AND skill_name=?',id,'code-tools:review').source,'plugin');
+  }finally{store.close()}
+ }finally{f.restore()}
+});
