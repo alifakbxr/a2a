@@ -5,7 +5,7 @@ const MAX_SKILLS=200;
 const MAX_RESULTS=2;
 function terms(value){
  return String(value||'').toLowerCase().normalize('NFKC')
-  .match(/[\\p{L}\\p{N}]+(?:[+#]+)?/gu)||[];
+  .match(/[\p{L}\p{N}]+(?:[+#]+)?/gu)||[];
 }
 function weightedOverlap(query,field,weight){
  const fieldTerms=new Set(terms(field));
