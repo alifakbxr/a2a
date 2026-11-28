@@ -28,7 +28,7 @@ export function rankSkills({task,skills=[],usage={},maxResults=MAX_RESULTS,thres
   const name=weightedOverlap(query,skill.name,3),description=weightedOverlap(query,skill.description,1);
   const raw=name.score+description.score;
   if(raw<threshold)continue;
-  const count=Number.isSafeInteger(usage[skill.name])&&usage[skill.name]>0?Math.min(usage[skill.name],1000):0;
+  const count=Number.isSafeInteger(usage[skill.name.toLowerCase()])&&usage[skill.name]>0?Math.min(usage[skill.name],1000):0;
   const usageBoost=Math.min(1.5,Math.log1p(count)*0.35);
   const sourceBoost=skill.source==='workspace'?0.5:0;
   ranked.push({name:skill.name,description:skill.description,source:skill.source||'unknown',
