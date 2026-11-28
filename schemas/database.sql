@@ -1,6 +1,6 @@
 -- A2A database schema v1; runtime applies idempotently.
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS workspaces (id TEXT PRIMARY KEY, canonical_path TEXT UNIQUE NOT NULL, created_at TEXT NOT NULL, current_revision_id TEXT);
+CREATE TABLE IF NOT EXISTS workspaces (id TEXT PRIMARY KEY, canonical_path TEXT UNIQUE NOT NULL, created_at TEXT NOT NULL, current_revision_id TEXT, indexed_revision_id TEXT);
 CREATE TABLE IF NOT EXISTS revisions (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, git_head TEXT, snapshot_sha TEXT NOT NULL, environment_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL, FOREIGN KEY(workspace_id) REFERENCES workspaces(id));
 CREATE INDEX IF NOT EXISTS revisions_by_ws ON revisions(workspace_id,created_at DESC);
 CREATE TABLE IF NOT EXISTS files (workspace_id TEXT NOT NULL, path TEXT NOT NULL, content_sha TEXT NOT NULL, language TEXT, bytes INTEGER NOT NULL, revision_id TEXT NOT NULL, mtime_ms REAL, ctime_ms REAL, PRIMARY KEY(workspace_id,path));
