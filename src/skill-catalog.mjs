@@ -44,7 +44,141 @@ function validList(v){return Array.isArray(v)&&v.length<=200&&v.every(x=>typeof 
 function matchesFilter(skill,filters){if(!filters||!filters.length)return true;const name=skill.name.split(':').at(-1),rel=skill.relativePath||name;return filters.includes(name)||filters.includes(skill.name)||filters.includes(rel)}
 function scanSkillRoot(root,source,boundary,cache,{plugin=null,includeOnly=null,exclude=[]}={}){if(!safeChain(root,boundary))return[];const found=[],direct=path.join(root,'SKILL.md');if(safeFile(direct,MAX_SKILL_BYTES)){const item=readSkill(root,source,cache,{plugin});if(item){item.relativePath=path.basename(root);if(matchesFilter(item,includeOnly)&&!(exclude.length&&(exclude.includes(item.name)||exclude.includes(item.relativePath))))found.push(item)}return found}let entries;try{entries=fs.readdirSync(root,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name)).slice(0,MAX_SKILLS)}catch{return found}for(const e of entries){if(found.length>=MAX_SKILLS)break;if(!e.isDirectory()||e.isSymbolicLink()||e.name.startsWith('.'))continue;const item=readSkill(path.join(root,e.name),source,cache,{plugin});if(!item)continue;item.relativePath=e.name;if(matchesFilter(item,includeOnly)&&!exclude.includes(e.name)&&!exclude.includes(item.name))found.push(item)}return found}
 function discoverManifest(file,{kind,repoRoot,cache,state,depth=0,seen=new Set(),boundary=null,source:manifestSource=null}={}){if(depth>=MAX_MANIFEST_DEPTH||state.manifests>=MAX_MANIFESTS||state.entries>=MAX_MANIFEST_ENTRIES)return[];const absolute=path.resolve(file);if(seen.has(absolute))return[];seen.add(absolute);state.manifests++;const manifestBoundary=boundary|| (kind==='personal'?path.dirname(absolute):repoRoot||path.parse(absolute).root);const doc=readJson(absolute,MAX_MANIFEST_BYTES,manifestBoundary);if(!doc)return[];const parent=path.dirname(absolute),base=kind==='personal'?parent:kind==='personal-workspace'?repoRoot:kind==='inherited'?(ALIASES.includes(path.basename(parent))?path.dirname(parent):parent):path.dirname(parent),entryBoundary=kind==='personal'?base:(repoRoot||base),out=[];if(Array.isArray(doc.inherits))for(const inherited of doc.inherits.slice(0,32)){if(!inherited||typeof inherited.path!=='string'||!path.isAbsolute(inherited.path)||inherited.path.length>4096)continue;const items=discoverManifest(inherited.path,{kind:'inherited',repoRoot:null,cache,state,depth:depth+1,seen,boundary:path.parse(path.resolve(inherited.path)).root,source:manifestSource}),filter=validList(inherited.include_only)?inherited.include_only:null;out.push(...(filter?items.filter(x=>matchesFilter(x,filter)):items))}if(Array.isArray(doc.entries))for(const entry of doc.entries.slice(0,Math.min(100,MAX_MANIFEST_ENTRIES-state.entries))){state.entries++;if(!entry||typeof entry.path!=='string'||entry.path.length>4096)continue;const includeOnly=validList(entry.include_only)?entry.include_only:null,exclude=validList(entry.exclude)?entry.exclude:[],absoluteEntry=path.isAbsolute(entry.path),target=path.resolve(base,entry.path);let root=absoluteEntry?path.resolve(entry.path):target;if(!absoluteEntry&&!safeDir(root)&&repoRoot)root=path.resolve(repoRoot,entry.path);const rootBoundary=absoluteEntry?path.parse(root).root:entryBoundary,source=manifestSource||(kind==='personal-workspace'?'personal-workspace':kind==='personal'?'global-manifest':'workspace-manifest');if(path.basename(root)==='SKILL.md'){const dir=path.dirname(root),rel=path.relative(base,root).split(path.sep).join('/');if(safeChain(dir,rootBoundary)){const item=readSkill(dir,source,cache);if(item){item.relativePath=rel;if(matchesFilter(item,includeOnly)&&!exclude.includes(item.name)&&!exclude.includes(rel))out.push(item)}}}else out.push(...scanSkillRoot(root,source,rootBoundary,cache,{includeOnly,exclude}));if(includeOnly)for(const nested of includeOnly.filter(x=>x.includes('/'))){const nestedRoot=path.resolve(root,nested),rel=path.relative(root,nestedRoot);if(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel)||!safeChain(nestedRoot,rootBoundary))continue;const item=readSkill(nestedRoot,source,cache);if(item){item.relativePath=rel.split(path.sep).join('/');if(!exclude.includes(item.relativePath)&&!exclude.includes(item.name))out.push(item)}}}if(validList(doc.exclude))state.excludes.push(...doc.exclude);return out}
-function getRoots({host,home,workspace}){const roots=[],{levels,repoRoot}=workspaceLevels(workspace),manifests=[];for(const level of levels)for(const alias of ALIASES){const custom=path.join(level,alias);addRoot(roots,path.join(custom,'skills'),'workspace');const manifest=path.join(custom,'skills.json');if(safeFile(manifest))manifests.push(manifest)}let personalRoot=null;if(repoRoot){const configFile=path.join(repoRoot,'.gemini','config.json'),configDoc=readJson(configFile,16*1024,repoRoot),raw=configDoc?.personal_customization_dir;if(typeof raw==='string'&&raw.length<=512&&!path.isAbsolute(raw)){let username=process.env.USER||process.env.USERNAME||'';if(!username)try{username=os.userInfo().username}catch{}const relative=raw.replaceAll('{user}',username);if((!raw.includes('{user}')||username)&&relative&&!relative.includes('{')&&!relative.includes('}')&&!relative.split(/[\\\\/]/).includes('..')){const candidate=path.resolve(repoRoot,relative);if(safeChain(candidate,repoRoot)){personalRoot=candidate;for(const alias of ALIASES){const custom=path.join(candidate,alias);addRoot(roots,path.join(custom,'skills'),'personal-workspace');const manifest=path.join(custom,'skills.json');if(safeFile(manifest))manifests.unshift(manifest)}}}}}const config=path.join(home,'.gemini','config');if(host==='cli'){addRoot(roots,path.join(home,'.gemini','antigravity-cli','skills'),'cli-only');addRoot(roots,path.join(home,'.gemini','skills'),'cli-only')}addRoot(roots,path.join(config,'skills'),'global');if(host==='ide')addRoot(roots,path.join(home,'.gemini','antigravity','skills'),'legacy-ide');const pluginBase=path.join(config,'plugins');if(safeDir(pluginBase)){let entries=[];try{entries=fs.readdirSync(pluginBase,{withFileTypes:true}).slice(0,100)}catch{}for(const e of entries)if(e.isDirectory()&&!e.isSymbolicLink()){const pluginDir=path.join(pluginBase,e.name),manifest=path.join(pluginDir,'plugin.json'),nested=path.join(pluginDir,'.antigravity-plugin','plugin.json'),doc=readJson(manifest,32*1024,pluginBase)||readJson(nested,32*1024,pluginBase);if(typeof doc?.name!=='string'||doc.name!==e.name||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(doc.name))continue;addRoot(roots,path.join(pluginDir,'skills'),'plugin',{plugin:doc.name})}}return{roots,manifests,personalManifest:path.join(config,'skills.json'),repoRoot,levels,personalRoot}}
-function scanAll({host,home,workspace,cache}){const config=getRoots({host,home,workspace}),state={manifests:0,entries:0,excludes:[]},priority={'cli-only':0,'personal-workspace':1,workspace:2,'workspace-manifest':2,global:3,'global-manifest':3,'legacy-ide':4,plugin:5},rootCandidates=[],manifestCandidates=[];const roots=[...config.roots].sort((a,b)=>(priority[a.source]??5)-(priority[b.source]??5));for(const root of roots){if(rootCandidates.length>=MAX_SKILL_CANDIDATES)break;const boundary=(root.source==='workspace'||root.source==='personal-workspace')?(config.repoRoot||root.path):root.source==='plugin'?path.dirname(path.dirname(root.path)):path.parse(root.path).root;rootCandidates.push(...scanSkillRoot(root.path,root.source,boundary,cache,{plugin:root.plugin}).slice(0,MAX_SKILL_CANDIDATES-rootCandidates.length))}for(const manifest of config.manifests){if(manifestCandidates.length>=MAX_SKILL_CANDIDATES)break;const personal=config.personalRoot&&manifest.startsWith(config.personalRoot+path.sep),source=personal?'personal-workspace':'workspace-manifest';manifestCandidates.push(...discoverManifest(manifest,{kind:personal?'personal-workspace':'workspace',repoRoot:config.repoRoot,cache,state,boundary:config.repoRoot||path.parse(manifest).root,source}).slice(0,MAX_SKILL_CANDIDATES-manifestCandidates.length))}if(safeFile(config.personalManifest)&&manifestCandidates.length<MAX_SKILL_CANDIDATES)manifestCandidates.push(...discoverManifest(config.personalManifest,{kind:'personal',repoRoot:null,cache,state,boundary:home,source:'global-manifest'}).slice(0,MAX_SKILL_CANDIDATES-manifestCandidates.length));const excluded=new Set(state.excludes),candidates=[...rootCandidates,...manifestCandidates],seen=new Set(),result=[];candidates.sort((a,b)=>(priority[a.source]??5)-(priority[b.source]??5));for(const skill of candidates){const key=skill.name.toLowerCase(),base=skill.name.split(':').at(-1);if(seen.has(key)||(skill.source!=='cli-only'&&(excluded.has(skill.name)||excluded.has(base)||excluded.has(skill.relativePath))))continue;seen.add(key);result.push(skill);if(result.length>=MAX_SKILLS)break}return{...config,skills:result,state}}
+function readPluginManifest(pluginDir,boundary){
+ if(!safeChain(pluginDir,boundary))return null;
+ const files=[path.join(pluginDir,'plugin.json'),path.join(pluginDir,'.antigravity-plugin','plugin.json'),path.join(pluginDir,'.gemini-plugin','plugin.json')];
+ for(const file of files){
+  const doc=readJson(file,32*1024,boundary);if(!doc)continue;
+  const name=doc.name===undefined?path.basename(pluginDir):doc.name;
+  if(typeof name!=='string'||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name))continue;
+  return{dir:pluginDir,name,folder:path.basename(pluginDir)};
+ }
+ return null;
+}
+function scanPluginContainer(container,cache,{includeOnly=null,exclude=[],limit=MAX_SKILL_CANDIDATES}={}){
+ const {path:containerPath,source,boundary}=container;if(!safeChain(containerPath,boundary)||limit<=0)return[];
+ const direct=readPluginManifest(containerPath,boundary),plugins=[];
+ if(direct)plugins.push(direct);
+ else{
+  let entries=[];try{entries=fs.readdirSync(containerPath,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name)).slice(0,MAX_PLUGIN_DIRS)}catch{return[]}
+  for(const entry of entries){if(plugins.length>=MAX_PLUGIN_DIRS)break;if(!entry.isDirectory()||entry.isSymbolicLink()||entry.name.startsWith('.'))continue;const plugin=readPluginManifest(path.join(containerPath,entry.name),boundary);if(plugin)plugins.push(plugin)}
+ }
+ const result=[];
+ for(const plugin of plugins){
+  if(result.length>=limit)break;
+  if(includeOnly?.length&&!includeOnly.includes(plugin.folder)&&!includeOnly.includes(plugin.name))continue;
+  if(exclude.includes(plugin.folder)||exclude.includes(plugin.name))continue;
+  const skillsRoot=path.join(plugin.dir,'skills');if(!safeChain(skillsRoot,plugin.dir))continue;
+  const skills=scanSkillRoot(skillsRoot,source,plugin.dir,cache,{plugin:plugin.name}).slice(0,limit-result.length);
+  for(const skill of skills){skill.pluginFolder=plugin.folder;result.push(skill)}
+ }
+ return result;
+}
+function discoverPluginManifest(file,{kind,repoRoot,cache,state,depth=0,seen=new Set(),boundary=null,source:manifestSource=null}={}){
+ if(depth>=MAX_MANIFEST_DEPTH||state.manifests>=MAX_MANIFESTS||state.entries>=MAX_MANIFEST_ENTRIES)return[];
+ const absolute=path.resolve(file);if(seen.has(absolute))return[];seen.add(absolute);state.manifests++;
+ const manifestBoundary=boundary||(kind==='personal'?path.dirname(absolute):repoRoot||path.parse(absolute).root);
+ const doc=readJson(absolute,MAX_MANIFEST_BYTES,manifestBoundary);if(!doc)return[];
+ const parent=path.dirname(absolute),base=kind==='personal'?parent:kind==='personal-workspace'?repoRoot:kind==='inherited'?(ALIASES.includes(path.basename(parent))?path.dirname(parent):parent):path.dirname(parent),entryBoundary=kind==='personal'?base:(repoRoot||base),out=[];
+ if(Array.isArray(doc.inherits))for(const inherited of doc.inherits.slice(0,32)){
+  if(!inherited||typeof inherited.path!=='string'||!path.isAbsolute(inherited.path)||inherited.path.length>4096)continue;
+  const items=discoverPluginManifest(inherited.path,{kind:'inherited',repoRoot:null,cache,state,depth:depth+1,seen,boundary:path.parse(path.resolve(inherited.path)).root,source:manifestSource});
+  const filter=validList(inherited.include_only)?inherited.include_only:null;
+  out.push(...(filter?items.filter(x=>filter.includes(x.plugin)||filter.includes(x.pluginFolder)):items));
+ }
+ if(Array.isArray(doc.entries))for(const entry of doc.entries.slice(0,Math.min(100,MAX_MANIFEST_ENTRIES-state.entries))){
+  state.entries++;if(!entry||typeof entry.path!=='string'||entry.path.length>4096)continue;
+  const includeOnly=validList(entry.include_only)?entry.include_only:null,exclude=validList(entry.exclude)?entry.exclude:[],absoluteEntry=path.isAbsolute(entry.path),target=path.resolve(base,entry.path);
+  let root=absoluteEntry?path.resolve(entry.path):target;if(!absoluteEntry&&!safeDir(root)&&repoRoot)root=path.resolve(repoRoot,entry.path);
+  const rootBoundary=absoluteEntry?path.parse(root).root:entryBoundary,source=manifestSource||(kind==='personal-workspace'?'personal-plugin':kind==='personal'?'plugin':'workspace-plugin');
+  out.push(...scanPluginContainer({path:root,source,boundary:rootBoundary},cache,{includeOnly,exclude,limit:MAX_SKILL_CANDIDATES-out.length}));
+ }
+ if(validList(doc.exclude))state.excludes.push(...doc.exclude);
+ return out;
+}
+function getRoots({host,home,workspace}){
+ const roots=[],pluginContainers=[],manifests=[],pluginManifests=[];
+ const {levels,repoRoot}=workspaceLevels(workspace);
+ for(const level of levels)for(const alias of ALIASES){
+  const custom=path.join(level,alias);
+  addRoot(roots,path.join(custom,'skills'),'workspace');
+  const skillManifest=path.join(custom,'skills.json');if(safeFile(skillManifest))manifests.push(skillManifest);
+  pluginContainers.push({path:path.join(custom,'plugins'),source:'workspace-plugin',boundary:repoRoot||level});
+  const pluginManifest=path.join(custom,'plugins.json');if(safeFile(pluginManifest))pluginManifests.push(pluginManifest);
+ }
+ let personalRoot=null;
+ if(repoRoot){
+  const configFile=path.join(repoRoot,'.gemini','config.json'),configDoc=readJson(configFile,16*1024,repoRoot),raw=configDoc?.personal_customization_dir;
+  if(typeof raw==='string'&&raw.length<=512&&!path.isAbsolute(raw)){
+   let username=process.env.USER||process.env.USERNAME||'';if(!username)try{username=os.userInfo().username}catch{}
+   const relative=raw.replaceAll('{user}',username);
+   if((!raw.includes('{user}')||username)&&relative&&!relative.includes('{')&&!relative.includes('}')&&!relative.split(/[\\/]/).includes('..')){
+    const candidate=path.resolve(repoRoot,relative);
+    if(safeChain(candidate,repoRoot)){
+     personalRoot=candidate;
+     for(const alias of ALIASES){
+      const custom=path.join(candidate,alias);
+      addRoot(roots,path.join(custom,'skills'),'personal-workspace');
+      const skillManifest=path.join(custom,'skills.json');if(safeFile(skillManifest))manifests.unshift(skillManifest);
+      pluginContainers.unshift({path:path.join(custom,'plugins'),source:'personal-plugin',boundary:repoRoot});
+      const pluginManifest=path.join(custom,'plugins.json');if(safeFile(pluginManifest))pluginManifests.unshift(pluginManifest);
+     }
+    }
+   }
+  }
+ }
+ const config=path.join(home,'.gemini','config');
+ if(host==='cli'){
+  addRoot(roots,path.join(home,'.gemini','antigravity-cli','skills'),'cli-only');
+  addRoot(roots,path.join(home,'.gemini','skills'),'cli-only');
+ }
+ addRoot(roots,path.join(config,'skills'),'global');
+ if(host==='ide')addRoot(roots,path.join(home,'.gemini','antigravity','skills'),'legacy-ide');
+ pluginContainers.push({path:path.join(config,'plugins'),source:'plugin',boundary:config});
+ const personalSkillManifest=path.join(config,'skills.json');if(safeFile(personalSkillManifest)){}
+ const personalPluginManifest=path.join(config,'plugins.json');if(safeFile(personalPluginManifest))pluginManifests.push(personalPluginManifest);
+ return{roots,manifests,pluginContainers,pluginManifests,personalManifest:personalSkillManifest,repoRoot,levels,personalRoot};
+}
+function scanAll({host,home,workspace,cache}){
+ const config=getRoots({host,home,workspace});
+ const state={manifests:0,entries:0,excludes:[]},pluginState={manifests:0,entries:0,excludes:[]};
+ const priority={'cli-only':0,'personal-workspace':1,'personal-plugin':1,workspace:2,'workspace-manifest':2,'workspace-plugin':2,global:3,'global-manifest':3,'legacy-ide':4,plugin:5};
+ const rootCandidates=[],manifestCandidates=[],pluginCandidates=[],pluginManifestCandidates=[];
+ const roots=[...config.roots].sort((a,b)=>(priority[a.source]??5)-(priority[b.source]??5));
+ for(const root of roots){
+  if(rootCandidates.length>=MAX_SKILL_CANDIDATES)break;
+  const boundary=(root.source==='workspace'||root.source==='personal-workspace')?(config.repoRoot||root.path):path.parse(root.path).root;
+  rootCandidates.push(...scanSkillRoot(root.path,root.source,boundary,cache,{plugin:root.plugin}).slice(0,MAX_SKILL_CANDIDATES-rootCandidates.length));
+ }
+ for(const manifest of config.manifests){
+  if(manifestCandidates.length>=MAX_SKILL_CANDIDATES)break;
+  const personal=config.personalRoot&&manifest.startsWith(config.personalRoot+path.sep),source=personal?'personal-workspace':'workspace-manifest';
+  manifestCandidates.push(...discoverManifest(manifest,{kind:personal?'personal-workspace':'workspace',repoRoot:config.repoRoot,cache,state,boundary:config.repoRoot||path.parse(manifest).root,source}).slice(0,MAX_SKILL_CANDIDATES-manifestCandidates.length));
+ }
+ if(safeFile(config.personalManifest)&&manifestCandidates.length<MAX_SKILL_CANDIDATES)
+  manifestCandidates.push(...discoverManifest(config.personalManifest,{kind:'personal',repoRoot:null,cache,state,boundary:home,source:'global-manifest'}).slice(0,MAX_SKILL_CANDIDATES-manifestCandidates.length));
+ const pluginContainers=[...config.pluginContainers].sort((a,b)=>(priority[a.source]??5)-(priority[b.source]??5));
+ for(const container of pluginContainers){
+  if(pluginCandidates.length>=MAX_SKILL_CANDIDATES)break;
+  pluginCandidates.push(...scanPluginContainer(container,cache,{limit:MAX_SKILL_CANDIDATES-pluginCandidates.length}));
+ }
+ for(const manifest of config.pluginManifests){
+  if(pluginManifestCandidates.length>=MAX_SKILL_CANDIDATES)break;
+  const personal=config.personalRoot&&manifest.startsWith(config.personalRoot+path.sep),source=personal?'personal-plugin':'workspace-plugin';
+  pluginManifestCandidates.push(...discoverPluginManifest(manifest,{kind:personal?'personal-workspace':'workspace',repoRoot:config.repoRoot,cache, state:pluginState,boundary:config.repoRoot||path.parse(manifest).root,source}).slice(0,MAX_SKILL_CANDIDATES-pluginManifestCandidates.length));
+ }
+ const personalPluginManifest=path.join(home,'.gemini','config','plugins.json');
+ if(safeFile(personalPluginManifest)&&pluginManifestCandidates.length<MAX_SKILL_CANDIDATES)
+  pluginManifestCandidates.push(...discoverPluginManifest(personalPluginManifest,{kind:'personal',repoRoot:null,cache,state:pluginState,boundary:home,source:'plugin'}).slice(0,MAX_SKILL_CANDIDATES-pluginManifestCandidates.length));
+ const excluded=new Set([...state.excludes]),excludedPlugins=new Set(pluginState.excludes);
+ const candidates=[...rootCandidates,...manifestCandidates,...pluginCandidates,...pluginManifestCandidates],seen=new Set(),result=[];
+ candidates.sort((a,b)=>(priority[a.source]??5)-(priority[b.source]??5));
+ for(const skill of candidates){
+  const key=skill.name.toLowerCase(),base=skill.name.split(':').at(-1);
+  if(seen.has(key)||(skill.source!=='cli-only'&&(excluded.has(skill.name)||excluded.has(base)||excluded.has(skill.relativePath)))||(skill.plugin&&(excludedPlugins.has(skill.plugin)||excludedPlugins.has(skill.pluginFolder))))continue;
+  seen.add(key);result.push(skill);if(result.length>=MAX_SKILLS)break;
+ }
+ return{...config,skills:result,state:{...state,pluginManifests:pluginState.manifests}};
+}
 export function identifySkillFile({filePath,home=process.env.HOME||process.env.USERPROFILE||os.homedir(),workspace=null,host='ide'}={}){if(typeof filePath!=='string'||filePath.length>4096||!path.isAbsolute(filePath)||path.basename(filePath)!=='SKILL.md')return null;const homeRoot=path.resolve(home),cache=loadSkillMetadataCache(homeRoot);cache.hits=0;cache.misses=0;const catalog=scanAll({host:HOSTS.has(host)?host:'ide',home:homeRoot,workspace,cache}),target=path.resolve(filePath);saveSkillMetadataCache(cache,homeRoot);for(const skill of catalog.skills)if(skill.filePath===target)return{name:skill.name,source:skill.source};return null}
-export function discoverSkills({host=null,home=process.env.HOME||process.env.USERPROFILE||os.homedir(),workspace=null,transcriptPath=null}={}){if(host!==null&&!HOSTS.has(host))throw new Error('host must be app, cli, or ide');const p=String(transcriptPath||'').replaceAll('\\','/').toLowerCase(),selected=HOSTS.has(host)?host:p.includes('/antigravity-cli/')?'cli':p.includes('/antigravity-ide/')?'ide':'ide',homeRoot=path.resolve(home),cache=loadSkillMetadataCache(homeRoot);cache.hits=0;cache.misses=0;const catalog=scanAll({host:selected,home:homeRoot,workspace,cache}),persisted=saveSkillMetadataCache(cache,homeRoot);return{host:selected,skills:catalog.skills.map(({relativePath,filePath,...skill})=>skill),scanned_roots:catalog.roots.filter(x=>safeDir(x.path)).map(x=>({source:x.source,available:true})),manifest_count:catalog.state.manifests,cache:{hits:cache.hits,misses:cache.misses,entries:cache.entries.size,max_entries:MAX_CACHE_ENTRIES,persistent:cache.valid===true,persisted},limits:{max_skills:MAX_SKILLS,max_skill_bytes:MAX_SKILL_BYTES,max_manifest_bytes:MAX_MANIFEST_BYTES}}}
+export function discoverSkills({host=null,home=process.env.HOME||process.env.USERPROFILE||os.homedir(),workspace=null,transcriptPath=null}={}){if(host!==null&&!HOSTS.has(host))throw new Error('host must be app, cli, or ide');const p=String(transcriptPath||'').replaceAll('\\','/').toLowerCase(),selected=HOSTS.has(host)?host:p.includes('/antigravity-cli/')?'cli':p.includes('/antigravity-ide/')?'ide':'ide',homeRoot=path.resolve(home),cache=loadSkillMetadataCache(homeRoot);cache.hits=0;cache.misses=0;const catalog=scanAll({host:selected,home:homeRoot,workspace,cache}),persisted=saveSkillMetadataCache(cache,homeRoot);return{host:selected,skills:catalog.skills.map(({relativePath,filePath,pluginFolder,...skill})=>skill),scanned_roots:catalog.roots.filter(x=>safeDir(x.path)).map(x=>({source:x.source,available:true})),manifest_count:catalog.state.manifests,cache:{hits:cache.hits,misses:cache.misses,entries:cache.entries.size,max_entries:MAX_CACHE_ENTRIES,persistent:cache.valid===true,persisted},limits:{max_skills:MAX_SKILLS,max_skill_bytes:MAX_SKILL_BYTES,max_manifest_bytes:MAX_MANIFEST_BYTES}}}
