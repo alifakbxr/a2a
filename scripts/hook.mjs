@@ -357,11 +357,38 @@ function recordCommandRun(payload, baseDir) {
 
 export const ALWAYS_ON_POLICY = 'PILAH Always-On (opt-in): Native first; zero calls for clear tasks. On cross-file uncertainty use eager PILAH context (actual mcp_<server>_pilah_context; workspace=<trusted project>, limit=5) if listed in /mcp. Others lazy: discover their schema and call_mcp_tool with actual server. No chains without new evidence. Local PASS is not E2E.';
 
+function recommendSkillGuidance(payload,baseDir){
+  const conversationId=sanitizeConversationId(payload?.conversationId);
+  const task=typeof payload?.lastUserInput==='string'?payload.lastUserInput:'';
+  if(!conversationId||!task.trim()||task.length>4000)return {};
+  const candidates=[...(Array.isArray(payload?.workspacePaths)?payload.workspacePaths:[]),...(typeof payload?.cwd==='string'?[payload.cwd]:[])].filter(x=>typeof x==='string'&&x.length<=1024&&path.isAbsolute(x));
+  let workspace=null;
+  for(const candidate of candidates){try{workspace=requireAuthorizedWorkspace(candidate);break}catch{}}
+  if(!workspace)return {};
+  const rawHost=payload?.hostSurface||process.env.PILAH_HOST_SURFACE||'ide';
+  const host=['app','cli','ide'].includes(rawHost)?rawHost:'ide';
+  let store;
+  try{
+    store=new Store(baseDir);
+    const workspaceId=store.register(workspace);
+    const result=recommendSkills({task,host,home:getHomeDir(),workspace,workspaceId,store});
+    if(result.status!=='recommended'||result.confidence!=='high'||!result.recommendations.length)return {};
+    const names=result.recommendations.slice(0,2).map(x=>x.name);
+    const fingerprint=sha256(names.join('|'));
+    if(!store.shouldInjectSkillRecommendation({workspaceId,conversationId,fingerprint}))return {};
+    const list=names.join(', ');
+    return {injectSteps:[{systemMessage:{systemMessage:'Potentially relevant Agent Skills for this request: '+list+'. If the host exposes these Skills, consider using the most relevant one. Do not assume a Skill is loaded or claim it ran unless the host confirms it. Otherwise continue with native Antigravity capabilities.'}}]};
+  }catch(error){debugLog('skill_recommendation',error);return {};}
+  finally{try{store?.close()}catch{}}
+}
+
 export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   if (!payload || typeof payload !== 'object') return {};
   const event = payload.hookEventName || payload.hook_event_name || '';
 
-  if (event === 'SessionStart') {
+  if (event === 'PreInvocation') {
+    return recommendSkillGuidance(payload,baseDir);
+  } else if (event === 'SessionStart') {
     recordActiveSession(payload, baseDir);
   } else if (event === 'PreToolUse') {
     recordPreTestRun(payload, baseDir);
