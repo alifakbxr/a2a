@@ -15,6 +15,7 @@ Official repository: [alifakbxr/pilah](https://github.com/alifakbxr/pilah). Stab
 - [MCP Schema Contracts](CONTRACTS.md): Full parameter definitions, type validations, and outputs for all 4 MCP tools.
 - [Native-First Workflow](NATIVE_FIRST_WORKFLOW.md): Decision matrix on when to use native Antigravity capabilities vs PILAH.
 - [System Compatibility](COMPATIBILITY.md): Node.js versions, operating systems (Linux, macOS, Windows), and Antigravity environments.
+- [Agent Skills Discovery](SKILL_DISCOVERY.md): v1.2.0 Skill catalog, host-specific paths, deterministic ranking and activation boundaries.
 - [Workspace Security & Privacy](SECURITY.md): Workspace authorization model, local SQLite isolation, and sensitive file protection.
 
 ---

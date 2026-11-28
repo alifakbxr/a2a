@@ -21,7 +21,7 @@ PILAH is language-agnostic in its **file, evidence, and MCP contracts**. Static 
 
 ## Antigravity surface support
 
-- **IDE:** MCP tools & resources, `hooks.json` (`SessionStart`, targeted `PreToolUse` only for native-test report correlation, targeted `PostToolUse`; no recurring `PreInvocation`), skills, and `rules/AGENTS.md`; native browser testing remains under `/browser`.
+- **IDE:** MCP tools & resources, `hooks.json` (`PreInvocation` (dedicated lightweight Skill-only entrypoint), `SessionStart`, targeted `PreToolUse` only for native-test report correlation, targeted `PostToolUse`), skills, and `rules/AGENTS.md`; native browser testing remains under `/browser`.
 - **App:** MCP/plugin contract; browser and orchestration remain native.
 - **CLI:** MCP/plugin contract and headless operation remain native (`antigravity-cli/settings.json` `trustedWorkspaces` supported, filtered by protected roots).
 - **SDK:** not used to proxy models or run third-party agents. A separately written SDK client could call this standard MCP server if supported.
@@ -51,6 +51,8 @@ The CI test does not have access to the user's Pop!_OS GUI session; a live Antig
 `getHomeDir()` is the shared resolver for user-scoped Antigravity brain, token history, release config, snapshots, and CLI/hook paths, supporting Windows `USERPROFILE` when `HOME` is unset. Storage protects both the OS account home and an overridden `HOME` from permission changes. Relative project snapshots resolve against the authorized workspace root rather than the MCP process CWD. `isSamePath` and `isSameOrDescendantPath` consistently handle Windows/macOS case defaults and macOS `/private/var`, `/private/tmp`, `/private/etc` aliases. The benchmark capture reader canonicalizes the manifest root. These guards do not replace real native IDE/browser tests on each OS.
 
 ### Skill inclusion versus plugin MCP availability
+
+The v1.2.0 development branch adds a bounded, read-only Skill metadata catalog, deterministic local ranking and a high-confidence-only `PreInvocation` guidance hook. See [Agent Skills discovery](SKILL_DISCOVERY.md) for the documented App/CLI/IDE path matrix, deduplication rules and activation limitations.
 
 An enabled plugin and four green MCP tools do not imply the PILAH skill metadata is in the **current** agent context. Antigravity may exclude skills through a global `~/.gemini/config/skills.json`, workspace `.agents/skills.json`, or subagent context filtering. Run `node scripts/pilah.mjs doctor` to inspect the **global manifest only** (`skill_discovery`), then check `/skills` in the actual IDE/CLI session and `agy plugin validate --strict`. `/skills reload` refreshes CLI discovery without invoking an PILAH MCP tool. Do not automatically remove exclusions or duplicate the skill in a second location. An `Excluded` indicator is not by itself proof of an MCP server outage or evidence that the model would choose PILAH when included.
 

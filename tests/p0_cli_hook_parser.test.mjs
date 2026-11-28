@@ -7,7 +7,9 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {parseArtifact,verifyHandoff} from '../src/verification.mjs';
 import {isDirectTestCommand,handleHookEvent,detectSideQuestionInfo} from '../scripts/hook.mjs';
-import {sha256,authorizeWorkspace,invalidateWorkspaceCache} from '../src/security.mjs';
+import {recommendSkillGuidance} from '../src/skill-guidance.mjs';
+import {recommendSkills} from '../src/skill-discovery.mjs';
+import {sha256,authorizeWorkspace,invalidateWorkspaceCache,setA2AMode} from '../src/security.mjs';
 import {Store} from '../src/storage.mjs';
 
 const cwd=fileURLToPath(new URL('../',import.meta.url));
@@ -65,11 +67,14 @@ test('#50: tokens positional authorized workspace and artifact CLI operations do
  }finally{x.clean()}
 });
 
-test('#51: hook matchers include five native edit tool names and reject PreInvocation',()=>{
+test('#51: hook manifest registers native edit and PreInvocation events',()=>{
  const hooks=JSON.parse(fs.readFileSync(path.join(cwd,'hooks.json'),'utf8'));
  const groups=Object.values(hooks);
  const triggers=groups.flatMap(g=>Object.keys(g));
- assert.equal(triggers.includes('PreInvocation'),false);
+ assert.equal(triggers.includes('PreInvocation'),true);
+ const pre=groups.flatMap(g=>g.PreInvocation||[]);
+ assert.ok(pre.some(x=>x.command==='node ./scripts/skill-hook.mjs'));
+ assert.ok(pre.every(x=>!x.command.includes('scripts/hook.mjs')));
  const matchers=groups.flatMap(g=>g.PostToolUse||[]).map(x=>x.matcher);
  for(const tool of ['write_file','edit_file','write_to_file','replace_file_content','multi_replace_file_content'])
   assert.ok(matchers.some(m=>new RegExp(m).test(tool)),tool);
@@ -187,4 +192,37 @@ test('#53: TAP bailout, missing plan, TODO and duplicate assertion IDs cannot pa
  ];
  for(const source of data)assert.notEqual(parseArtifact(source,'results.tap').status,'passed',source);
  assert.equal(parseArtifact('TAP version 13\n1..1\nok 1 - fine\n','results.tap').status,'passed');
+});
+
+test('PreInvocation injects one high-confidence Skill hint per changed recommendation only',()=>{
+ const x=setup();
+ try{
+  const skillDir=path.join(x.work,'.agents','skills','laravel-api');
+  fs.mkdirSync(skillDir,{recursive:true});
+  fs.writeFileSync(path.join(skillDir,'SKILL.md'),'---\nname: laravel-api\ndescription: Laravel API endpoint validation and authorization\n---\n');
+  setA2AMode('always-on');
+  const payload={hookEventName:'PreInvocation',conversationId:'conv-pilah-skill-hook',workspacePaths:[x.work],lastUserInput:'Implement Laravel API endpoint validation and authorization'};
+  const direct=recommendSkills({task:payload.lastUserInput,host:'ide',home:x.home,workspace:x.work});
+  assert.equal(direct.status,'recommended',JSON.stringify(direct));
+  assert.equal(direct.confidence,'high',JSON.stringify(direct));
+  const first=recommendSkillGuidance(payload,x.data,{throwErrors:true});
+  assert.equal(first.injectSteps.length,1);
+  assert.match(first.injectSteps[0].systemMessage.systemMessage,/laravel-api/);
+  assert.doesNotMatch(first.injectSteps[0].systemMessage.systemMessage,/Laravel API endpoint validation and authorization/);
+  const usageStore=new Store(x.data);
+  try{assert.deepEqual(usageStore.getSkillUsage(usageStore.register(x.work)),{},'a recommendation is not learned as actual Skill usage')}finally{usageStore.close()}
+  const repeated=handleHookEvent(payload,{baseDir:x.data});
+  assert.deepEqual(repeated,{});
+  const simple=handleHookEvent({...payload,lastUserInput:'Thanks'}, {baseDir:x.data});
+  assert.deepEqual(simple,{});
+ }finally{x.clean()}
+});
+
+test('PreInvocation fails closed for untrusted workspaces and missing task input',()=>{
+ const x=setup();
+ try{
+  const untrusted=path.join(x.base,'untrusted');fs.mkdirSync(untrusted);
+  assert.deepEqual(handleHookEvent({hookEventName:'PreInvocation',conversationId:'conv-untrusted',workspacePaths:[untrusted],lastUserInput:'Implement Laravel API endpoint validation'},{baseDir:x.data}),{});
+  assert.deepEqual(handleHookEvent({hookEventName:'PreInvocation',conversationId:'conv-empty',workspacePaths:[x.work]},{baseDir:x.data}),{});
+ }finally{x.clean()}
 });

@@ -89,7 +89,7 @@ test('published docs distinguish local proof, external release gate, and active 
  const types=new Set(Object.values(hooks).flatMap(group=>Object.keys(group)));
  assert.ok(types.has('SessionStart'));
  assert.ok(types.has('PostToolUse'));
- assert.ok(!types.has('PreInvocation'));
+ assert.ok(types.has('PreInvocation'));
  for(const file of ['README.md','BUILD_STATUS.md','docs/ARCHITECTURE.md','docs/RELEASE.md','docs/CONTRACTS.md']){
    assert.ok(/not.tested|unverified|independent|NO.GO|not production|not released|release gate/i.test(content[file]),file+': acceptance boundary missing');
  }
