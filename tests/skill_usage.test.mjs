@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {Store} from '../src/storage.mjs';
 
-test('Skill usage is recorded only with explicit host-observed activation evidence',()=>{
+test('Skill usage is recorded only with explicit host-observed full-read evidence',()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-skill-usage-'));
  const db=path.join(root,'private-store');
  const workspace=path.join(root,'workspace');
