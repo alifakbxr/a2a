@@ -26,24 +26,33 @@ export class Engine {
     const root=requireAuthorizedWorkspace(workspace),wsId=this.store.register(root);
     const cachedFiles=new Map(this.store.all('SELECT path,content_sha AS hash,language,bytes,mtime_ms,ctime_ms FROM files WHERE workspace_id=?',wsId).map(r=>[r.path,r]));
     const index=discover(root,{cachedFiles:verifyIntegrity?null:cachedFiles}), git=gitHead(root);
-    const snapshot=sha256((git||'no-git')+'|'+snapshotOf(index));const current=this.store.latest(wsId);
-    const revision=this.store.insertRevision(wsId,snapshot,git,{os:os.platform(),arch:os.arch(),node:process.versions.node});
-    if(!current||current.id!==revision||cachedFiles.size!==index.files.length){
+    const snapshot=sha256((git||'no-git')+'|'+snapshotOf(index));
+    const current=this.store.latest(wsId);
+    const workspaceState=this.store.get('SELECT indexed_revision_id FROM workspaces WHERE id=?',wsId);
+    const cacheMatchesIndex=cachedFiles.size===index.files.length&&index.files.every(file=>{
+      const cached=cachedFiles.get(file.path);
+      return cached&&cached.hash===file.hash&&cached.bytes===file.bytes;
+    });
+    const rebuildIndex=!current||current.snapshot_sha!==snapshot||
+      workspaceState?.indexed_revision_id!==current.id||!cacheMatchesIndex;
+    let revision;
+    if(rebuildIndex){
       for(const f of index.files){
         if(f.text===null){
           try{f.text=fs.readFileSync(safeFile(root,f.path),'utf8')}catch{f.text=''}
         }
       }
       const graph=createGraph(index);
-      this.store.persistIndex(wsId,revision,index.files.map(({text,...rest})=>rest),graph.nodes,graph.edges);
+      revision=this.store.persistSnapshot(wsId,snapshot,git,{os:os.platform(),arch:os.arch(),node:process.versions.node},
+        index.files.map(({text,...rest})=>rest),graph.nodes,graph.edges);
     }else{
+      revision=current.id;
       // A content-identical edit updates ctime but not the source revision.
       // Refresh only changed metadata; do not rebuild the graph or write
       // unchanged cache rows on normal warm MCP calls.
       const changedMetadata=index.files.filter(f=>{
         const old=cachedFiles.get(f.path);
-        return old && f.hash===old.hash &&
-          (old.ctime_ms!==f.ctime_ms || old.mtime_ms!==f.mtime_ms);
+        return old&&f.hash===old.hash&&(old.ctime_ms!==f.ctime_ms||old.mtime_ms!==f.mtime_ms);
       });
       if(changedMetadata.length){
         this.store.transaction(()=>{
