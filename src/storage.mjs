@@ -193,7 +193,7 @@ export class Store {
     if(typeof workspaceId!=='string'||!this.get('SELECT id FROM workspaces WHERE id=?',workspaceId))
       throw new Error('Skill usage requires a registered workspace');
     if(observationEvidence!=='host_observed_full_read')
-      throw new Error('Skill usage requires host-observed activation evidence');
+      throw new Error('Skill usage requires explicit host-observed full-read evidence');
     const name=String(skillName||'').trim();
     if(!name||name.length>128||name.includes('\r')||name.includes('\n')||name.includes('\0'))
       throw new Error('Invalid Skill name');
