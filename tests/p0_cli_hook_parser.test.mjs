@@ -65,11 +65,11 @@ test('#50: tokens positional authorized workspace and artifact CLI operations do
  }finally{x.clean()}
 });
 
-test('#51: hook matchers include five native edit tool names and reject PreInvocation',()=>{
+test('#51: hook manifest registers native edit and PreInvocation events',()=>{
  const hooks=JSON.parse(fs.readFileSync(path.join(cwd,'hooks.json'),'utf8'));
  const groups=Object.values(hooks);
  const triggers=groups.flatMap(g=>Object.keys(g));
- assert.equal(triggers.includes('PreInvocation'),false);
+ assert.equal(triggers.includes('PreInvocation'),true);
  const matchers=groups.flatMap(g=>g.PostToolUse||[]).map(x=>x.matcher);
  for(const tool of ['write_file','edit_file','write_to_file','replace_file_content','multi_replace_file_content'])
   assert.ok(matchers.some(m=>new RegExp(m).test(tool)),tool);
