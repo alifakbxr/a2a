@@ -22,7 +22,7 @@ PILAH reads workspace skills.json files in .agents/ and the documented aliases b
 
 Only frontmatter name and description are parsed; the optional disable-model-invocation flag is honored so manual-only Skills are never automatically recommended. Folded and literal YAML description blocks are supported, and the Skill name must match its containing folder. Skill bodies, scripts and resources are never read. UTF-8 BOM, LF and Windows CRLF are supported. Duplicate required keys, invalid names, empty/oversized descriptions and unsafe scalar forms are rejected. Symlink Skill directories/files are rejected.
 
-Discovery is capped at 200 Skills, 16 KiB per Skill metadata file, 64 KiB per manifest, 400 persistent cache entries and 256 KiB of cache storage. Validated metadata is cached across hook processes in private ~/.config/pilah/skill-metadata-cache.json; file identity and timestamps invalidate changed entries. No task text, Skill body, or absolute Skill file path is stored in the cache.
+Discovery is capped at 200 Skills, 16 KiB per Skill metadata file, 64 KiB per manifest, 400 persistent cache entries and 256 KiB of cache storage. Validated metadata is cached across hook processes in private ~/.config/pilah/skill-metadata-cache.json; file identity and timestamps invalidate changed entries. No task text, Skill body, or absolute Skill file path is stored in the cache; cache keys are SHA-256 digests of file paths.
 
 ## Ranking, hooks, and learning
 
@@ -30,7 +30,7 @@ Ranking is deterministic and local. It normalizes English/Indonesian terms, uses
 
 The dedicated PreInvocation hook runs before each model invocation, requires always-on, an authorized workspace and a high-confidence match, and injects only a short hint. Host surface is derived from the documented transcript path (App, CLI or IDE); an explicit test override is supported. PILAH never invokes MCP, activates Skills, changes permissions, or overrides native agent choice.
 
-Usage learning observes successful, un-ranged PostToolUse/view_file events for a valid SKILL.md under a discovered Skill root. It records a workspace-scoped Skill name, source category, count and timestamp only. This is evidence of a completed full-file read, not proof that a Skill improved task quality. Learning is opt-in and stops when the workspace is not authorized.
+Usage learning observes successful, un-ranged PostToolUse/view_file events only when the host explicitly sets IsSkillFile=true for a valid SKILL.md under a discovered Skill root. Missing IsSkillFile metadata is treated as unverified and is not learned. It records a workspace-scoped Skill name, source category, count and timestamp only. This is evidence of a completed full-file read, not proof that a Skill improved task quality. Learning is opt-in and stops when the workspace is not authorized.
 
 ## Evidence boundaries
 
