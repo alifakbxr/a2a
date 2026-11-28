@@ -20,7 +20,7 @@ PILAH reads workspace skills.json files in .agents/ and the documented aliases b
 
 ## Metadata, cache, and limits
 
-Only frontmatter name and description are parsed. Skill bodies, scripts and resources are never read. UTF-8 BOM, LF and Windows CRLF are supported. Duplicate required keys, invalid names, empty/oversized descriptions and unsafe scalar forms are rejected. Symlink Skill directories/files are rejected.
+Only frontmatter name and description are parsed. Folded and literal YAML description blocks are supported, and the Skill name must match its containing folder. Skill bodies, scripts and resources are never read. UTF-8 BOM, LF and Windows CRLF are supported. Duplicate required keys, invalid names, empty/oversized descriptions and unsafe scalar forms are rejected. Symlink Skill directories/files are rejected.
 
 Discovery is capped at 200 Skills, 16 KiB per Skill metadata file, 64 KiB per manifest, 400 persistent cache entries and 256 KiB of cache storage. Validated metadata is cached across hook processes in private ~/.config/pilah/skill-metadata-cache.json; file identity and timestamps invalidate changed entries. No task text, Skill body, or absolute Skill file path is stored in the cache.
 
