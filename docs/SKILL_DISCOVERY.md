@@ -10,11 +10,11 @@ PILAH's Skill catalog is a **local, read-only metadata inventory**. It is not a 
 | Antigravity CLI | Same workspace roots | `~/.gemini/config/skills/<skill>/SKILL.md` | `~/.gemini/antigravity-cli/skills`, `~/.gemini/skills`, and documented plugin CLI roots under `~/.gemini/config/plugins/*/skills` |
 | Antigravity IDE | Same workspace roots | `~/.gemini/config/skills/<skill>/SKILL.md` | Legacy `~/.gemini/antigravity/skills` |
 
-The catalog only reads the Skill folder's `SKILL.md` frontmatter and requires bounded scalar `name` and `description` fields. It does not read the full Skill body or scripts/resources. It ignores malformed metadata, symbolic-link roots/folders/files, and duplicate names. Discovery is capped at 200 Skills, 16 KiB per metadata file, two nested directory levels and eight workspace ancestors.
+The catalog only reads the Skill folder's `SKILL.md` frontmatter and requires bounded scalar `name` and `description` fields. It does not read the full Skill body or scripts/resources. It ignores malformed metadata, symbolic-link roots/folders/files, and duplicate names. Discovery is capped at 200 Skills, 16 KiB per metadata file, two nested directory levels and eight workspace ancestors. Validated frontmatter is cached in-process by file identity and timestamps (maximum 400 entries); changed files invalidate their cache entry. Only metadata is cached, never the Skill body.
 
 ## Local relevance ranking
 
-`rankSkills()` matches the task text against Skill names and descriptions using deterministic token overlap. Skill-name matches carry more weight; workspace Skills receive a small locality preference; optional caller-supplied usage counts are a bounded tie-breaker and cannot create a match by themselves. It returns at most two recommendations and suppresses weak/ambiguous matches. It makes no model call and does not read Skill bodies. Usage history is not persisted or learned automatically in this milestone.
+`rankSkills()` matches the task text against Skill names and descriptions using deterministic token overlap. Skill-name matches carry more weight; workspace Skills receive a small locality preference; optional caller-supplied usage counts are a bounded tie-breaker and cannot create a match by themselves. It returns at most two recommendations and suppresses weak/ambiguous matches. It makes no model call and does not read Skill bodies. Usage history is stored per workspace in the local SQLite database without task text or prompt content. The storage API requires an explicit `host_observed` activation evidence marker; discovery and recommendation never increment usage. No automatic usage event is wired until a host event can reliably establish Skill activation.
 
 ## Important boundaries
 
@@ -22,7 +22,8 @@ The catalog only reads the Skill folder's `SKILL.md` frontmatter and requires bo
 - A listed Skill is **available on disk**, not necessarily loaded into the current conversation.
 - Plugin-managed Skills on App/IDE remain host-managed because their on-disk storage path is not a stable public contract.
 - `PreInvocation` can at most inject guidance where supported; it is not a documented Skill activation API. PILAH does not enable a `PreInvocation` hook in this milestone.
-- No model calls, network requests, filesystem writes, shell execution or Skill-body reads occur during catalog discovery.
+- No model calls, network requests, filesystem writes, shell execution or Skill-body reads occur during catalog discovery or ranking.
+- Usage counters are bounded, workspace-scoped and included in workspace privacy status/purge accounting.
 - The catalog returns metadata and source category only; it does not expose absolute paths or private Skill content.
 
 ## Validation status
