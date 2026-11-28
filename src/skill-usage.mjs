@@ -13,7 +13,7 @@ export function recordObservedSkillUse(payload,baseDir){
  if((eventName&&eventName!=='PostToolUse')||payload?.error)return false;
  const call=payload?.toolCall,args=call?.args;
  if(call?.name!=='view_file'||!args||typeof args!=='object'||Array.isArray(args))return false;
- if(args.IsSkillFile===false||args.StartLine!=null||args.EndLine!=null)return false;
+ if(args.IsSkillFile!==true||args.StartLine!=null||args.EndLine!=null)return false;
  const filePath=args.AbsolutePath;
  if(typeof filePath!=='string'||filePath.length>4096||!path.isAbsolute(filePath))return false;
  const candidates=[...(Array.isArray(payload?.workspacePaths)?payload.workspacePaths:[]),payload?.cwd]
