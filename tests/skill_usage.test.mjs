@@ -76,3 +76,15 @@ test('Skill guidance fingerprint is deduplicated per authorized workspace and co
   fs.rmSync(root,{recursive:true,force:true});
  }
 });
+
+test('accepts every discovered manifest source category',()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-skill-source-'));
+ const store=new Store(root);
+ try{
+  const workspace=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-skill-source-workspace-'));
+  const id=store.register(workspace);
+  for(const source of ['personal-workspace','workspace-manifest','global-manifest'])
+   assert.equal(store.recordSkillUsage({workspaceId:id,skillName:'sample-skill',source,activationEvidence:'host_observed'}).source,source);
+  fs.rmSync(workspace,{recursive:true,force:true});
+ }finally{store.close();fs.rmSync(root,{recursive:true,force:true})}
+});
