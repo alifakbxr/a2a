@@ -29,7 +29,7 @@ export function recordObservedSkillUse(payload,baseDir){
  try{
   store=new Store(baseDir);
   const workspaceId=store.register(workspace);
-  store.recordSkillUsage({workspaceId,skillName:skill.name,source:skill.source,activationEvidence:'host_observed'});
+  store.recordSkillUsage({workspaceId,skillName:skill.name,source:skill.source,observationEvidence:'host_observed_full_read'});
   return true;
  }catch(error){debugLog('skill_usage_observation',error);return false}
  finally{try{store?.close()}catch{}}
