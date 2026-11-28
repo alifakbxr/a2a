@@ -31,6 +31,7 @@ export function rankSkills({task,skills=[],usage={},maxResults=MAX_RESULTS,thres
  const query=[...new Set(terms(task))];if(!allowRoutine&&query.length<3)return{status:'skipped',reason:'Task description is too short for reliable Skill matching.',recommendations:[]};if(!query.length)return{status:'skipped',reason:'No meaningful task terms were found.',recommendations:[]};
  const ranked=[];
  for(const skill of skills){
+  if(skill?.disableModelInvocation===true)continue;
   if(!skill||typeof skill.name!=='string'||skill.name.length>128||!/^[a-z0-9]+(?:-[a-z0-9]+)*(?::[a-z0-9]+(?:-[a-z0-9]+)*)?$/.test(skill.name)||typeof skill.description!=='string'||skill.description.length>1024)continue;
   const names=new Set(terms(skill.name.replace(/[-:]/g,' '))),desc=new Set(terms(skill.description)),n=fieldScore(query,names,4.2),d=fieldScore(query,desc,1.35),matched=new Set(query.filter(q=>match(q,names)||match(q,desc))),coverage=matched.size/query.length,raw=n.score+d.score;
   const count=Number.isSafeInteger(usage[skill.name.toLowerCase()])&&usage[skill.name.toLowerCase()]>0?Math.min(usage[skill.name.toLowerCase()],1000):0,boost=Math.min(.6,Math.log1p(count)*.12)+(skill.source==='workspace'?.2:0),browserIntent=query.some(q=>['browser','playwright'].includes(q)),browserSupport=[...names,...desc].some(q=>['browser','playwright','e2e'].includes(q)),intentPenalty=browserIntent&&!browserSupport?2.5:0,score=Math.max(0,Math.min(10,raw/Math.max(2,Math.sqrt(query.length))*2+boost-intentPenalty));
