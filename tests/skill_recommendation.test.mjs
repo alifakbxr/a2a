@@ -18,7 +18,7 @@ test('recommendSkills combines the local catalog with workspace-scoped observed 
  const store=new Store(path.join(root,'db'));
  try{
   const workspaceId=store.register(workspace);
-  store.recordSkillUsage({workspaceId,skillName:'laravel-api',source:'workspace',activationEvidence:'host_observed'});
+  store.recordSkillUsage({workspaceId,skillName:'laravel-api',source:'workspace',observationEvidence:'host_observed_full_read'});
   const result=recommendSkills({task:'Implement Laravel API endpoint validation and authorization',host:'ide',home,workspace,workspaceId,store});
   assert.equal(result.status,'recommended');
   assert.equal(result.recommendations[0].name,'laravel-api');
