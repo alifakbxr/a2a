@@ -50,5 +50,5 @@ export function discoverSkills({host='ide',home=process.env.HOME||process.env.US
  const skills=[],seen=new Set();
  for(const root of roots){const boundary=path.parse(path.resolve(root.path)).root;for(const skill of walk(root.path,root.source,boundary,cache)){const key=skill.name.toLowerCase();if(seen.has(key))continue;seen.add(key);skills.push(skill);if(skills.length>=MAX_SKILLS)break}if(skills.length>=MAX_SKILLS)break}
  const persisted=saveSkillMetadataCache(cache,homeRoot);
- return{host,skills,scanned_roots:roots.filter(x=>safeDir(x.path)).map(x=>({source:x.source,available:true})),cache:{hits:cache.hits,misses:cache.misses,entries:cache.entries.size,max_entries:MAX_CACHE_ENTRIES,persistent:true,persisted},limits:{max_skills:MAX_SKILLS,max_skill_bytes:MAX_SKILL_BYTES}};
+ return{host,skills,scanned_roots:roots.filter(x=>safeDir(x.path)).map(x=>({source:x.source,available:true})),cache:{hits:cache.hits,misses:cache.misses,entries:cache.entries.size,max_entries:MAX_CACHE_ENTRIES,persistent:cache.valid===true,persisted},limits:{max_skills:MAX_SKILLS,max_skill_bytes:MAX_SKILL_BYTES}};
 }
