@@ -107,7 +107,7 @@ export function discoverSkills({host='ide',home=process.env.HOME||process.env.US
   const roots=getRoots({host,home:homeRoot,workspace});
   const skills=[],seen=new Set();
   for(const root of roots){
-    const boundary=root.source==='workspace'?path.resolve(workspace):homeRoot;
+    const boundary=path.parse(path.resolve(root.path)).root;
     for(const skill of walk(root.path,root.source,boundary)){
       const key=skill.name.toLowerCase();
       if(seen.has(key))continue;
