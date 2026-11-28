@@ -57,6 +57,7 @@ export class Store {
       ['assessed_revision_id','TEXT'],['updated_at','TEXT']
     ])this.#ensureColumn('hypotheses',column,type);
     this.db.exec(DDL);
+    this.#ensureColumn('skill_recommendation_state','injection_count','INTEGER NOT NULL DEFAULT 1');
     // Existing v2.0.1 SQLite databases must upgrade in place, without
     // deleting prior user checkpoints or requiring a new major DB schema.
     this.#ensureColumn('recovery_checkpoints','decisions_json',"TEXT NOT NULL DEFAULT '[]'");
@@ -150,7 +151,7 @@ export class Store {
     const row=this.get('SELECT id FROM workspaces WHERE canonical_path=?',canonical);
     const tables=['revisions','files','nodes','edges','evidence','runs','incidents','hypotheses',
       'rca_experiments','telemetry','side_questions','artifact_versions','model_recovery_state',
-      'recovery_checkpoints','acceptance_plans'];
+      'recovery_checkpoints','acceptance_plans','skill_usage','skill_recommendation_state'];
     const counts={};
     for(const table of tables)counts[table]=row?this.get(`SELECT COUNT(*) AS n FROM ${table} WHERE workspace_id=?`,row.id)?.n||0:0;
     return {registered:!!row,workspace_id:row?.id||null,counts,
@@ -163,13 +164,58 @@ export class Store {
     if(!pre.registered)return {...pre,purged:false,reason:'Workspace has no stored records'};
     const tableOrder=['acceptance_plans','revisions','files','nodes','edges','evidence',
       'runs','hypotheses','rca_experiments','incidents','telemetry','side_questions',
-      'artifact_versions','model_recovery_state','recovery_checkpoints'];
+      'artifact_versions','model_recovery_state','recovery_checkpoints','skill_usage','skill_recommendation_state'];
     this.transaction(()=>{
       for(const table of tableOrder)this.run(`DELETE FROM ${table} WHERE workspace_id=?`,pre.workspace_id);
       this.run('DELETE FROM workspaces WHERE id=?',pre.workspace_id);
     });
     return {purged:true,deleted_rows:pre.total_rows,workspace_id:pre.workspace_id,
       limits:pre.limits,follow_up:'If necessary, separately delete files you explicitly retained outside the SQLite store.'};
+  }
+  shouldInjectSkillRecommendation({workspaceId,conversationId,fingerprint}={}) {
+    if(typeof workspaceId!=='string'||!this.get('SELECT id FROM workspaces WHERE id=?',workspaceId))
+      throw new Error('Skill guidance requires a registered workspace');
+    if(typeof conversationId!=='string'||! /^[A-Za-z0-9._:-]{1,128}$/.test(conversationId))
+      throw new Error('Invalid conversation ID');
+    if(typeof fingerprint!=='string'||! /^[a-f0-9]{64}$/.test(fingerprint))
+      throw new Error('Invalid Skill recommendation fingerprint');
+    const previous=this.get('SELECT fingerprint,injection_count FROM skill_recommendation_state WHERE workspace_id=? AND conversation_id=?',workspaceId,conversationId);
+    if(previous?.fingerprint===fingerprint||(previous?.injection_count||0)>=2)return false;
+    this.run(`INSERT INTO skill_recommendation_state(workspace_id,conversation_id,fingerprint,injection_count,updated_at)
+      VALUES(?,?,?,?,?)
+      ON CONFLICT(workspace_id,conversation_id) DO UPDATE SET
+        fingerprint=excluded.fingerprint,injection_count=skill_recommendation_state.injection_count+1,updated_at=excluded.updated_at`,
+      workspaceId,conversationId,fingerprint,(previous?.injection_count||0)+1,new Date().toISOString());
+    this.run('DELETE FROM skill_recommendation_state WHERE workspace_id=? AND conversation_id NOT IN (SELECT conversation_id FROM skill_recommendation_state WHERE workspace_id=? ORDER BY updated_at DESC LIMIT 200)',workspaceId,workspaceId);
+    return true;
+  }
+  recordSkillUsage({workspaceId,skillName,source='unknown',observationEvidence}={}) {
+    if(typeof workspaceId!=='string'||!this.get('SELECT id FROM workspaces WHERE id=?',workspaceId))
+      throw new Error('Skill usage requires a registered workspace');
+    if(observationEvidence!=='host_observed_full_read')
+      throw new Error('Skill usage requires explicit host-observed full-read evidence');
+    const name=String(skillName||'').trim();
+    if(!name||name.length>128||name.includes('\r')||name.includes('\n')||name.includes('\0'))
+      throw new Error('Invalid Skill name');
+    const allowedSources=new Set(['workspace','personal-workspace','workspace-manifest','workspace-plugin','personal-plugin','global','global-manifest','cli-only','legacy-ide','plugin-cli','plugin','manifest','unknown']);
+    if(!allowedSources.has(source))throw new Error('Invalid Skill source');
+    const normalized=name.toLowerCase();
+    const now=new Date().toISOString();
+    this.run(`INSERT INTO skill_usage(workspace_id,skill_name,source,usage_count,last_used_at)
+      VALUES(?,?,?,?,?)
+      ON CONFLICT(workspace_id,skill_name) DO UPDATE SET
+        source=excluded.source,
+        usage_count=MIN(skill_usage.usage_count+1,1000000),
+        last_used_at=excluded.last_used_at`,
+      workspaceId,normalized,source,1,now);
+    this.run('DELETE FROM skill_usage WHERE workspace_id=? AND skill_name NOT IN (SELECT skill_name FROM skill_usage WHERE workspace_id=? ORDER BY last_used_at DESC LIMIT 200)',workspaceId,workspaceId);
+    return this.get('SELECT skill_name,source,usage_count,last_used_at FROM skill_usage WHERE workspace_id=? AND skill_name=?',workspaceId,normalized);
+  }
+  getSkillUsage(workspaceId) {
+    if(typeof workspaceId!=='string'||!this.get('SELECT id FROM workspaces WHERE id=?',workspaceId))
+      return {};
+    const rows=this.all('SELECT skill_name,usage_count FROM skill_usage WHERE workspace_id=? ORDER BY last_used_at DESC LIMIT 200',workspaceId);
+    return Object.fromEntries(rows.map(row=>[row.skill_name,Math.min(1000,row.usage_count)]));
   }
   recordTelemetry(wsId,{toolName,action,rawScopeTokens=0,responseTokens=0,scanStats=null}){
     const raw=Math.max(0,Math.round(rawScopeTokens));

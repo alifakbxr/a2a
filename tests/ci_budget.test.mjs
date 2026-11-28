@@ -5,19 +5,18 @@ import {routeWorkflow} from '../src/workflow-router.mjs';
 
 const read = p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('routine CI runs 1 full-suite PR job, 3 OS main jobs, and 9 optional manual compatibility jobs',()=>{
+test('PR and manual CI run the full 3 OS × 3 Node matrix; main pushes use 3 OS × Node 24',()=>{
  const yaml=read('.github/workflows/ci.yml');
  assert.match(yaml,/pull_request:\s*\n\s*branches: \[main\]/);
  assert.match(yaml,/push:\s*\n\s*branches: \[main\]/);
  assert.match(yaml,/workflow_dispatch:/);
  assert.doesNotMatch(yaml,/branches: \[main, 'v2\.0\.1'\]/);
- assert.match(yaml,/github\.event_name == 'pull_request' && '\["ubuntu-latest"\]'/);
- assert.match(yaml,/\["ubuntu-latest","macos-latest","windows-latest"\]/);
- assert.match(yaml,/github\.event_name == 'workflow_dispatch' && '\["22","24","26\.13\.1"\]'/);
- assert.match(yaml,/\|\| '\["24"\]'/);
+ assert.match(yaml,/os: \[ubuntu-latest, macos-latest, windows-latest\]/);
+ assert.match(yaml,/github\.event_name == 'push' && '\["24"\]'/);
+ assert.match(yaml,/\|\| '\["22","24","26\.13\.1"\]'/);
  assert.match(yaml,/cancel-in-progress: true/);
  assert.match(yaml,/github\.event\.pull_request\.number \|\| github\.ref/);
- for(const check of ['npm run syntax','npm test','node scripts/check-release.mjs','npm pack --dry-run','sqlite-compat.mjs'])
+ for(const check of ['npm run syntax','npm test','npm run benchmark:skills','node scripts/check-release.mjs','npm pack --dry-run','sqlite-compat.mjs'])
   assert.ok(yaml.includes(check),'CI skipped a mandatory gate: '+check);
 });
 

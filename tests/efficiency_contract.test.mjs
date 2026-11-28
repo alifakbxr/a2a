@@ -110,9 +110,14 @@ test('Always-On bounded impact summary preserves risk, uncertainty and full coun
   }
 });
 
-test('permanent plugin rule stays tiny and PreInvocation hook is absent',()=>{
+test('permanent plugin rule stays tiny and PreInvocation hook remains bounded',()=>{
   const rule=fs.readFileSync(new URL('../rules/AGENTS.md',import.meta.url),'utf8');
   const hooks=JSON.parse(fs.readFileSync(new URL('../hooks.json',import.meta.url),'utf8'));
   assert.ok(rule.length<400,'Persistent rule must not carry full always-on policy on each turn');
-  for(const group of Object.values(hooks)) assert.equal(group.PreInvocation,undefined);
+  for(const group of Object.values(hooks)) if(group.PreInvocation) {
+    assert.equal(group.PreInvocation.length,1);
+    assert.equal(group.PreInvocation[0].timeout,5);
+    assert.equal(group.PreInvocation[0].type,'command');
+  }
+  assert.ok(Object.values(hooks).some(group=>Array.isArray(group.PreInvocation)));
 });

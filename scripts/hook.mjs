@@ -5,6 +5,7 @@ import {pathToFileURL} from 'node:url';
 import { dataDir, getA2AMode, getArtifactAutoSnapshotMode, getHomeDir, requireAuthorizedWorkspace } from '../src/security.mjs';
 import { sanitizeConversationId, vettedTranscript } from '../src/tokens.mjs';
 import { Store } from '../src/storage.mjs';
+import {recommendSkillGuidance} from '../src/skill-guidance.mjs';
 import {gitChanges} from '../src/scanner.mjs';
 import {Engine} from '../src/engine.mjs';
 import {CANDIDATE_ARTIFACTS} from '../src/verification.mjs';
@@ -357,11 +358,15 @@ function recordCommandRun(payload, baseDir) {
 
 export const ALWAYS_ON_POLICY = 'PILAH Always-On (opt-in): Native first; zero calls for clear tasks. On cross-file uncertainty use eager PILAH context (actual mcp_<server>_pilah_context; workspace=<trusted project>, limit=5) if listed in /mcp. Others lazy: discover their schema and call_mcp_tool with actual server. No chains without new evidence. Local PASS is not E2E.';
 
+export {recommendSkillGuidance};
+
 export function handleHookEvent(payload, { baseDir = dataDir() } = {}) {
   if (!payload || typeof payload !== 'object') return {};
   const event = payload.hookEventName || payload.hook_event_name || '';
 
-  if (event === 'SessionStart') {
+  if (event === 'PreInvocation') {
+    return recommendSkillGuidance(payload,baseDir);
+  } else if (event === 'SessionStart') {
     recordActiveSession(payload, baseDir);
   } else if (event === 'PreToolUse') {
     recordPreTestRun(payload, baseDir);

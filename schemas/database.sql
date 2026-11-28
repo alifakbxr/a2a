@@ -82,3 +82,26 @@ CREATE TABLE IF NOT EXISTS acceptance_plans (
   FOREIGN KEY(workspace_id) REFERENCES workspaces(id)
 );
 CREATE INDEX IF NOT EXISTS acceptance_plans_recent ON acceptance_plans(workspace_id,created_at DESC);
+
+-- Caller-attested observed Skill usage only; no automatic host activation event is wired.
+CREATE TABLE IF NOT EXISTS skill_usage (
+  workspace_id TEXT NOT NULL,
+  skill_name TEXT NOT NULL,
+  source TEXT NOT NULL,
+  usage_count INTEGER NOT NULL DEFAULT 0 CHECK(usage_count >= 0),
+  last_used_at TEXT NOT NULL,
+  PRIMARY KEY(workspace_id,skill_name),
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS skill_usage_recent ON skill_usage(workspace_id,last_used_at DESC);
+
+-- Deduplicate per-conversation Skill guidance without retaining task text.
+CREATE TABLE IF NOT EXISTS skill_recommendation_state (
+  workspace_id TEXT NOT NULL,
+  conversation_id TEXT NOT NULL,
+  fingerprint TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(workspace_id,conversation_id),
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS skill_recommendation_recent ON skill_recommendation_state(workspace_id,updated_at DESC);
