@@ -3,11 +3,14 @@ import {getA2AMode,getHomeDir,requireAuthorizedWorkspace,debugLog} from './secur
 import {Store} from './storage.mjs';
 import {identifySkillFile} from './skill-catalog.mjs';
 
-// Learn only from successful, un-ranged Antigravity file reads of a validated
-// SKILL.md in a documented Skill root. Never persist file paths or file content.
+// This script is registered only for the host's PostToolUse/view_file matcher.
+// Antigravity's documented payload does not include hookEventName, so validate
+// the event when supplied but rely on the hook registration when it is absent.
+// Learn only from successful, un-ranged reads of a validated Skill manifest.
 export function recordObservedSkillUse(payload,baseDir){
  if(getA2AMode()!=='always-on')return false;
- if((payload?.hookEventName||payload?.hook_event_name)!=='PostToolUse'||payload?.error)return false;
+ const eventName=payload?.hookEventName||payload?.hook_event_name;
+ if((eventName&&eventName!=='PostToolUse')||payload?.error)return false;
  const call=payload?.toolCall,args=call?.args;
  if(call?.name!=='view_file'||!args||typeof args!=='object'||Array.isArray(args))return false;
  if(args.IsSkillFile===false||args.StartLine!=null||args.EndLine!=null)return false;
