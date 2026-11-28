@@ -41,3 +41,8 @@ test('rejects Skill metadata whose name does not match its containing folder',()
 });
 
 test('personal folder manifests resolve relative paths from the repository root',()=>{const f=fixture();try{const repo=path.join(f.root,'repo'),ws=path.join(repo,'apps','web'),personal=path.join(repo,'people',process.env.USER||process.env.USERNAME||os.userInfo().username);fs.mkdirSync(path.join(repo,'.git'),{recursive:true});fs.mkdirSync(ws,{recursive:true});fs.mkdirSync(path.join(personal,'.agents'),{recursive:true});fs.mkdirSync(path.join(repo,'.gemini'),{recursive:true});fs.writeFileSync(path.join(repo,'.gemini','config.json'),JSON.stringify({personal_customization_dir:'people/{user}'}));f.skill(repo,path.join('people',process.env.USER||process.env.USERNAME||os.userInfo().username,'.agents/skills/personal-skill'),'personal-skill','Personal Skill');f.skill(repo,'shared-skills/external-skill','external-skill','External Skill');fs.writeFileSync(path.join(personal,'.agents','skills.json'),JSON.stringify({entries:[{path:'shared-skills'}]}));const r=discoverSkills({host:'app',home:f.root,workspace:ws});assert.ok(r.skills.some(x=>x.name==='external-skill'&&x.source==='personal-workspace'))}finally{f.clean()}});
+
+test('preserves manual-only Skill metadata without auto-recommending it',()=>{
+ const parsed=parseSkillFrontmatter('---\nname: manual-review\ndescription: Review deployment changes and release risks\ndisable-model-invocation: true\n---\n');
+ assert.deepEqual(parsed,{name:'manual-review',description:'Review deployment changes and release risks',disableModelInvocation:true});
+});
