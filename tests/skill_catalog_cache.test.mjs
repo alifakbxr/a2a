@@ -13,7 +13,7 @@ test('persists metadata across Node processes and invalidates changed files',()=
   const code='import {discoverSkills} from '+JSON.stringify(source)+';const r=discoverSkills({host:"app",home:'+JSON.stringify(root)+'});process.stdout.write(JSON.stringify({description:r.skills[0]?.description,cache:r.cache}));';
   const run=()=>spawnSync(process.execPath,['--input-type=module','-e',code],{encoding:'utf8'});
   const a=run(),b=run();assert.equal(a.status,0,a.stderr);assert.equal(b.status,0,b.stderr);
-  assert.equal(JSON.parse(a.stdout).description,'Original metadata description');assert.equal(JSON.parse(a.stdout).cache.misses,1);assert.equal(JSON.parse(b.stdout).cache.hits,1);
+  assert.equal(JSON.parse(a.stdout).description,'Original metadata description');assert.equal(JSON.parse(a.stdout).cache.misses,1);assert.equal(JSON.parse(b.stdout).cache.hits,1);const cacheFile=path.join(root,'.config','pilah','skill-metadata-cache.json');const cacheText=fs.readFileSync(cacheFile,'utf8');assert.ok(!cacheText.includes(root),'cache must not persist absolute Skill paths');assert.match(cacheText,/\"[a-f0-9]{64}\"/);
   fs.writeFileSync(file,'---\nname: cacheable\ndescription: Updated metadata description with a longer value\n---\n');
   const c=run();assert.equal(c.status,0,c.stderr);assert.equal(JSON.parse(c.stdout).description,'Updated metadata description with a longer value');assert.equal(JSON.parse(c.stdout).cache.misses,1);
  }finally{fs.rmSync(root,{recursive:true,force:true})}
