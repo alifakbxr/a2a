@@ -188,3 +188,30 @@ test('#53: TAP bailout, missing plan, TODO and duplicate assertion IDs cannot pa
  for(const source of data)assert.notEqual(parseArtifact(source,'results.tap').status,'passed',source);
  assert.equal(parseArtifact('TAP version 13\n1..1\nok 1 - fine\n','results.tap').status,'passed');
 });
+
+test('PreInvocation injects one high-confidence Skill hint per changed recommendation only',()=>{
+ const x=setup();
+ try{
+  const skillDir=path.join(x.work,'.agents','skills','laravel-api');
+  fs.mkdirSync(skillDir,{recursive:true});
+  fs.writeFileSync(path.join(skillDir,'SKILL.md'),'---\\nname: laravel-api\\ndescription: Laravel API endpoint validation and authorization\\n---\\n');
+  const payload={hookEventName:'PreInvocation',conversationId:'conv-pilah-skill-hook',workspacePaths:[x.work],lastUserInput:'Implement Laravel API endpoint validation and authorization'};
+  const first=handleHookEvent(payload,{baseDir:x.data});
+  assert.equal(first.injectSteps.length,1);
+  assert.match(first.injectSteps[0].systemMessage.systemMessage,/laravel-api/);
+  assert.doesNotMatch(first.injectSteps[0].systemMessage.systemMessage,/Laravel API endpoint validation and authorization/);
+  const repeated=handleHookEvent(payload,{baseDir:x.data});
+  assert.deepEqual(repeated,{});
+  const simple=handleHookEvent({...payload,lastUserInput:'Thanks'}, {baseDir:x.data});
+  assert.deepEqual(simple,{});
+ }finally{x.clean()}
+});
+
+test('PreInvocation fails closed for untrusted workspaces and missing task input',()=>{
+ const x=setup();
+ try{
+  const untrusted=path.join(x.base,'untrusted');fs.mkdirSync(untrusted);
+  assert.deepEqual(handleHookEvent({hookEventName:'PreInvocation',conversationId:'conv-untrusted',workspacePaths:[untrusted],lastUserInput:'Implement Laravel API endpoint validation'},{baseDir:x.data}),{});
+  assert.deepEqual(handleHookEvent({hookEventName:'PreInvocation',conversationId:'conv-empty',workspacePaths:[x.work]},{baseDir:x.data}),{});
+ }finally{x.clean()}
+});
