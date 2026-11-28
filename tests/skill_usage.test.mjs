@@ -83,7 +83,7 @@ test('accepts every discovered manifest source category',()=>{
  try{
   const workspace=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-skill-source-workspace-'));
   const id=store.register(workspace);
-  for(const source of ['personal-workspace','workspace-manifest','global-manifest'])
+  for(const source of ['personal-workspace','workspace-manifest','global-manifest','workspace-plugin','personal-plugin'])
    assert.equal(store.recordSkillUsage({workspaceId:id,skillName:'sample-skill',source,observationEvidence:'host_observed_full_read'}).source,source);
   fs.rmSync(workspace,{recursive:true,force:true});
  }finally{store.close();fs.rmSync(root,{recursive:true,force:true})}
