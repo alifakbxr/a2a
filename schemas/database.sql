@@ -94,3 +94,14 @@ CREATE TABLE IF NOT EXISTS skill_usage (
   FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS skill_usage_recent ON skill_usage(workspace_id,last_used_at DESC);
+
+-- Deduplicate per-conversation Skill guidance without retaining task text.
+CREATE TABLE IF NOT EXISTS skill_recommendation_state (
+  workspace_id TEXT NOT NULL,
+  conversation_id TEXT NOT NULL,
+  fingerprint TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(workspace_id,conversation_id),
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS skill_recommendation_recent ON skill_recommendation_state(workspace_id,updated_at DESC);
