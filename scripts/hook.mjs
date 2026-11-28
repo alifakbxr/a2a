@@ -5,6 +5,7 @@ import {pathToFileURL} from 'node:url';
 import { dataDir, getA2AMode, getArtifactAutoSnapshotMode, getHomeDir, requireAuthorizedWorkspace } from '../src/security.mjs';
 import { sanitizeConversationId, vettedTranscript } from '../src/tokens.mjs';
 import { Store } from '../src/storage.mjs';
+import {recommendSkills} from '../src/skill-discovery.mjs';
 import {gitChanges} from '../src/scanner.mjs';
 import {Engine} from '../src/engine.mjs';
 import {CANDIDATE_ARTIFACTS} from '../src/verification.mjs';
@@ -360,7 +361,7 @@ export const ALWAYS_ON_POLICY = 'PILAH Always-On (opt-in): Native first; zero ca
 export function recommendSkillGuidance(payload,baseDir,{throwErrors=false}={}){
   const conversationId=sanitizeConversationId(payload?.conversationId);
   const task=typeof payload?.lastUserInput==='string'?payload.lastUserInput:'';
-  if(!conversationId||!task.trim()||task.length>4000)return {};
+  if(getA2AMode()!=='always-on'||!conversationId||!task.trim()||task.length>4000)return {};
   const candidates=[...(Array.isArray(payload?.workspacePaths)?payload.workspacePaths:[]),...(typeof payload?.cwd==='string'?[payload.cwd]:[])].filter(x=>typeof x==='string'&&x.length<=1024&&path.isAbsolute(x));
   let workspace=null;
   for(const candidate of candidates){try{workspace=requireAuthorizedWorkspace(candidate);break}catch{}}
