@@ -67,7 +67,7 @@ test('ignores partial reads, errors, non-Skill files, and paths outside discover
   fs.writeFileSync(outside,'---\nname: forged-skill\ndescription: forged\n---\n');
   const forged=event(outside,{workspace:f.workspace});
   const flaggedFalse=event(f.skillFile,{workspace:f.workspace,args:{IsSkillFile:false}});
-  const flagMissing=event(f.skillFile,{workspace:f.workspace,args:{}});
+  const flagMissing={...event(f.skillFile,{workspace:f.workspace}),toolCall:{name:'view_file',args:{AbsolutePath:f.skillFile}}};
   for(const payload of [partial,failed,ordinary,forged,flaggedFalse,flagMissing])
    assert.equal(recordObservedSkillUse(payload,f.baseDir),false);
   const store=new Store(f.baseDir);
