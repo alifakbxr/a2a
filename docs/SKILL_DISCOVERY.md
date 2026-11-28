@@ -10,7 +10,7 @@ PILAH maintains a bounded, read-only metadata inventory aligned with Antigravity
 - Repository personal customization folders configured through .gemini/config.json and personal_customization_dir.
 - IDE legacy ~/.gemini/antigravity/skills/.
 - CLI-only ~/.gemini/antigravity-cli/skills/ and ~/.gemini/skills/, which take precedence over all other local sources and are not hidden by manifest exclusions.
-- Installed plugins under ~/.gemini/config/plugins/<plugin> with a valid plugin.json (or .antigravity-plugin/plugin.json) and skills/<skill>/SKILL.md. Plugin Skill names are namespaced as <plugin>:<skill>.
+- Installed plugins under ~/.gemini/config/plugins/<plugin> with a valid plugin.json (or .antigravity-plugin/plugin.json) and skills/<skill>/SKILL.md. Plugin Skill names are namespaced as <plugin>:<skill>. Discovery follows host precedence: CLI-only Skills first, then repository personal Skills, workspace Skills, personal global Skills, IDE legacy Skills, and plugin Skills. Built-in Skills remain host-managed.
 
 Antigravity built-in Skills are host-managed and are not ordinary local Skill files; PILAH does not invent or mirror them. Plugin discovery is based on installed plugin manifests and directories. Whether a plugin is enabled and its Skill is loaded remains host-owned state, not something PILAH can independently assert.
 
