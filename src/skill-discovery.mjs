@@ -1,6 +1,15 @@
 import {discoverSkills} from './skill-catalog.mjs';
 import {rankSkills} from './skill-ranking.mjs';
 export {discoverSkills,rankSkills};
+
+// Compose disk inventory with optional workspace-scoped observed usage. This is
+// still advisory: it neither activates Skills nor mutates host state.
+export function recommendSkills({task,host='ide',home,workspace=null,workspaceId=null,store=null}={}) {
+  const catalog=discoverSkills({host,home,workspace});
+  const usage=store&&workspaceId&&typeof store.getSkillUsage==='function'
+    ?store.getSkillUsage(workspaceId):{};
+  return {...catalog,...rankSkills({task,skills:catalog.skills,usage})};
+}
 // Read-only, bounded skill exclusion diagnostic. Plugin installation does not
 // prove skill inclusion in every Antigravity conversation or subagent.
 import path from 'node:path';
