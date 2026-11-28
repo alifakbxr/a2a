@@ -30,3 +30,19 @@ test('persistent cache retains manual-only Skill metadata across Node processes'
   assert.equal(JSON.parse(a.stdout).disableModelInvocation,true);assert.equal(JSON.parse(b.stdout).disableModelInvocation,true);
  }finally{fs.rmSync(root,{recursive:true,force:true})}
 });
+
+test('replaces legacy plaintext-path cache schema with hashed keys',()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-skill-cache-migrate-'));
+ try{
+  const cacheDir=path.join(root,'.config','pilah');fs.mkdirSync(cacheDir,{recursive:true,mode:0o700});
+  const legacyPath=path.join(root,'.gemini','config','skills','old','SKILL.md');
+  fs.writeFileSync(path.join(cacheDir,'skill-metadata-cache.json'),JSON.stringify({version:2,entries:{[legacyPath]:{signature:'old',metadata:{name:'old',description:'old'}}}}),{mode:0o600});
+  const skillDir=path.join(root,'.gemini','config','skills','fresh');fs.mkdirSync(skillDir,{recursive:true});
+  fs.writeFileSync(path.join(skillDir,'SKILL.md'),'---\nname: fresh\ndescription: Fresh metadata\n---\n');
+  const code='import {discoverSkills} from '+JSON.stringify(source)+';discoverSkills({host:"app",home:'+JSON.stringify(root)+'});';
+  const run=spawnSync(process.execPath,['--input-type=module','-e',code],{encoding:'utf8'});
+  assert.equal(run.status,0,run.stderr);
+  const next=fs.readFileSync(path.join(cacheDir,'skill-metadata-cache.json'),'utf8');
+  assert.ok(!next.includes(legacyPath));assert.match(next,/"[a-f0-9]{64}"/);
+ }finally{fs.rmSync(root,{recursive:true,force:true})}
+});
