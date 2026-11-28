@@ -1,7 +1,7 @@
 const STOP=new Set(['a','an','and','are','as','at','be','by','do','for','from','how','i','in','into','is','it','me','my','of','on','or','our','please','the','this','to','we','with','you','your','yang','dan','atau','untuk','dari','dengan','pada','di','ke','ini','itu','saya','aku','tolong','bisa','agar','supaya','buat','mohon','sebuah','semua','lebih','saat','ketika','dalam','jadi','nya']);
 const MAX_TASK_CHARS=4000,MAX_SKILLS=200,MAX_RESULTS=2;
 const GROUPS=[
- ['auth','authentication','authorization','authorize','login','signin','permission','access','akses','hakakses','izin','masuk','otentikasi','otorisasi'],
+ ['auth','authentication','authorization','authorize','login','signin','permission','access','akses','hakakses','security','izin','masuk','otentikasi','otorisasi'],
  ['user','users','pengguna','guna','akun','account','accounts','customer','pelanggan'],
  ['database','databases','db','basisdata','basis','sql','postgres','postgresql','mysql','migration','migrations','schema','skema','migrasi'],
  ['frontend','ui','interface','tampilan','antarmuka','view','component','components','komponen','halaman','panel'],
@@ -15,13 +15,13 @@ const GROUPS=[
  ['bug','fix','debug','debugging','error','issue','masalah','perbaiki','baiki','memperbaiki'],
  ['file','files','berkas','dokumen','document','documents','upload','unggah'],
  ['image','images','gambar','foto','photo','media'],
- ['workflow','pipeline','automation','automate','otomatisasi','otomatis','alur','ci','cd','actions']
+ ['workflow','pipeline','automation','automate','otomatisasi','alur','ci','cd','actions']
 ];
 const ALIAS=new Map();for(const g of GROUPS)for(const w of g)ALIAS.set(w,g);
 function norm(t){let x=t.toLowerCase().normalize('NFKC');if(x.length>6){for(const p of ['meng','men','mem','ber','per','peng'])if(x.startsWith(p)&&x.length>p.length+2){x=x.slice(p.length);break}if(x.endsWith('kan')&&x.length>7)x=x.slice(0,-3);else if(x.endsWith('nya')&&x.length>6)x=x.slice(0,-3);else if(x.endsWith('an')&&x.length>6)x=x.slice(0,-2)}return x}
 function terms(v){return(String(v||'').toLowerCase().normalize('NFKC').match(/[\p{L}\p{N}]+(?:[+#]+)?/gu)||[]).map(norm).filter(x=>x.length>1&&!STOP.has(x))}
 function match(q,set){for(const t of ALIAS.get(q)||[q])if(set.has(t))return t===q?1:.72;return 0}
-function fieldScore(query,set,weight){let score=0,matched=0,exact=0;for(const q of query){const m=match(q,set);if(m){score+=weight*m;matched++;if(m===1)exact++}}return{score,matched,exact}}
+function fieldScore(query,set,weight){let score=0,matched=0,exact=0;for(const q of query){const m=match(q,set);if(m){score+=weight*(weight>2&&m!==1?0.25:m);matched++;if(m===1)exact++}}return{score,matched,exact}}
 export function rankSkills({task,skills=[],usage={},maxResults=MAX_RESULTS,threshold=1.2,allowRoutine=false}={}){
  if(typeof task!=='string'||task.length>MAX_TASK_CHARS)throw Error('task must be a string up to 4000 characters');
  if(!Array.isArray(skills)||skills.length>MAX_SKILLS)throw Error('skills must contain at most 200 entries');

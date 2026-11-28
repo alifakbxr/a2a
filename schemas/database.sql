@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS acceptance_plans (
 );
 CREATE INDEX IF NOT EXISTS acceptance_plans_recent ON acceptance_plans(workspace_id,created_at DESC);
 
--- Explicit host-observed Skill usage only; never stores task text or Skill bodies.
+-- Caller-attested observed Skill usage only; no automatic host activation event is wired.
 CREATE TABLE IF NOT EXISTS skill_usage (
   workspace_id TEXT NOT NULL,
   skill_name TEXT NOT NULL,
@@ -100,7 +100,6 @@ CREATE TABLE IF NOT EXISTS skill_recommendation_state (
   workspace_id TEXT NOT NULL,
   conversation_id TEXT NOT NULL,
   fingerprint TEXT NOT NULL,
-  injection_count INTEGER NOT NULL DEFAULT 1 CHECK(injection_count BETWEEN 1 AND 2),
   updated_at TEXT NOT NULL,
   PRIMARY KEY(workspace_id,conversation_id),
   FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE

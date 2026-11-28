@@ -209,6 +209,8 @@ test('PreInvocation injects one high-confidence Skill hint per changed recommend
   assert.equal(first.injectSteps.length,1);
   assert.match(first.injectSteps[0].systemMessage.systemMessage,/laravel-api/);
   assert.doesNotMatch(first.injectSteps[0].systemMessage.systemMessage,/Laravel API endpoint validation and authorization/);
+  const usageStore=new Store(x.data);
+  try{assert.deepEqual(usageStore.getSkillUsage(usageStore.register(x.work)),{},'a recommendation is not learned as actual Skill usage')}finally{usageStore.close()}
   const repeated=handleHookEvent(payload,{baseDir:x.data});
   assert.deepEqual(repeated,{});
   const simple=handleHookEvent({...payload,lastUserInput:'Thanks'}, {baseDir:x.data});
