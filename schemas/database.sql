@@ -82,3 +82,15 @@ CREATE TABLE IF NOT EXISTS acceptance_plans (
   FOREIGN KEY(workspace_id) REFERENCES workspaces(id)
 );
 CREATE INDEX IF NOT EXISTS acceptance_plans_recent ON acceptance_plans(workspace_id,created_at DESC);
+
+-- Explicit host-observed Skill usage only; never stores task text or Skill bodies.
+CREATE TABLE IF NOT EXISTS skill_usage (
+  workspace_id TEXT NOT NULL,
+  skill_name TEXT NOT NULL,
+  source TEXT NOT NULL,
+  usage_count INTEGER NOT NULL DEFAULT 0 CHECK(usage_count >= 0),
+  last_used_at TEXT NOT NULL,
+  PRIMARY KEY(workspace_id,skill_name),
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS skill_usage_recent ON skill_usage(workspace_id,last_used_at DESC);
