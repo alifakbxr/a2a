@@ -1,23 +1,38 @@
-# Agent Skills discovery (v1.2.0 development)
+# Agent Skills discovery (v1.2.0)
 
-PILAH's catalog is a bounded, read-only metadata inventory. It is not a Skill loader, activation API, or proof that a Skill is in the current agent context.
+PILAH maintains a bounded, read-only metadata inventory aligned with Antigravity's current customization discovery contract. It does not load Skill bodies, execute scripts, activate a Skill, or prove that a Skill is present in the current model context.
 
-## Discovery and cache
+## Supported sources
 
-The documented App/CLI/IDE path matrix is unchanged. Workspace discovery also recognizes Antigravity's backward-compatible `.agent/`, `_agents/` and `_agent/` customization directory aliases alongside `.agents/`. Discovery is capped at 200 Skills, 16 KiB per metadata file, two nested directory levels and eight workspace ancestors. Only frontmatter name and description are parsed; Skill bodies, scripts and resources are never read. UTF-8 BOM, LF and Windows CRLF are supported. Duplicate required keys, invalid names, empty/oversized descriptions and unsafe scalar forms are rejected. Symlink Skill directories/files are rejected.
+- Workspace .agents/skills/<skill>/SKILL.md and aliases .agent/, _agents/, and _agent/.
+- Workspace customization folders from the current directory up to the detected repository root. Without a repository marker, only the current workspace folder is scanned.
+- Personal ~/.gemini/config/skills/ and ~/.gemini/config/skills.json manifest.
+- IDE legacy ~/.gemini/antigravity/skills/.
+- CLI-only ~/.gemini/antigravity-cli/skills/ and ~/.gemini/skills/, which have higher precedence than workspace/global Skills.
+- Installed plugin folders under ~/.gemini/config/plugins/<plugin>/skills/. Plugin Skill names are namespaced as <plugin>:<skill>.
 
-Validated metadata is cached across hook processes in private `~/.config/pilah/skill-metadata-cache.json`. It stores file identity/timestamps plus name and description only, is capped at 400 entries and 256 KiB, and is written through a private temporary file before replacement. The cache is disposable and rebuilt if a platform-specific replacement is interrupted. Device, inode, size, mtime or ctime changes invalidate entries. Unsafe or unavailable cache state fails closed; discovery continues without cache. No task text or Skill body is stored.
+Antigravity built-in Skills are host-managed and are not ordinary local Skill files; PILAH does not invent or mirror them. Plugin discovery is based on installed plugin directories. Whether a plugin is enabled and its Skill is loaded remains host-owned state, not something PILAH can independently assert.
 
-## Local ranking and capability routing
+## Discovery manifests
 
-Ranking is deterministic and local. It normalizes English/Indonesian terms, uses a small explicit domain-synonym map, weights exact Skill-name matches more strongly, applies a coverage threshold and abstains on weak matches. No model or network call is made. Usage history is a small tie-breaker only. At most two recommendations are returned. The shared capability router combines Skill recommendations with the existing caller-declared workflow router. It remains advisory: it never invokes MCP, activates Skills or changes host permissions. Native Antigravity capabilities remain authoritative.
+PILAH reads workspace skills.json files in .agents/ and the documented aliases between the workspace and repository root, plus ~/.gemini/config/skills.json. It supports bounded entries, inherits, include_only, and exclude fields. Inherited manifest paths must be absolute. Relative workspace entry paths resolve from the directory containing the customization folder, with repository-root fallback; personal paths resolve from ~/.gemini/config/. Manifest traversal is capped at four levels and 64 manifests. Wildcards are not interpreted. Unsafe paths, symlinks, malformed JSON, oversized manifests, and invalid filters are ignored.
 
-The bilingual corpus is synthetic and does not establish production precision/recall, Skill activation, task quality or token savings.
+Standard folders are scanned one level deep: skills/<skill-folder>/SKILL.md. Deeper folders are considered only when explicitly named by a manifest entry.
 
-## Hook behavior and limits
+## Metadata, cache, and limits
 
-PreInvocation uses a dedicated `scripts/skill-hook.mjs` entrypoint rather than importing the full scanner, engine and verification hook. It remains opt-in through `always-on`, requires an authorized workspace and injects only a high-confidence hint. It does not force Skill activation. Antigravity still starts a hook process for each registered PreInvocation event; PILAH reduces the loaded module graph and repeated metadata parsing but does not claim zero process-start overhead.
+Only frontmatter name and description are parsed. Skill bodies, scripts and resources are never read. UTF-8 BOM, LF and Windows CRLF are supported. Duplicate required keys, invalid names, empty/oversized descriptions and unsafe scalar forms are rejected. Symlink Skill directories/files are rejected.
 
-Recommendation injection is capped at two distinct fingerprints per conversation, with duplicate fingerprints suppressed. State stores only fingerprints and counters, never task text.
+Discovery is capped at 200 Skills, 16 KiB per Skill metadata file, 64 KiB per manifest, 400 persistent cache entries and 256 KiB of cache storage. Validated metadata is cached across hook processes in private ~/.config/pilah/skill-metadata-cache.json; file identity and timestamps invalidate changed entries. No task text, Skill body, or absolute Skill file path is stored in the cache.
 
-Usage learning is opt-in through `always-on`. A dedicated `PostToolUse` hook observes successful, un-ranged `view_file` calls for `SKILL.md`; it accepts the event only when the path resolves to a valid Skill inside a documented workspace/global/CLI/IDE Skill root and the workspace is authorized. Tool errors, ranged reads, ordinary files, invalid metadata, unsafe paths, and revoked workspaces are ignored. Only the normalized Skill name, source category, count, and last-used timestamp are stored. No task text, Skill body, or local file path is retained. This is evidence that Antigravity completed a full-file read of the Skill manifest, not proof that the Skill improved the task outcome. The native host remains responsible for discovery, activation, and execution.
+## Ranking, hooks, and learning
+
+Ranking is deterministic and local. It normalizes English/Indonesian terms, uses a small explicit domain-synonym map, weights exact Skill-name matches more strongly, applies a coverage threshold and abstains on weak matches. Usage history is a small tie-breaker only. At most two recommendations are returned. No model or network call is made.
+
+The dedicated PreInvocation hook runs before each model invocation, requires always-on, an authorized workspace and a high-confidence match, and injects only a short hint. Host surface is derived from the documented transcript path (App, CLI or IDE); an explicit test override is supported. PILAH never invokes MCP, activates Skills, changes permissions, or overrides native agent choice.
+
+Usage learning observes successful, un-ranged PostToolUse/view_file events for a valid SKILL.md under a discovered Skill root. It records a workspace-scoped Skill name, source category, count and timestamp only. This is evidence of a completed full-file read, not proof that a Skill improved task quality. Learning is opt-in and stops when the workspace is not authorized.
+
+## Evidence boundaries
+
+The synthetic bilingual benchmark measures only deterministic lexical routing on its small fixture corpus. It does not measure production precision/recall, host Skill activation, task quality, or token savings. Those require live, controlled App/CLI/IDE tests with identical task, model, effort, permissions and available Skills.
