@@ -18,7 +18,8 @@ export function loadSkillMetadataCache(home){
  if(!file)return{entries,file:null,dirty:false,valid:false};let fd;
  try{
   const before=fs.lstatSync(file);
-  if(before.isSymbolicLink()||!before.isFile())return{entries,file,dirty:false,valid:false};\n  if(before.size>MAX_BYTES||(process.platform!=='win32'&&(before.mode&0o077)!==0))return{entries,file,dirty:true,valid:false};
+  if(before.isSymbolicLink()||!before.isFile())return{entries,file,dirty:false,valid:false};
+  if(before.size>MAX_BYTES||(process.platform!=='win32'&&(before.mode&0o077)!==0))return{entries,file,dirty:true,valid:false};
   fd=fs.openSync(file,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));
   const after=fs.fstatSync(fd);
   if(!after.isFile()||after.dev!==before.dev||after.ino!==before.ino||after.size>MAX_BYTES)return{entries,file,dirty:false,valid:false};
