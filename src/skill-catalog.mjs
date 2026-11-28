@@ -27,12 +27,12 @@ function safeChain(dir,boundary){
   return true;
 }
 function parseFrontmatter(text){
-  if(typeof text!=='string'||!text.startsWith('---\\n'))return null;
-  const end=text.indexOf('\\n---',4);
+  if(typeof text!=='string'||!text.startsWith('---\n'))return null;
+  const end=text.indexOf('\n---',4);
   if(end<0)return null;
   const fields={};
-  for(const line of text.slice(4,end).split(/\\r?\\n/)){
-    const match=line.match(/^(name|description):\\s*(.*?)\\s*$/);
+  for(const line of text.slice(4,end).split(/\r?\n/)){
+    const match=line.match(/^(name|description):\s*(.*?)\s*$/);
     if(!match)continue;
     let value=match[2];
     if((value.startsWith('"')&&value.endsWith('"'))||(value.startsWith("'")&&value.endsWith("'")))value=value.slice(1,-1);
