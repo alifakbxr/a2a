@@ -7,7 +7,7 @@ import {loadSkillMetadataCache,saveSkillMetadataCache} from './skill-metadata-ca
 
 const HOSTS=new Set(['app','cli','ide']),ALIASES=['.agents','.agent','_agents','_agent'];
 const MAX_SKILLS=200,MAX_SKILL_BYTES=16*1024,MAX_ANCESTORS=32,MAX_CACHE_ENTRIES=400;
-const MAX_MANIFEST_BYTES=64*1024,MAX_MANIFEST_DEPTH=4,MAX_MANIFESTS=64,MAX_MANIFEST_ENTRIES=256,MAX_SKILL_CANDIDATES=800;
+const MAX_MANIFEST_BYTES=64*1024,MAX_MANIFEST_DEPTH=4,MAX_MANIFESTS=64,MAX_MANIFEST_ENTRIES=256,MAX_SKILL_CANDIDATES=800,MAX_PLUGIN_DIRS=100;
 function safeDir(p){try{const s=fs.lstatSync(p);return s.isDirectory()&&!s.isSymbolicLink()}catch{return false}}
 function safeFile(p,max=MAX_MANIFEST_BYTES){try{const s=fs.lstatSync(p);return s.isFile()&&!s.isSymbolicLink()&&s.size<=max}catch{return false}}
 function safeChain(dir,boundary){const target=path.resolve(dir),base=path.resolve(boundary),rel=path.relative(base,target);if(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel))return false;let cur=base;if(!safeDir(cur))return false;for(const seg of rel.split(path.sep).filter(Boolean)){cur=path.join(cur,seg);if(!safeDir(cur)){if(process.platform==='darwin'&&base===path.parse(base).root&&['var','tmp','etc'].includes(seg)){try{const real=fs.realpathSync(cur);if(real===path.join('/private',seg)){cur=real;continue}}catch{}}return false}}return true}
@@ -135,8 +135,7 @@ function getRoots({host,home,workspace}){
  addRoot(roots,path.join(config,'skills'),'global');
  if(host==='ide')addRoot(roots,path.join(home,'.gemini','antigravity','skills'),'legacy-ide');
  pluginContainers.push({path:path.join(config,'plugins'),source:'plugin',boundary:config});
- const personalSkillManifest=path.join(config,'skills.json');if(safeFile(personalSkillManifest)){}
- const personalPluginManifest=path.join(config,'plugins.json');if(safeFile(personalPluginManifest))pluginManifests.push(personalPluginManifest);
+ const personalSkillManifest=path.join(config,'skills.json');
  return{roots,manifests,pluginContainers,pluginManifests,personalManifest:personalSkillManifest,repoRoot,levels,personalRoot};
 }
 function scanAll({host,home,workspace,cache}){
