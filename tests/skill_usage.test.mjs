@@ -57,3 +57,20 @@ test('Skill usage rejects invalid source and unsafe names',()=>{
   fs.rmSync(root,{recursive:true,force:true});
  }
 });
+
+test('Skill guidance fingerprint is deduplicated per authorized workspace and conversation',()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-skill-guidance-state-'));
+ const store=new Store(path.join(root,'db'));
+ try{
+  const workspaceId=store.register(path.join(root,'workspace'));
+  const fingerprint='a'.repeat(64);
+  assert.equal(store.shouldInjectSkillRecommendation({workspaceId,conversationId:'conv-guidance-1',fingerprint}),true);
+  assert.equal(store.shouldInjectSkillRecommendation({workspaceId,conversationId:'conv-guidance-1',fingerprint}),false);
+  assert.equal(store.shouldInjectSkillRecommendation({workspaceId,conversationId:'conv-guidance-1',fingerprint:'b'.repeat(64)}),true);
+  assert.equal(store.shouldInjectSkillRecommendation({workspaceId,conversationId:'conv-guidance-2',fingerprint}),true);
+  assert.throws(()=>store.shouldInjectSkillRecommendation({workspaceId,conversationId:'../bad',fingerprint}),/conversation ID/);
+ }finally{
+  store.close();
+  fs.rmSync(root,{recursive:true,force:true});
+ }
+});
