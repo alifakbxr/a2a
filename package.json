@@ -44,6 +44,7 @@
     "check": "npm run syntax && npm test",
     "selftest": "node scripts/pilah.mjs doctor",
     "benchmark": "node benchmarks/bench.mjs",
+    "benchmark:skills": "node benchmarks/skill-routing.mjs",
     "syntax": "node scripts/check-syntax.mjs"
   }
 }
