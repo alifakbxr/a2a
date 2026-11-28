@@ -9,7 +9,7 @@ import {recommendSkills} from '../src/skill-discovery.mjs';
 test('recommendSkills combines the local catalog with workspace-scoped observed usage',()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-skill-recommend-'));
  const home=path.join(root,'home');
- const workspace=path.join(root,'repo');
+ const workspace=path.join(home,'repo');
  const skillDir=path.join(workspace,'.agents','skills','laravel-api');
  fs.mkdirSync(skillDir,{recursive:true});
  fs.mkdirSync(home,{recursive:true});
