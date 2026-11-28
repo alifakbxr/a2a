@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-const VERSION=2,MAX_ENTRIES=400,MAX_BYTES=256*1024;
+const VERSION=3,MAX_ENTRIES=400,MAX_BYTES=256*1024;
 const isDir=p=>{try{const s=fs.lstatSync(p);return s.isDirectory()&&!s.isSymbolicLink()}catch{return false}};
 function privateDir(home,create=false){
  const root=path.resolve(home);if(!isDir(root))return null;
@@ -23,9 +23,9 @@ export function loadSkillMetadataCache(home){
   const after=fs.fstatSync(fd);
   if(!after.isFile()||after.dev!==before.dev||after.ino!==before.ino||after.size>MAX_BYTES)return{entries,file,dirty:false,valid:false};
   const value=JSON.parse(fs.readFileSync(fd,'utf8'));
-  if(value?.version!==VERSION||!value.entries||typeof value.entries!=='object'||Array.isArray(value.entries))return{entries,file,dirty:false,valid:false};
+  if(value?.version!==VERSION)return{entries,file,dirty:true,valid:false};\n  if(!value.entries||typeof value.entries!=='object'||Array.isArray(value.entries))return{entries,file,dirty:false,valid:false};
   for(const[key,item]of Object.entries(value.entries)){
-   if(key.length<=4096&&typeof item?.signature==='string'&&item.signature.length<=256&&typeof item.metadata?.name==='string'&&typeof item.metadata?.description==='string'){
+   if(/^[a-f0-9]{64}$/.test(key)&&typeof item?.signature==='string'&&item.signature.length<=256&&typeof item.metadata?.name==='string'&&typeof item.metadata?.description==='string'){
     entries.set(key,{signature:item.signature,metadata:{name:item.metadata.name,description:item.metadata.description,...(item.metadata.disableModelInvocation===true?{disableModelInvocation:true}:{})}});
     if(entries.size>=MAX_ENTRIES)break;
    }
