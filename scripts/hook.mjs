@@ -357,7 +357,7 @@ function recordCommandRun(payload, baseDir) {
 
 export const ALWAYS_ON_POLICY = 'PILAH Always-On (opt-in): Native first; zero calls for clear tasks. On cross-file uncertainty use eager PILAH context (actual mcp_<server>_pilah_context; workspace=<trusted project>, limit=5) if listed in /mcp. Others lazy: discover their schema and call_mcp_tool with actual server. No chains without new evidence. Local PASS is not E2E.';
 
-function recommendSkillGuidance(payload,baseDir){
+export function recommendSkillGuidance(payload,baseDir,{throwErrors=false}={}){
   const conversationId=sanitizeConversationId(payload?.conversationId);
   const task=typeof payload?.lastUserInput==='string'?payload.lastUserInput:'';
   if(!conversationId||!task.trim()||task.length>4000)return {};
@@ -378,7 +378,7 @@ function recommendSkillGuidance(payload,baseDir){
     if(!store.shouldInjectSkillRecommendation({workspaceId,conversationId,fingerprint}))return {};
     const list=names.join(', ');
     return {injectSteps:[{systemMessage:{systemMessage:'Potentially relevant Agent Skills for this request: '+list+'. If the host exposes these Skills, consider using the most relevant one. Do not assume a Skill is loaded or claim it ran unless the host confirms it. Otherwise continue with native Antigravity capabilities.'}}]};
-  }catch(error){debugLog('skill_recommendation',error);return {};}
+  }catch(error){debugLog('skill_recommendation',error);if(throwErrors)throw error;return {};}
   finally{try{store?.close()}catch{}}
 }
 
