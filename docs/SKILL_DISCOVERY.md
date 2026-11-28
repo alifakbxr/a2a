@@ -27,6 +27,10 @@ The catalog only reads the Skill folder's `SKILL.md` frontmatter and requires bo
 - Usage counters are bounded, workspace-scoped and included in workspace privacy status/purge accounting.
 - The catalog returns metadata and source category only; it does not expose absolute paths or private Skill content.
 
+## Benchmark
+
+Run `npm run benchmark:skills` for a deterministic synthetic task set covering eight expected Skill matches and three unrelated tasks. It reports top-1 accuracy, positive coverage, false-positive rate and local latency. This is a lexical routing benchmark only; it does not prove real-world Skill activation, task quality or token savings.
+
 ## Validation status
 
 The v1.2.0 branch adds automated filesystem, ranking, cache, usage-storage and hook tests for host-specific roots, workspace/global discovery, CLI-only and legacy IDE roots, malformed metadata, duplicate names and symlink rejection. These tests are source-level compatibility checks, not proof that a live Antigravity host activates a selected Skill. Installed-host validation remains a separate release gate.
