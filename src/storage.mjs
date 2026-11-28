@@ -189,10 +189,10 @@ export class Store {
     this.run('DELETE FROM skill_recommendation_state WHERE workspace_id=? AND conversation_id NOT IN (SELECT conversation_id FROM skill_recommendation_state WHERE workspace_id=? ORDER BY updated_at DESC LIMIT 200)',workspaceId,workspaceId);
     return true;
   }
-  recordSkillUsage({workspaceId,skillName,source='unknown',activationEvidence}={}) {
+  recordSkillUsage({workspaceId,skillName,source='unknown',observationEvidence}={}) {
     if(typeof workspaceId!=='string'||!this.get('SELECT id FROM workspaces WHERE id=?',workspaceId))
       throw new Error('Skill usage requires a registered workspace');
-    if(activationEvidence!=='host_observed')
+    if(observationEvidence!=='host_observed_full_read')
       throw new Error('Skill usage requires host-observed activation evidence');
     const name=String(skillName||'').trim();
     if(!name||name.length>128||name.includes('\r')||name.includes('\n')||name.includes('\0'))
