@@ -4,7 +4,7 @@ PILAH's catalog is a bounded, read-only metadata inventory. It is not a Skill lo
 
 ## Discovery and cache
 
-The documented App/CLI/IDE path matrix is unchanged. Discovery is capped at 200 Skills, 16 KiB per metadata file, two nested directory levels and eight workspace ancestors. Only frontmatter name and description are parsed; Skill bodies, scripts and resources are never read. UTF-8 BOM, LF and Windows CRLF are supported. Duplicate required keys, invalid names, empty/oversized descriptions and unsafe scalar forms are rejected. Symlink Skill directories/files are rejected.
+The documented App/CLI/IDE path matrix is unchanged. Workspace discovery also recognizes Antigravity's backward-compatible `.agent/`, `_agents/` and `_agent/` customization directory aliases alongside `.agents/`. Discovery is capped at 200 Skills, 16 KiB per metadata file, two nested directory levels and eight workspace ancestors. Only frontmatter name and description are parsed; Skill bodies, scripts and resources are never read. UTF-8 BOM, LF and Windows CRLF are supported. Duplicate required keys, invalid names, empty/oversized descriptions and unsafe scalar forms are rejected. Symlink Skill directories/files are rejected.
 
 Validated metadata is cached across hook processes in private `~/.config/pilah/skill-metadata-cache.json`. It stores file identity/timestamps plus name and description only, is capped at 400 entries and 256 KiB, and is written through a private temporary file before replacement. The cache is disposable and rebuilt if a platform-specific replacement is interrupted. Device, inode, size, mtime or ctime changes invalidate entries. Unsafe or unavailable cache state fails closed; discovery continues without cache. No task text or Skill body is stored.
 
