@@ -18,3 +18,15 @@ test('persists metadata across Node processes and invalidates changed files',()=
   const c=run();assert.equal(c.status,0,c.stderr);assert.equal(JSON.parse(c.stdout).description,'Updated metadata description with a longer value');assert.equal(JSON.parse(c.stdout).cache.misses,1);
  }finally{fs.rmSync(root,{recursive:true,force:true})}
 });
+
+test('persistent cache retains manual-only Skill metadata across Node processes',()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'pilah-skill-cache-manual-'));
+ try{
+  const dir=path.join(root,'.gemini','config','skills','manual-only');fs.mkdirSync(dir,{recursive:true});
+  fs.writeFileSync(path.join(dir,'SKILL.md'),'---\nname: manual-only\ndescription: Review release plans and deployment risks\ndisable-model-invocation: true\n---\n');
+  const code='import {discoverSkills} from '+JSON.stringify(source)+';const r=discoverSkills({host:"app",home:'+JSON.stringify(root)+'});process.stdout.write(JSON.stringify(r.skills[0]));';
+  const run=()=>spawnSync(process.execPath,['--input-type=module','-e',code],{encoding:'utf8'});
+  const a=run(),b=run();assert.equal(a.status,0,a.stderr);assert.equal(b.status,0,b.stderr);
+  assert.equal(JSON.parse(a.stdout).disableModelInvocation,true);assert.equal(JSON.parse(b.stdout).disableModelInvocation,true);
+ }finally{fs.rmSync(root,{recursive:true,force:true})}
+});
