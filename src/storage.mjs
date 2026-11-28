@@ -177,7 +177,7 @@ export class Store {
     if(activationEvidence!=='host_observed')
       throw new Error('Skill usage requires host-observed activation evidence');
     const name=String(skillName||'').trim();
-    if(!name||name.length>128||/[\\r\\n\\0]/.test(name))
+    if(!name||name.length>128||name.includes('\r')||name.includes('\n')||name.includes('\0'))
       throw new Error('Invalid Skill name');
     const allowedSources=new Set(['workspace','global','cli-only','legacy-ide','plugin-cli','unknown']);
     if(!allowedSources.has(source))throw new Error('Invalid Skill source');
