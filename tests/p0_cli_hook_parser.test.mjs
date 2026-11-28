@@ -194,7 +194,7 @@ test('PreInvocation injects one high-confidence Skill hint per changed recommend
  try{
   const skillDir=path.join(x.work,'.agents','skills','laravel-api');
   fs.mkdirSync(skillDir,{recursive:true});
-  fs.writeFileSync(path.join(skillDir,'SKILL.md'),'---\\nname: laravel-api\\ndescription: Laravel API endpoint validation and authorization\\n---\\n');
+  fs.writeFileSync(path.join(skillDir,'SKILL.md'),'---\nname: laravel-api\ndescription: Laravel API endpoint validation and authorization\n---\n');
   const payload={hookEventName:'PreInvocation',conversationId:'conv-pilah-skill-hook',workspacePaths:[x.work],lastUserInput:'Implement Laravel API endpoint validation and authorization'};
   const first=handleHookEvent(payload,{baseDir:x.data});
   assert.equal(first.injectSteps.length,1);
