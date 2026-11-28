@@ -1,40 +1,8 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {rankSkills} from '../src/skill-ranking.mjs';
-
-const skills=[
- {name:'laravel-api',description:'Build Laravel API endpoints, validation and authorization',source:'workspace'},
- {name:'vue-ui',description:'Build Vue components and frontend interactions',source:'global'},
- {name:'database-migrations',description:'Design database schema and migration changes',source:'global'}
-];
-
-test('ranks Skills from task terms and returns at most two recommendations',()=>{
- const result=rankSkills({task:'Implement Laravel API endpoint validation and authorization',skills});
- assert.equal(result.status,'recommended');
- assert.equal(result.recommendations[0].name,'laravel-api');
- assert.ok(result.recommendations.length<=2);
-});
-
-test('does not recommend a Skill for routine or underspecified tasks by default',()=>{
- assert.equal(rankSkills({task:'fix typo',skills}).status,'skipped');
- assert.equal(rankSkills({task:'',skills}).status,'skipped');
-});
-
-test('usage is a bounded tie-breaker and cannot create a match',()=>{
- const none=rankSkills({task:'Write documentation for product roadmap',skills,usage:{'vue-ui':1000}});
- assert.notEqual(none.status,'recommended');
- const ranked=rankSkills({task:'Build Vue components and frontend interactions',skills,usage:{'vue-ui':1000}});
- assert.equal(ranked.recommendations[0].name,'vue-ui');
- assert.ok(ranked.recommendations[0].score<=10);
-});
-
-test('rejects malformed limits and oversized inputs',()=>{
- assert.throws(()=>rankSkills({task:'x',skills,maxResults:3}),/maxResults/);
- assert.throws(()=>rankSkills({task:'x'.repeat(4001),skills}),/task/);
- assert.throws(()=>rankSkills({task:'valid enough task terms',skills:Array(201).fill(skills[0])}),/skills/);
-});
-
-test('ambiguous or weak matches are not promoted as recommendations',()=>{
- const result=rankSkills({task:'Find useful item',skills:[{name:'data-tool',description:'Useful data work'}],threshold:1});
- assert.ok(['ambiguous','skipped','no_match'].includes(result.status));
-});
+import test from 'node:test';import assert from 'node:assert/strict';import {rankSkills} from '../src/skill-ranking.mjs';
+const skills=[{name:'laravel-api',description:'Laravel PHP REST API controllers request validation authorization middleware backend endpoints',source:'workspace'},{name:'vue-ui',description:'Vue JavaScript frontend components reactive state composables user interface interactions'},{name:'database-migrations',description:'SQL PostgreSQL MySQL schema design database migrations indexes constraints data models'},{name:'security-review',description:'Security audit threat modeling authentication authorization secrets vulnerabilities'},{name:'browser-testing',description:'Playwright browser automation end-to-end tests user journeys assertions selectors'},{name:'documentation',description:'Write maintain README guides API references tutorials developer documentation'}];
+test('ranks direct English tasks',()=>{const r=rankSkills({task:'Implement Laravel API endpoint validation and authorization',skills});assert.equal(r.status,'recommended');assert.equal(r.recommendations[0].name,'laravel-api');assert.ok(r.recommendations.length<=2)});
+test('matches Indonesian tasks to English Skill metadata',()=>{const cases=[['Perbaiki proses masuk agar pengguna tidak bisa mengakses dashboard orang lain','laravel-api'],['Buat tampilan komponen Vue untuk halaman pengguna','vue-ui'],['Tambahkan migrasi basis data PostgreSQL dan indeks','database-migrations'],['Audit keamanan dan hak akses akun pengguna','security-review'],['Buat pengujian browser otomatis untuk alur checkout','browser-testing']];for(const [task,expected] of cases){const r=rankSkills({task,skills});assert.equal(r.status,'recommended',task);assert.equal(r.recommendations[0].name,expected,task)}});
+test('skips routine tasks',()=>{assert.equal(rankSkills({task:'fix typo',skills}).status,'skipped');assert.equal(rankSkills({task:'',skills}).status,'skipped')});
+test('usage is a bounded tie-breaker and cannot create a match',()=>{const none=rankSkills({task:'Write a product roadmap for next quarter',skills,usage:{'vue-ui':1000}});assert.notEqual(none.status,'recommended');const r=rankSkills({task:'Build Vue components and frontend interactions',skills,usage:{'vue-ui':1000}});assert.equal(r.recommendations[0].name,'vue-ui');assert.ok(r.recommendations[0].score<=10)});
+test('rejects malformed limits and oversized inputs',()=>{assert.throws(()=>rankSkills({task:'x',skills,maxResults:3}),/maxResults/);assert.throws(()=>rankSkills({task:'x'.repeat(4001),skills}),/task/);assert.throws(()=>rankSkills({task:'valid enough task terms',skills:Array(201).fill(skills[0])}),/skills/)});
+test('abstains on unrelated or ambiguous tasks',()=>{assert.notEqual(rankSkills({task:'Tell me a funny story about a sleepy cat',skills}).status,'recommended');assert.ok(['ambiguous','skipped','no_match'].includes(rankSkills({task:'Build the system and improve the application for users',skills}).status))});
