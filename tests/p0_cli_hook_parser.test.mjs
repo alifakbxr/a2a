@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {parseArtifact,verifyHandoff} from '../src/verification.mjs';
 import {isDirectTestCommand,handleHookEvent,detectSideQuestionInfo,recommendSkillGuidance} from '../scripts/hook.mjs';
 import {recommendSkills} from '../src/skill-discovery.mjs';
-import {sha256,authorizeWorkspace,invalidateWorkspaceCache} from '../src/security.mjs';
+import {sha256,authorizeWorkspace,invalidateWorkspaceCache,setA2AMode} from '../src/security.mjs';
 import {Store} from '../src/storage.mjs';
 
 const cwd=fileURLToPath(new URL('../',import.meta.url));
@@ -196,6 +196,7 @@ test('PreInvocation injects one high-confidence Skill hint per changed recommend
   const skillDir=path.join(x.work,'.agents','skills','laravel-api');
   fs.mkdirSync(skillDir,{recursive:true});
   fs.writeFileSync(path.join(skillDir,'SKILL.md'),'---\nname: laravel-api\ndescription: Laravel API endpoint validation and authorization\n---\n');
+  setA2AMode('always-on');
   const payload={hookEventName:'PreInvocation',conversationId:'conv-pilah-skill-hook',workspacePaths:[x.work],lastUserInput:'Implement Laravel API endpoint validation and authorization'};
   const direct=recommendSkills({task:payload.lastUserInput,host:'ide',home:x.home,workspace:x.work});
   assert.equal(direct.status,'recommended',JSON.stringify(direct));
